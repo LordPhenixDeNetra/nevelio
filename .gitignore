@@ -24,3 +24,5 @@ Desktop.ini
 *.obj
 *.pdb
 *.dSYM/
+
+.trae/
