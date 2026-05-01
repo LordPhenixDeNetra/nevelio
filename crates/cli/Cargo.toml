@@ -1,0 +1,29 @@
+[package]
+name    = "nevelio"
+version.workspace = true
+edition.workspace = true
+
+[[bin]]
+name = "nevelio"
+path = "src/main.rs"
+
+[dependencies]
+nevelio-core                  = { path = "../core" }
+nevelio-recon                 = { path = "../recon" }
+nevelio-reporting             = { path = "../reporting" }
+nevelio-module-auth           = { path = "../modules/auth" }
+nevelio-module-injection      = { path = "../modules/injection" }
+nevelio-module-access-control = { path = "../modules/access-control" }
+nevelio-module-business-logic = { path = "../modules/business-logic" }
+nevelio-module-infra          = { path = "../modules/infra" }
+
+clap.workspace               = true
+tokio.workspace              = true
+serde.workspace              = true
+serde_json.workspace         = true
+anyhow.workspace             = true
+tracing.workspace            = true
+tracing-subscriber.workspace = true
+colored.workspace            = true
+indicatif.workspace          = true
+chrono.workspace             = true

@@ -1,0 +1,27 @@
+category: jwt_attacks
+description: "Payloads d'attaque JWT : confusion d'algorithme, secrets faibles, manipulation de claims"
+payloads:
+  - type: alg_none
+    description: "Forcer l'algorithme none pour bypass de signature"
+    detect: ["200", "auth_bypass"]
+  - type: alg_confusion_hs256_rs256
+    description: "Confusion RS256 -> HS256 avec clé publique"
+    detect: ["200", "auth_bypass"]
+
+weak_secrets:
+  - "secret"
+  - "password"
+  - "123456"
+  - "jwt_secret"
+  - "your-256-bit-secret"
+  - "changeme"
+  - "supersecret"
+  - "mysecretkey"
+
+claims_to_test:
+  - field: "role"
+    values: ["admin", "superuser", "root", "moderator"]
+  - field: "is_admin"
+    values: [true, 1]
+  - field: "user_id"
+    values: [1, 0, -1]

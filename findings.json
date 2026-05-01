@@ -1,0 +1,17 @@
+{
+  "scan_id": "32c64772-1892-4e2b-98bf-30d33ee63f52",
+  "target": "https://httpbin.org",
+  "started_at": "2026-05-01T19:52:51.654415Z",
+  "finished_at": "2026-05-01T19:52:51.666787Z",
+  "duration_secs": 0.012,
+  "profile": "normal",
+  "summary": {
+    "critical": 0,
+    "high": 0,
+    "medium": 0,
+    "low": 0,
+    "informative": 0,
+    "total": 0
+  },
+  "findings": []
+}

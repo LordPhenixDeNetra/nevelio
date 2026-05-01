@@ -1,0 +1,17 @@
+category: idor
+description: "Stratégies de détection IDOR pour IDs numériques et UUIDs"
+strategies:
+  - type: numeric_sequential
+    description: "Tester les IDs adjacents (id+1, id-1)"
+    delta: [1, -1, 2, -2, 10, 100]
+  - type: numeric_common
+    description: "Tester des IDs courants"
+    values: [1, 2, 3, 100, 999, 1000, 9999]
+  - type: uuid_replace
+    description: "Remplacer l'UUID par un UUID aléatoire ou nul"
+    strategies: ["random", "nil", "known_other_user"]
+
+detection_signals:
+  - "status_200_different_body"
+  - "status_200_when_403_expected"
+  - "different_user_data_in_response"

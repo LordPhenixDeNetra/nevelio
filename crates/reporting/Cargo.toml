@@ -1,0 +1,13 @@
+[package]
+name    = "nevelio-reporting"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+nevelio-core         = { path = "../core" }
+serde.workspace      = true
+serde_json.workspace = true
+tera.workspace       = true
+anyhow.workspace     = true
+thiserror.workspace  = true
+chrono.workspace     = true

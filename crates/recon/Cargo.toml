@@ -1,0 +1,15 @@
+[package]
+name    = "nevelio-recon"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+nevelio-core          = { path = "../core" }
+anyhow.workspace      = true
+thiserror.workspace   = true
+tracing.workspace     = true
+tokio.workspace       = true
+reqwest.workspace     = true
+serde.workspace       = true
+serde_json.workspace  = true
+oas3.workspace        = true

@@ -1,6 +1,39 @@
-[package]
-name = "nevelio"
-version = "0.1.0"
-edition = "2024"
+[workspace]
+members = [
+    "crates/cli",
+    "crates/core",
+    "crates/modules/auth",
+    "crates/modules/injection",
+    "crates/modules/access-control",
+    "crates/modules/business-logic",
+    "crates/modules/infra",
+    "crates/recon",
+    "crates/reporting",
+]
+resolver = "2"
 
-[dependencies]
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+authors = ["Nevelio Contributors"]
+license = "MIT"
+
+[workspace.dependencies]
+tokio              = { version = "1",    features = ["full"] }
+reqwest            = { version = "0.13", features = ["json", "stream", "rustls", "webpki-roots", "http2"], default-features = false }
+clap               = { version = "4",    features = ["derive"] }
+serde              = { version = "1",    features = ["derive"] }
+serde_json         = "1"
+serde_yaml         = "0.9"
+jsonwebtoken       = "10"
+oas3               = { version = "0.21", features = ["yaml-spec"] }
+indicatif          = "0.18"
+tera               = "1"
+anyhow             = "1"
+thiserror          = "2"
+tracing            = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+colored            = "3"
+uuid               = { version = "1", features = ["v4"] }
+chrono             = { version = "0.4", features = ["serde"] }
+async-trait        = "0.1"

