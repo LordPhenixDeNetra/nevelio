@@ -2,6 +2,7 @@ use anyhow::{Context, Result};
 use clap::Parser;
 use colored::Colorize;
 use indicatif::{ProgressBar, ProgressStyle};
+use std::path::{Path, PathBuf};
 use std::time::Duration;
 use tracing_subscriber::{fmt, EnvFilter};
 
@@ -12,7 +13,9 @@ use nevelio_module_auth::AuthModule;
 use nevelio_module_business_logic::BusinessLogicModule;
 use nevelio_module_infra::InfraModule;
 use nevelio_module_injection::InjectionModule;
-use nevelio_reporting::JsonReporter;
+use nevelio_reporting::{
+    HtmlReporter, JsonReporter, JunitReporter, MarkdownReporter, ReportFormat, ScanReport,
+};
 
 use crate::args::{Cli, Commands, ModulesAction};
 use crate::legal;
@@ -41,6 +44,44 @@ pub async fn run() -> Result<()> {
     }
 }
 
+// ---------------------------------------------------------------------------
+// Report writing helper
+// ---------------------------------------------------------------------------
+
+fn write_report(report: &ScanReport, format: &ReportFormat, out_dir: &Path) -> Result<PathBuf> {
+    std::fs::create_dir_all(out_dir)?;
+
+    let (path, label) = match format {
+        ReportFormat::Json => {
+            let p = out_dir.join("findings.json");
+            JsonReporter::write_to_file(report, &p)?;
+            (p, "JSON")
+        }
+        ReportFormat::Html => {
+            let p = out_dir.join("report.html");
+            HtmlReporter::write_to_file(report, &p)?;
+            (p, "HTML")
+        }
+        ReportFormat::Markdown => {
+            let p = out_dir.join("report.md");
+            MarkdownReporter::write_to_file(report, &p)?;
+            (p, "Markdown")
+        }
+        ReportFormat::Junit => {
+            let p = out_dir.join("security-report.xml");
+            JunitReporter::write_to_file(report, &p)?;
+            (p, "JUnit XML")
+        }
+    };
+
+    tracing::info!("{} report written to {}", label, path.display());
+    Ok(path)
+}
+
+// ---------------------------------------------------------------------------
+// Scan command
+// ---------------------------------------------------------------------------
+
 async fn handle_scan(args: crate::args::ScanArgs, verbose: bool) -> Result<()> {
     let target = args
         .target
@@ -50,6 +91,7 @@ async fn handle_scan(args: crate::args::ScanArgs, verbose: bool) -> Result<()> {
     let base_profile: ScanProfile = args.profile.into();
     let concurrency = args.concurrency.unwrap_or(base_profile.concurrency());
     let rate_limit = args.rate_limit.unwrap_or(base_profile.rate_limit_per_sec());
+    let output_format: ReportFormat = args.output.into();
 
     let config = ScanConfig {
         target: target.clone(),
@@ -78,7 +120,7 @@ async fn handle_scan(args: crate::args::ScanArgs, verbose: bool) -> Result<()> {
     let http_client = HttpClient::new(&config).context("Impossible de créer le client HTTP")?;
     let raw_client = http_client.inner().clone();
 
-    // --- Recon: discover endpoints ---
+    // --- Recon ---
     let endpoints = if !config.dry_run {
         if let Some(ref spec_path) = args.spec {
             nevelio_recon::openapi::parse_spec(spec_path, &target, &raw_client)
@@ -90,7 +132,6 @@ async fn handle_scan(args: crate::args::ScanArgs, verbose: bool) -> Result<()> {
                 .context("Échec de la découverte des endpoints")?
         }
     } else {
-        // Dry-run: stub single endpoint
         vec![nevelio_core::types::Endpoint {
             method: "GET".to_string(),
             path: "/".to_string(),
@@ -112,7 +153,6 @@ async fn handle_scan(args: crate::args::ScanArgs, verbose: bool) -> Result<()> {
         .progress_chars("█▓░"),
     );
 
-    // Active modules (filter by --module flag if specified)
     let all_modules: Vec<Box<dyn AttackModule>> = vec![
         Box::new(AuthModule),
         Box::new(InjectionModule),
@@ -126,7 +166,7 @@ async fn handle_scan(args: crate::args::ScanArgs, verbose: bool) -> Result<()> {
     } else {
         all_modules
             .iter()
-            .filter(|m| session.config.modules.iter().any(|name| name == m.name()))
+            .filter(|m| session.config.modules.iter().any(|n| n == m.name()))
             .collect()
     };
 
@@ -152,10 +192,19 @@ async fn handle_scan(args: crate::args::ScanArgs, verbose: bool) -> Result<()> {
     session.finish();
 
     let report = JsonReporter::generate(&session);
-    let report_path = session.config.out_dir.join("findings.json");
-    std::fs::create_dir_all(&session.config.out_dir)?;
-    JsonReporter::write_to_file(&report, &report_path)
+    let out_dir = session.config.out_dir.clone();
+
+    // Always write JSON (canonical result)
+    let json_path = out_dir.join("findings.json");
+    JsonReporter::write_to_file(&report, &json_path)
         .context("Échec de l'écriture de findings.json")?;
+
+    // Also write in the requested format if different from JSON
+    let report_path = if matches!(output_format, ReportFormat::Json) {
+        json_path
+    } else {
+        write_report(&report, &output_format, &out_dir)?
+    };
 
     println!();
     output::print_summary(&session.findings);
@@ -165,53 +214,44 @@ async fn handle_scan(args: crate::args::ScanArgs, verbose: bool) -> Result<()> {
         report_path.display().to_string().cyan()
     );
 
-    // CI/CD exit code based on severity
-    let exit_code = ci_exit_code(&session.findings);
-    if exit_code > 0 {
-        std::process::exit(exit_code);
-    }
-
-    Ok(())
+    std::process::exit(ci_exit_code(&session.findings));
 }
 
-fn ci_exit_code(findings: &[nevelio_core::types::Finding]) -> i32 {
-    use nevelio_core::types::Severity;
-    if findings.iter().any(|f| f.severity == Severity::Critical) {
-        return 3;
-    }
-    if findings.iter().any(|f| f.severity == Severity::High) {
-        return 2;
-    }
-    if findings
-        .iter()
-        .any(|f| f.severity == Severity::Medium || f.severity == Severity::Low)
-    {
-        return 1;
-    }
-    0
-}
+// ---------------------------------------------------------------------------
+// Report command
+// ---------------------------------------------------------------------------
 
 async fn handle_report(args: crate::args::ReportArgs) -> Result<()> {
     let json =
         std::fs::read_to_string(&args.input).context("Impossible de lire le fichier JSON")?;
-    let report: nevelio_reporting::ScanReport =
-        serde_json::from_str(&json).context("Fichier JSON invalide")?;
+    let report: ScanReport = serde_json::from_str(&json).context("Fichier JSON invalide")?;
 
-    println!("Rapport : {} finding(s)", report.findings.len());
-    println!("Cible   : {}", report.target);
-    println!("Durée   : {:.2}s", report.duration_secs);
     println!(
-        "Résumé  : {} Critical  {} High  {} Medium  {} Low",
+        "Rapport : {} finding(s) — Cible: {} — Durée: {:.2}s",
+        report.findings.len(),
+        report.target,
+        report.duration_secs
+    );
+    println!(
+        "Résumé  : {} Critical  {} High  {} Medium  {} Low  {} Informative",
         report.summary.critical,
         report.summary.high,
         report.summary.medium,
-        report.summary.low
+        report.summary.low,
+        report.summary.informative
     );
     println!();
-    println!("Phase 2 : génération HTML/Markdown pas encore implémentée (Phase 3).");
+
+    let format: ReportFormat = args.format.into();
+    let path = write_report(&report, &format, &args.out_dir)?;
+    println!("{}", format!("→ {}", path.display()).cyan());
 
     Ok(())
 }
+
+// ---------------------------------------------------------------------------
+// Modules command
+// ---------------------------------------------------------------------------
 
 fn handle_modules(args: crate::args::ModulesArgs) -> Result<()> {
     let modules: Vec<Box<dyn AttackModule>> = vec![
@@ -242,4 +282,25 @@ fn handle_modules(args: crate::args::ModulesArgs) -> Result<()> {
     }
 
     Ok(())
+}
+
+// ---------------------------------------------------------------------------
+// CI/CD exit codes (CdC section 7.1)
+// ---------------------------------------------------------------------------
+
+fn ci_exit_code(findings: &[nevelio_core::types::Finding]) -> i32 {
+    use nevelio_core::types::Severity;
+    if findings.iter().any(|f| f.severity == Severity::Critical) {
+        return 3;
+    }
+    if findings.iter().any(|f| f.severity == Severity::High) {
+        return 2;
+    }
+    if findings
+        .iter()
+        .any(|f| f.severity == Severity::Medium || f.severity == Severity::Low)
+    {
+        return 1;
+    }
+    0
 }

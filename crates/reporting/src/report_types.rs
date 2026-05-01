@@ -9,6 +9,7 @@ pub enum ReportFormat {
     Json,
     Html,
     Markdown,
+    Junit,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]

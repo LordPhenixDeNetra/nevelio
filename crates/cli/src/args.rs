@@ -145,6 +145,7 @@ pub enum OutputFormat {
     Json,
     Html,
     Markdown,
+    Junit,
 }
 
 impl From<OutputFormat> for nevelio_reporting::ReportFormat {
@@ -153,6 +154,7 @@ impl From<OutputFormat> for nevelio_reporting::ReportFormat {
             OutputFormat::Json => Self::Json,
             OutputFormat::Html => Self::Html,
             OutputFormat::Markdown => Self::Markdown,
+            OutputFormat::Junit => Self::Junit,
         }
     }
 }

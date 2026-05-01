@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nevelio — Rapport de Sécurité API</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #0f1117;
+      color: #e2e8f0;
+      line-height: 1.5
+    }
+
+    a {
+      color: #60a5fa
+    }
+
+    header {
+      background: linear-gradient(135deg, #1a1f2e, #0f1117);
+      border-bottom: 1px solid #1e293b;
+      padding: 1.5rem 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between
+    }
+
+    .logo {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: #60a5fa;
+      letter-spacing: -.5px
+    }
+
+    .logo span {
+      color: #94a3b8;
+      font-weight: 400;
+      font-size: 0.9rem
+    }
+
+    .meta-row {
+      font-size: .8rem;
+      color: #64748b;
+      margin-top: .25rem
+    }
+
+    main {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem
+    }
+
+    /* Summary cards */
+    .summary {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 1rem;
+      margin-bottom: 2rem
+    }
+
+    .card {
+      background: #1e293b;
+      border-radius: .75rem;
+      padding: 1.25rem;
+      text-align: center;
+      border-top: 3px solid transparent;
+      transition: transform .15s
+    }
+
+    .card:hover {
+      transform: translateY(-2px)
+    }
+
+    .card.critical {
+      border-color: #ef4444
+    }
+
+    .card.high {
+      border-color: #f97316
+    }
+
+    .card.medium {
+      border-color: #eab308
+    }
+
+    .card.low {
+      border-color: #3b82f6
+    }
+
+    .card.info {
+      border-color: #94a3b8
+    }
+
+    .card.all {
+      border-color: #60a5fa
+    }
+
+    .card-count {
+      font-size: 2.5rem;
+      font-weight: 700;
+      line-height: 1
+    }
+
+    .card.critical .card-count {
+      color: #ef4444
+    }
+
+    .card.high .card-count {
+      color: #f97316
+    }
+
+    .card.medium .card-count {
+      color: #eab308
+    }
+
+    .card.low .card-count {
+      color: #3b82f6
+    }
+
+    .card.info .card-count {
+      color: #94a3b8
+    }
+
+    .card.all .card-count {
+      color: #60a5fa
+    }
+
+    .card-label {
+      font-size: .7rem;
+      text-transform: uppercase;
+      letter-spacing: .1em;
+      color: #64748b;
+      margin-top: .25rem
+    }
+
+    /* Scan info */
+    .scan-info {
+      background: #1e293b;
+      border-radius: .75rem;
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 1.5rem;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: .75rem
+    }
+
+    .info-item label {
+      font-size: .7rem;
+      text-transform: uppercase;
+      letter-spacing: .1em;
+      color: #64748b;
+      display: block
+    }
+
+    .info-item value {
+      font-size: .9rem;
+      color: #e2e8f0
+    }
+
+    /* Filters */
+    .filters {
+      margin-bottom: 1.5rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: .5rem;
+      align-items: center
+    }
+
+    .filter-label {
+      font-size: .75rem;
+      color: #64748b;
+      margin-right: .25rem
+    }
+
+    .btn {
+      border: none;
+      border-radius: .375rem;
+      padding: .375rem .875rem;
+      font-size: .8rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all .15s
+    }
+
+    .btn-all {
+      background: #334155;
+      color: #e2e8f0
+    }
+
+    .btn-all.active,
+    .btn-all:hover {
+      background: #60a5fa;
+      color: #0f1117
+    }
+
+    .btn-critical {
+      background: #2d1515;
+      color: #fca5a5
+    }
+
+    .btn-critical.active,
+    .btn-critical:hover {
+      background: #ef4444;
+      color: #fff
+    }
+
+    .btn-high {
+      background: #2d1f0f;
+      color: #fdba74
+    }
+
+    .btn-high.active,
+    .btn-high:hover {
+      background: #f97316;
+      color: #fff
+    }
+
+    .btn-medium {
+      background: #2d280f;
+      color: #fde68a
+    }
+
+    .btn-medium.active,
+    .btn-medium:hover {
+      background: #eab308;
+      color: #0f1117
+    }
+
+    .btn-low {
+      background: #0f1f3d;
+      color: #93c5fd
+    }
+
+    .btn-low.active,
+    .btn-low:hover {
+      background: #3b82f6;
+      color: #fff
+    }
+
+    .btn-info {
+      background: #1e293b;
+      color: #94a3b8
+    }
+
+    .btn-info.active,
+    .btn-info:hover {
+      background: #475569;
+      color: #fff
+    }
+
+    .search-box {
+      margin-left: auto
+    }
+
+    .search-box input {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: .375rem;
+      padding: .375rem .75rem;
+      color: #e2e8f0;
+      font-size: .8rem;
+      width: 220px;
+      outline: none
+    }
+
+    .search-box input:focus {
+      border-color: #60a5fa
+    }
+
+    /* Findings */
+    .no-findings {
+      text-align: center;
+      padding: 3rem;
+      color: #64748b;
+      font-size: 1.1rem
+    }
+
+    .finding {
+      background: #1e293b;
+      border-radius: .75rem;
+      margin-bottom: .75rem;
+      border-left: 4px solid transparent;
+      overflow: hidden;
+      transition: box-shadow .15s
+    }
+
+    .finding:hover {
+      box-shadow: 0 4px 20px rgba(0, 0, 0, .3)
+    }
+
+    .finding.critical {
+      border-color: #ef4444
+    }
+
+    .finding.high {
+      border-color: #f97316
+    }
+
+    .finding.medium {
+      border-color: #eab308
+    }
+
+    .finding.low {
+      border-color: #3b82f6
+    }
+
+    .finding.informative {
+      border-color: #475569
+    }
+
+    .finding-header {
+      padding: .875rem 1.25rem;
+      display: flex;
+      align-items: center;
+      gap: .75rem;
+      cursor: pointer;
+      user-select: none
+    }
+
+    .badge {
+      display: inline-block;
+      padding: .2rem .6rem;
+      border-radius: .25rem;
+      font-size: .65rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      white-space: nowrap
+    }
+
+    .badge.critical {
+      background: #ef4444;
+      color: #fff
+    }
+
+    .badge.high {
+      background: #f97316;
+      color: #fff
+    }
+
+    .badge.medium {
+      background: #eab308;
+      color: #0f1117
+    }
+
+    .badge.low {
+      background: #3b82f6;
+      color: #fff
+    }
+
+    .badge.informative {
+      background: #475569;
+      color: #e2e8f0
+    }
+
+    .finding-title {
+      font-size: .95rem;
+      font-weight: 600;
+      color: #e2e8f0;
+      flex: 1
+    }
+
+    .finding-meta {
+      display: flex;
+      gap: .5rem;
+      align-items: center;
+      flex-wrap: wrap
+    }
+
+    .module-tag {
+      background: #0f1117;
+      border: 1px solid #334155;
+      border-radius: .25rem;
+      padding: .1rem .45rem;
+      font-size: .65rem;
+      color: #94a3b8
+    }
+
+    .endpoint-tag {
+      font-size: .75rem;
+      color: #64748b;
+      font-family: monospace
+    }
+
+    .cvss-tag {
+      font-size: .7rem;
+      font-weight: 600;
+      color: #94a3b8
+    }
+
+    .toggle-icon {
+      color: #64748b;
+      font-size: .9rem;
+      transition: transform .2s;
+      flex-shrink: 0
+    }
+
+    .finding-body {
+      display: none;
+      padding: 0 1.25rem 1.25rem
+    }
+
+    .finding-body.open {
+      display: block
+    }
+
+    .detail-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      margin-bottom: 1rem
+    }
+
+    @media(max-width:600px) {
+      .detail-grid {
+        grid-template-columns: 1fr
+      }
+    }
+
+    .detail-section h4 {
+      font-size: .7rem;
+      text-transform: uppercase;
+      letter-spacing: .1em;
+      color: #64748b;
+      margin-bottom: .4rem
+    }
+
+    .detail-section p,
+    .detail-section pre {
+      font-size: .85rem;
+      color: #cbd5e1
+    }
+
+    .detail-section pre {
+      background: #0f1117;
+      border: 1px solid #1e293b;
+      border-radius: .375rem;
+      padding: .75rem;
+      overflow-x: auto;
+      font-family: monospace;
+      font-size: .8rem
+    }
+
+    .refs {
+      margin-top: .75rem;
+    }
+
+    .refs a {
+      font-size: .8rem;
+      color: #60a5fa;
+      display: block;
+      margin-bottom: .25rem
+    }
+
+    .cwe-tag {
+      display: inline-block;
+      background: #1e3a2d;
+      color: #6ee7b7;
+      border-radius: .25rem;
+      padding: .1rem .45rem;
+      font-size: .7rem;
+      font-weight: 600;
+      margin-top: .25rem
+    }
+
+    /* Footer */
+    footer {
+      text-align: center;
+      padding: 2rem;
+      color: #334155;
+      font-size: .75rem;
+      border-top: 1px solid #1e293b;
+      margin-top: 2rem
+    }
+
+    .hidden {
+      display: none !important
+    }
+  </style>
+</head>
+
+<body>
+
+  <header>
+    <div>
+      <div class="logo">Nevelio <span>Security Report</span></div>
+      <div class="meta-row">Généré le {{ generated_at }} · Scan ID: {{ scan.scan_id }}</div>
+    </div>
+    <div style="text-align:right;font-size:.8rem;color:#475569">
+      <div>{{ scan.summary.total }} finding(s)</div>
+      <div>{{ scan.duration_secs | round(precision=2) }}s</div>
+    </div>
+  </header>
+
+  <main>
+
+    <!-- Scan info -->
+    <div class="scan-info">
+      <div class="info-item"><label>Cible</label>
+        <value>{{ scan.target }}</value>
+      </div>
+      <div class="info-item"><label>Profil</label>
+        <value>{{ scan.profile }}</value>
+      </div>
+      <div class="info-item"><label>Démarré</label>
+        <value>{{ scan.started_at }}</value>
+      </div>
+      <div class="info-item"><label>Durée</label>
+        <value>{{ scan.duration_secs | round(precision=2) }}s</value>
+      </div>
+    </div>
+
+    <!-- Summary cards -->
+    <div class="summary">
+      <div class="card all" onclick="setFilter('all')">
+        <div class="card-count">{{ scan.summary.total }}</div>
+        <div class="card-label">Total</div>
+      </div>
+      <div class="card critical" onclick="setFilter('critical')">
+        <div class="card-count">{{ scan.summary.critical }}</div>
+        <div class="card-label">Critical</div>
+      </div>
+      <div class="card high" onclick="setFilter('high')">
+        <div class="card-count">{{ scan.summary.high }}</div>
+        <div class="card-label">High</div>
+      </div>
+      <div class="card medium" onclick="setFilter('medium')">
+        <div class="card-count">{{ scan.summary.medium }}</div>
+        <div class="card-label">Medium</div>
+      </div>
+      <div class="card low" onclick="setFilter('low')">
+        <div class="card-count">{{ scan.summary.low }}</div>
+        <div class="card-label">Low</div>
+      </div>
+      <div class="card info" onclick="setFilter('informative')">
+        <div class="card-count">{{ scan.summary.informative }}</div>
+        <div class="card-label">Informative</div>
+      </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="filters">
+      <span class="filter-label">Filtrer :</span>
+      <button class="btn btn-all active" id="btn-all" onclick="setFilter('all')">Tous</button>
+      <button class="btn btn-critical" id="btn-critical" onclick="setFilter('critical')">Critical</button>
+      <button class="btn btn-high" id="btn-high" onclick="setFilter('high')">High</button>
+      <button class="btn btn-medium" id="btn-medium" onclick="setFilter('medium')">Medium</button>
+      <button class="btn btn-low" id="btn-low" onclick="setFilter('low')">Low</button>
+      <button class="btn btn-info" id="btn-info" onclick="setFilter('informative')">Informative</button>
+      <div class="search-box">
+        <input type="text" id="search" placeholder="Rechercher..." oninput="applyFilters()">
+      </div>
+    </div>
+
+    <!-- Findings list -->
+    <div id="findings-list">
+      {% if scan.findings %}
+      {% for f in scan.findings %}
+      <div class="finding {{ f.severity | lower }}" data-severity="{{ f.severity | lower }}"
+        data-module="{{ f.module }}" data-title="{{ f.title | lower }}" data-endpoint="{{ f.endpoint | lower }}">
+        <div class="finding-header" onclick="toggle(this)">
+          <span class="badge {{ f.severity | lower }}">{{ f.severity }}</span>
+          <span class="finding-title">{{ f.title }}</span>
+          <span class="finding-meta">
+            <span class="module-tag">{{ f.module }}</span>
+            <span class="endpoint-tag">{{ f.method }} {{ f.endpoint }}</span>
+            {% if f.cvss_score > 0.0 %}<span class="cvss-tag">CVSS {{ f.cvss_score }}</span>{% endif %}
+          </span>
+          <span class="toggle-icon">▼</span>
+        </div>
+        <div class="finding-body">
+          <div class="detail-grid">
+            <div class="detail-section">
+              <h4>Description</h4>
+              <p>{{ f.description }}</p>
+              {% if f.cwe %}<span class="cwe-tag">{{ f.cwe }}</span>{% endif %}
+            </div>
+            <div class="detail-section">
+              <h4>Recommandation</h4>
+              <p>{{ f.recommendation }}</p>
+            </div>
+          </div>
+          {% if f.proof %}
+          <div class="detail-section" style="margin-bottom:.75rem">
+            <h4>Preuve</h4>
+            <pre>{{ f.proof }}</pre>
+          </div>
+          {% endif %}
+          {% if f.references %}
+          <div class="detail-section refs">
+            <h4>Références</h4>
+            {% for ref in f.references %}
+            <a href="{{ ref }}" target="_blank" rel="noopener">{{ ref }}</a>
+            {% endfor %}
+          </div>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+      {% else %}
+      <div class="no-findings">✓ Aucun finding détecté</div>
+      {% endif %}
+    </div>
+
+  </main>
+
+  <footer>
+    Généré par <strong>Nevelio v0.1.0</strong> — Outil de Pentest API · Usage autorisé uniquement sur systèmes avec
+    autorisation explicite
+  </footer>
+
+  <script>
+    var activeFilter = 'all';
+    function toggle(header) {
+      var body = header.nextElementSibling;
+      var icon = header.querySelector('.toggle-icon');
+      if (body.classList.contains('open')) { body.classList.remove('open'); icon.style.transform = 'rotate(0deg)' }
+      else { body.classList.add('open'); icon.style.transform = 'rotate(180deg)' }
+    }
+    function setFilter(f) {
+      activeFilter = f;
+      document.querySelectorAll('.btn').forEach(function (b) { b.classList.remove('active') });
+      var btn = document.getElementById('btn-' + (f === 'all' ? 'all' : f));
+      if (btn) btn.classList.add('active');
+      applyFilters();
+    }
+    function applyFilters() {
+      var q = document.getElementById('search').value.toLowerCase();
+      document.querySelectorAll('.finding').forEach(function (el) {
+        var sev = el.dataset.severity;
+        var matchSev = (activeFilter === 'all' || sev === activeFilter);
+        var matchQ = !q || (el.dataset.title.includes(q) || el.dataset.endpoint.includes(q) || el.dataset.module.includes(q));
+        el.classList.toggle('hidden', !(matchSev && matchQ));
+      });
+    }
+  </script>
+</body>
+
+</html>
