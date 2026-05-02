@@ -49,8 +49,8 @@ pub struct ScanArgs {
     pub url: Option<String>,
 
     /// Scan profile controlling concurrency and rate limits
-    #[arg(long, value_name = "PROFILE", default_value = "normal")]
-    pub profile: ProfileArg,
+    #[arg(long, value_name = "PROFILE")]
+    pub profile: Option<ProfileArg>,
 
     /// Attack modules to run (default: all)
     #[arg(long = "module", value_name = "MODULE", num_args = 1..)]
@@ -65,8 +65,8 @@ pub struct ScanArgs {
     pub rate_limit: Option<u64>,
 
     /// Request timeout in seconds
-    #[arg(long, value_name = "SECONDS", default_value = "5")]
-    pub timeout: u64,
+    #[arg(long, value_name = "SECONDS")]
+    pub timeout: Option<u64>,
 
     /// Authentication token (e.g. "Bearer eyJ..." or "Basic dXNlcjpwYXNz")
     #[arg(long, value_name = "TOKEN")]
@@ -77,12 +77,16 @@ pub struct ScanArgs {
     pub proxy: Option<String>,
 
     /// Output format for findings
-    #[arg(long, value_name = "FORMAT", default_value = "json")]
-    pub output: OutputFormat,
+    #[arg(long, value_name = "FORMAT")]
+    pub output: Option<OutputFormat>,
 
     /// Directory to write output files
-    #[arg(long, value_name = "PATH", default_value = ".")]
-    pub out_dir: PathBuf,
+    #[arg(long, value_name = "PATH")]
+    pub out_dir: Option<PathBuf>,
+
+    /// Exit with code 1 when any finding meets or exceeds this severity
+    #[arg(long, value_name = "SEVERITY")]
+    pub fail_on: Option<FailOnArg>,
 
     /// Simulate the scan without sending real HTTP requests
     #[arg(long)]
@@ -146,6 +150,7 @@ pub enum OutputFormat {
     Html,
     Markdown,
     Junit,
+    Sarif,
 }
 
 impl From<OutputFormat> for nevelio_reporting::ReportFormat {
@@ -155,6 +160,19 @@ impl From<OutputFormat> for nevelio_reporting::ReportFormat {
             OutputFormat::Html => Self::Html,
             OutputFormat::Markdown => Self::Markdown,
             OutputFormat::Junit => Self::Junit,
+            OutputFormat::Sarif => Self::Sarif,
         }
     }
+}
+
+/// Severity threshold for CI/CD exit code 1.
+#[derive(Debug, Clone, ValueEnum)]
+#[value(rename_all = "lowercase")]
+pub enum FailOnArg {
+    /// Never exit with failure based on severity
+    None,
+    Low,
+    Medium,
+    High,
+    Critical,
 }

@@ -10,6 +10,7 @@ pub enum ReportFormat {
     Html,
     Markdown,
     Junit,
+    Sarif,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]

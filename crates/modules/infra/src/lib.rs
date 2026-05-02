@@ -628,8 +628,8 @@ async fn check_tls(client: &HttpClient, base: &str) -> Vec<Finding> {
     }
 
     // If HTTPS — check whether HTTP (non-TLS) is also accessible without a redirect
-    if base.starts_with("https://") {
-        let http_url = format!("http://{}", &base[8..]);
+    if let Some(rest) = base.strip_prefix("https://") {
+        let http_url = format!("http://{rest}");
         let req = client.inner().get(&http_url).build();
         if let Ok(req) = req {
             // Use inner client directly so we don't follow redirects automatically

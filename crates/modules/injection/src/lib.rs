@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use serde::Deserialize;
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 use nevelio_core::types::{Endpoint, Finding, ParameterLocation, Severity};
 use nevelio_core::{AttackModule, HttpClient, ScanSession};
@@ -193,6 +193,36 @@ mod tests {
         assert!(!SQL_ERRORS.is_empty());
         assert!(SQL_ERRORS.iter().any(|&e| e.contains("sql")));
     }
+
+    #[test]
+    fn inject_nosql_query_bracket_notation() {
+        let url = inject_nosql_query(
+            "https://api.example.com/users",
+            "username",
+            r#"{"$gt":""}"#,
+        );
+        // Should use bracket notation, not encode the JSON object as a string value
+        assert!(url.contains("username%5B%24gt%5D="), "expected bracket notation, got: {url}");
+        assert!(!url.contains("%7B"), "should not encode JSON object as string value: {url}");
+    }
+
+    #[test]
+    fn inject_nosql_query_fallback_scalar() {
+        // Non-object value falls back to inject_query
+        let url = inject_nosql_query("https://api.example.com/users", "q", "hello");
+        assert_eq!(url, "https://api.example.com/users?q=hello");
+    }
+
+    #[test]
+    fn inject_nosql_query_appends_to_existing_params() {
+        let url = inject_nosql_query(
+            "https://api.example.com/users?page=1",
+            "id",
+            r#"{"$ne":null}"#,
+        );
+        assert!(url.contains("page=1"), "existing params preserved: {url}");
+        assert!(url.contains("id%5B%24ne%5D="), "bracket notation appended: {url}");
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -209,6 +239,37 @@ fn inject_query(base_url: &str, param: &str, payload: &str) -> String {
         urlencoding_encode(param),
         urlencoding_encode(payload)
     )
+}
+
+/// Builds a URL with MongoDB bracket notation for NoSQL operator payloads.
+/// `{"$gt":""}` → `?param%5B%24gt%5D=` (Express/PHP bracket notation).
+/// Falls back to `inject_query` for non-object JSON values.
+fn inject_nosql_query(base_url: &str, param: &str, json_str: &str) -> String {
+    if let Ok(serde_json::Value::Object(map)) = serde_json::from_str::<serde_json::Value>(json_str) {
+        let sep = if base_url.contains('?') { '&' } else { '?' };
+        let mut url = base_url.to_string();
+        let mut first = true;
+        for (key, val) in &map {
+            let bracket_param = format!("{}[{}]", param, key);
+            let val_str = match val {
+                serde_json::Value::String(s) => s.clone(),
+                serde_json::Value::Null => String::new(),
+                other => other.to_string(),
+            };
+            if first {
+                url.push(sep);
+                first = false;
+            } else {
+                url.push('&');
+            }
+            url.push_str(&urlencoding_encode(&bracket_param));
+            url.push('=');
+            url.push_str(&urlencoding_encode(&val_str));
+        }
+        url
+    } else {
+        inject_query(base_url, param, json_str)
+    }
 }
 
 /// Minimal percent-encoding for a query component value.
@@ -252,19 +313,31 @@ async fn check_sqli(
 
     for entry in payloads {
         let url = inject_query(&ep.full_url, param, &entry.value);
-
-        let req = match client
-            .inner()
-            .request(ep.method.parse().unwrap_or(reqwest::Method::GET), &url)
-            .build()
-        {
-            Ok(r) => r,
-            Err(_) => continue,
-        };
+        let method: reqwest::Method = ep.method.parse().unwrap_or(reqwest::Method::GET);
 
         let start = Instant::now();
-        let Ok(resp) = client.send(req).await else {
-            continue;
+        let resp = if entry.kind == "time_based" {
+            // Extended timeout so the injected delay is measurable
+            let Ok(req) = client
+                .inner()
+                .request(method, &url)
+                .timeout(Duration::from_millis(TIME_THRESHOLD_MS as u64 + 3_000))
+                .build()
+            else {
+                continue;
+            };
+            match client.inner().execute(req).await {
+                Ok(r) => r,
+                Err(_) => continue,
+            }
+        } else {
+            let Ok(req) = client.inner().request(method, &url).build() else {
+                continue;
+            };
+            match client.send(req).await {
+                Ok(r) => r,
+                Err(_) => continue,
+            }
         };
         let elapsed = start.elapsed().as_millis();
 
@@ -344,9 +417,9 @@ async fn check_nosqli(
     };
 
     for entry in payloads {
-        // Send as JSON body for POST/PUT, query param otherwise
+        // Send as JSON body for POST/PUT; bracket notation for GET/DELETE
         let resp = if ep.method == "GET" || ep.method == "DELETE" {
-            let url = inject_query(&ep.full_url, param, &entry.value);
+            let url = inject_nosql_query(&ep.full_url, param, &entry.value);
             let req = match client
                 .inner()
                 .request(ep.method.parse().unwrap_or(reqwest::Method::GET), &url)
@@ -489,19 +562,31 @@ async fn check_cmdi(
     for entry in payloads {
         let url = inject_query(&ep.full_url, param, &entry.value);
         let is_time = entry.detect == "delay_gt_4000ms";
-
-        let req = match client
-            .inner()
-            .request(ep.method.parse().unwrap_or(reqwest::Method::GET), &url)
-            .build()
-        {
-            Ok(r) => r,
-            Err(_) => continue,
-        };
+        let method: reqwest::Method = ep.method.parse().unwrap_or(reqwest::Method::GET);
 
         let start = Instant::now();
-        let Ok(resp) = client.send(req).await else {
-            continue;
+        let resp = if is_time {
+            // Extended timeout so the injected sleep is measurable
+            let Ok(req) = client
+                .inner()
+                .request(method, &url)
+                .timeout(Duration::from_millis(TIME_THRESHOLD_MS as u64 + 3_000))
+                .build()
+            else {
+                continue;
+            };
+            match client.inner().execute(req).await {
+                Ok(r) => r,
+                Err(_) => continue,
+            }
+        } else {
+            let Ok(req) = client.inner().request(method, &url).build() else {
+                continue;
+            };
+            match client.send(req).await {
+                Ok(r) => r,
+                Err(_) => continue,
+            }
         };
         let elapsed = start.elapsed().as_millis();
 

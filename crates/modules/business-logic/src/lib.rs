@@ -488,10 +488,10 @@ async fn check_price_manipulation(
             {
                 // Flag if the server accepts a suspiciously low price where baseline failed
                 // OR accepts price=0/-1 with a success response
-                let suspicious = (matches!(status, 200..=299)
-                    && (value == &serde_json::json!(0) || value == &serde_json::json!(-1)))
-                    || (matches!(status, 200..=299)
-                        && !matches!(baseline_status, 200..=299));
+                let suspicious = matches!(status, 200..=299)
+                    && (!matches!(baseline_status, 200..=299)
+                        || value == &serde_json::json!(0)
+                        || value == &serde_json::json!(-1));
 
                 if suspicious {
                     let mut f = Finding::new(
