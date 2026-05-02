@@ -1233,6 +1233,9 @@ dependencies = [
  "anyhow",
  "async-trait",
  "nevelio-core",
+ "reqwest",
+ "serde",
+ "serde_json",
  "tokio",
  "tracing",
 ]
