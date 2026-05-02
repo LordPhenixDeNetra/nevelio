@@ -52,6 +52,8 @@ pub enum Commands {
     Report(ReportArgs),
     /// List or inspect available attack modules
     Modules(ModulesArgs),
+    /// Créer un fichier .nevelio.toml commenté dans le répertoire courant
+    Init,
 }
 
 #[derive(Debug, clap::Args)]

@@ -53,6 +53,7 @@ pub async fn run() -> Result<()> {
         Commands::Scan(args) => handle_scan(args, cli.verbose).await,
         Commands::Report(args) => handle_report(args).await,
         Commands::Modules(args) => handle_modules(args),
+        Commands::Init => handle_init(),
     }
 }
 
@@ -137,7 +138,7 @@ async fn handle_scan(args: crate::args::ScanArgs, verbose: bool) -> Result<()> {
     let output_format: OutputFormat = args
         .output
         .or_else(|| parse_output_format(cfg_output.as_deref()))
-        .unwrap_or(OutputFormat::Json);
+        .unwrap_or(OutputFormat::Html);
 
     let out_dir: PathBuf = args
         .out_dir
@@ -201,6 +202,17 @@ async fn handle_scan(args: crate::args::ScanArgs, verbose: bool) -> Result<()> {
         if config.dry_run {
             println!("{}", "  [mode dry-run — aucune requête réelle envoyée]".yellow());
         }
+        println!();
+    }
+
+    // Afficher les modules qui vont tourner (avant la recon)
+    if !use_tui && !config.dry_run {
+        let names: Vec<&str> = if config.modules.is_empty() {
+            vec!["auth", "injection", "access-control", "business-logic", "graphql", "infra"]
+        } else {
+            config.modules.iter().map(String::as_str).collect()
+        };
+        println!("{:<12}: {}", "Modules", names.join(", ").dimmed());
         println!();
     }
 
@@ -304,7 +316,7 @@ async fn handle_scan(args: crate::args::ScanArgs, verbose: bool) -> Result<()> {
         let bar = ProgressBar::new(endpoints.len() as u64);
         bar.set_style(
             ProgressStyle::with_template(
-                "[{bar:40.cyan/blue}] {pos}/{len} endpoints — {elapsed_precise}",
+                "[{bar:40.cyan/blue}] {pos}/{len} endpoints — {elapsed_precise} · ETA {eta}",
             )?
             .progress_chars("█▓░"),
         );
@@ -401,6 +413,66 @@ async fn handle_scan(args: crate::args::ScanArgs, verbose: bool) -> Result<()> {
 
     let exit_code = resolve_exit_code(&session.findings, args.fail_on);
     std::process::exit(exit_code);
+}
+
+// ---------------------------------------------------------------------------
+// Init command
+// ---------------------------------------------------------------------------
+
+const NEVELIO_TOML_TEMPLATE: &str = r#"# .nevelio.toml — Configuration Nevelio
+# Toutes les clés sont optionnelles. Les arguments CLI ont la priorité.
+
+# URL de base de l'API cible
+# target = "https://api.example.com"
+
+# Profil de scan : stealth | normal | aggressive
+# profile = "normal"
+
+# Format de sortie : html | json | markdown | junit | sarif
+# output = "html"
+
+# Répertoire des fichiers de sortie
+# out_dir = "./nevelio-results"
+
+# Timeout des requêtes en secondes
+# timeout = 5
+
+# Modules à activer (vide = tous)
+# modules = ["auth", "injection", "access-control", "business-logic", "graphql", "infra"]
+
+# Concurrence maximale (requêtes simultanées)
+# concurrency = 10
+
+# Limite de débit (requêtes par seconde)
+# rate_limit = 20
+
+# Token d'authentification — préférer auth_token_env pour ne pas exposer le token
+# auth_token = "Bearer eyJ..."
+
+# Variable d'environnement contenant le token (recommandé)
+# auth_token_env = "API_TOKEN"
+
+# Proxy HTTP (ex. Burp Suite)
+# proxy = "http://127.0.0.1:8080"
+"#;
+
+fn handle_init() -> Result<()> {
+    let path = std::path::Path::new(".nevelio.toml");
+    if path.exists() {
+        eprintln!(
+            "{}",
+            ".nevelio.toml existe déjà — supprimez-le d'abord si vous souhaitez le recréer."
+                .yellow()
+        );
+        std::process::exit(1);
+    }
+    std::fs::write(path, NEVELIO_TOML_TEMPLATE)
+        .context("Impossible de créer .nevelio.toml")?;
+    println!(
+        "{}",
+        "✓ .nevelio.toml créé — éditez-le puis lancez : nevelio scan".green()
+    );
+    Ok(())
 }
 
 // ---------------------------------------------------------------------------
