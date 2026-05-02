@@ -1,5 +1,7 @@
+use chrono::Utc;
 use colored::Colorize;
 use std::io::{self, Write};
+use std::path::PathBuf;
 
 const LEGAL_TEXT: &str = "
 \u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}
@@ -19,7 +21,40 @@ En continuant, vous confirmez que :
   3. Vous traiterez toutes les découvertes comme confidentielles.
 \u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}";
 
+fn marker_path() -> Option<PathBuf> {
+    std::env::var("HOME").ok().map(|h| {
+        PathBuf::from(h)
+            .join(".config")
+            .join("nevelio")
+            .join("legal_accepted")
+    })
+}
+
+fn is_already_accepted() -> bool {
+    marker_path().is_some_and(|p| p.exists())
+}
+
+fn persist_acceptance() {
+    if let Some(path) = marker_path() {
+        if let Some(parent) = path.parent() {
+            let _ = std::fs::create_dir_all(parent);
+        }
+        let _ = std::fs::write(&path, Utc::now().to_rfc3339());
+    }
+}
+
+/// Persist acceptance when `--accept-legal` is passed on the CLI.
+pub fn persist_acceptance_if_needed() {
+    if !is_already_accepted() {
+        persist_acceptance();
+    }
+}
+
 pub fn display_and_confirm() -> anyhow::Result<()> {
+    if is_already_accepted() {
+        return Ok(());
+    }
+
     println!("{}", LEGAL_TEXT.yellow());
     print!("Acceptez-vous ces conditions ? [o/N] : ");
     io::stdout().flush()?;
@@ -28,7 +63,10 @@ pub fn display_and_confirm() -> anyhow::Result<()> {
     io::stdin().read_line(&mut input)?;
 
     match input.trim().to_lowercase().as_str() {
-        "o" | "oui" | "y" | "yes" => Ok(()),
+        "o" | "oui" | "y" | "yes" => {
+            persist_acceptance();
+            Ok(())
+        }
         _ => {
             eprintln!("{}", "Scan annulé. Avertissement légal non accepté.".red());
             std::process::exit(1);

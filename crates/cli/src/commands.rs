@@ -45,6 +45,7 @@ pub async fn run() -> Result<()> {
     if !cli.accept_legal {
         legal::display_and_confirm()?;
     } else {
+        legal::persist_acceptance_if_needed();
         legal::display_banner();
     }
 
@@ -181,13 +182,22 @@ async fn handle_scan(args: crate::args::ScanArgs, verbose: bool) -> Result<()> {
     let use_tui = !args.no_tui && !args.dry_run && std::io::stdout().is_terminal();
     let ai_suggestions = args.ai_suggestions;
 
+    // Avertissement précoce si --ai-suggestions demandé sans clé API
+    if ai_suggestions && std::env::var("ANTHROPIC_API_KEY").is_err() {
+        eprintln!(
+            "{}",
+            "⚠  --ai-suggestions ignoré : ANTHROPIC_API_KEY non défini".yellow()
+        );
+    }
+
     // Print startup info only in plain mode (TUI replaces this display)
     if !use_tui {
-        println!("{:<12}: {}", "Cible", target.cyan().bold());
+        println!("{:<12}: {}", "Cible",  target.cyan().bold());
         if let Some(ref spec) = args.spec {
             println!("{:<12}: {}", "Spec", spec);
         }
         println!("{:<12}: {:?}", "Profil", config.profile);
+        println!("{:<12}: {}", "Sortie", out_dir.display().to_string().dimmed());
         if config.dry_run {
             println!("{}", "  [mode dry-run — aucune requête réelle envoyée]".yellow());
         }

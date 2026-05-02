@@ -6,6 +6,25 @@ use std::path::PathBuf;
     name = "nevelio",
     version = env!("CARGO_PKG_VERSION"),
     about = "Nevelio — API Penetration Testing Tool",
+    after_help = "\
+EXEMPLES :
+  Scanner avec un spec OpenAPI :
+    nevelio scan --target https://api.example.com --spec openapi.yaml
+
+  Scanner sans spec (découverte automatique) :
+    nevelio scan --target https://api.example.com
+
+  Scanner et générer un rapport HTML :
+    nevelio scan --target https://api.example.com --output html --out-dir ./results
+
+  Générer des suggestions IA après un scan :
+    ANTHROPIC_API_KEY=sk-... nevelio scan --target https://api.example.com --ai-suggestions
+
+  Convertir un JSON existant en rapport HTML :
+    nevelio report --input findings.json --format html
+
+  Lister les modules disponibles :
+    nevelio modules list"
 )]
 pub struct Cli {
     #[command(subcommand)]
@@ -28,13 +47,17 @@ pub struct Cli {
 pub enum Commands {
     /// Scan an API for vulnerabilities
     Scan(ScanArgs),
-    /// Generate a report from a previous scan's JSON results
+    /// Générer un rapport depuis les résultats JSON d'un scan précédent
+    #[command(alias = "convert")]
     Report(ReportArgs),
     /// List or inspect available attack modules
     Modules(ModulesArgs),
 }
 
 #[derive(Debug, clap::Args)]
+#[command(after_help = "\
+VARIABLES D'ENVIRONNEMENT :
+  ANTHROPIC_API_KEY    Clé API Claude (requis pour --ai-suggestions)")]
 pub struct ScanArgs {
     /// Path or URL to an OpenAPI/Swagger spec (JSON or YAML)
     #[arg(long, value_name = "SPEC")]
