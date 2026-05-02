@@ -38,6 +38,10 @@ pub async fn run() -> Result<()> {
     };
     fmt().with_env_filter(filter).without_time().init();
 
+    if cli.no_color {
+        colored::control::set_override(false);
+    }
+
     if !cli.accept_legal {
         legal::display_and_confirm()?;
     } else {
@@ -116,6 +120,13 @@ async fn handle_scan(args: crate::args::ScanArgs, verbose: bool) -> Result<()> {
         .or(cfg_target)
         .context("--target / --url requis (ou défini dans .nevelio.toml)")?;
 
+    if !target.starts_with("http://") && !target.starts_with("https://") {
+        anyhow::bail!(
+            "Cible invalide : l'URL doit commencer par http:// ou https:// (reçu : {})",
+            target
+        );
+    }
+
     let profile: ScanProfile = args
         .profile
         .map(ScanProfile::from)
@@ -166,7 +177,8 @@ async fn handle_scan(args: crate::args::ScanArgs, verbose: bool) -> Result<()> {
         dry_run: args.dry_run,
     };
 
-    let use_tui = !args.no_tui && !args.dry_run;
+    use std::io::IsTerminal;
+    let use_tui = !args.no_tui && !args.dry_run && std::io::stdout().is_terminal();
     let ai_suggestions = args.ai_suggestions;
 
     // Print startup info only in plain mode (TUI replaces this display)

@@ -16,6 +16,17 @@ const ALL_METHODS: &[&str] = &["GET", "POST", "PUT", "PATCH", "DELETE"];
 // UUID nil value
 const NIL_UUID: &str = "00000000-0000-0000-0000-000000000000";
 
+// Body keywords that indicate a real error despite HTTP 2xx (BFLA false-positive filter)
+const BFLA_ERROR_INDICATORS: &[&str] = &[
+    "not allowed",
+    "not implemented",
+    "not supported",
+    "method not permitted",
+    "invalid method",
+    "method not found",
+    "405",
+];
+
 // ---------------------------------------------------------------------------
 // Payload structs
 // ---------------------------------------------------------------------------
@@ -151,6 +162,26 @@ mod tests {
     #[test]
     fn extract_uuid_returns_none_without_uuid() {
         assert!(extract_uuid("https://api.example.com/users/123").is_none());
+    }
+
+    #[test]
+    fn bfla_error_indicator_detects_false_positive() {
+        let body = b"HTTP 200 OK: method not allowed for this endpoint";
+        let body_lower = String::from_utf8_lossy(body).to_lowercase();
+        let is_real_error = BFLA_ERROR_INDICATORS
+            .iter()
+            .any(|kw| body_lower.contains(kw));
+        assert!(is_real_error, "should detect 'not allowed' as error indicator");
+    }
+
+    #[test]
+    fn bfla_error_indicator_passes_real_success() {
+        let body = b"{\"id\":1,\"name\":\"resource\",\"status\":\"active\"}";
+        let body_lower = String::from_utf8_lossy(body).to_lowercase();
+        let is_real_error = BFLA_ERROR_INDICATORS
+            .iter()
+            .any(|kw| body_lower.contains(kw));
+        assert!(!is_real_error, "clean JSON body should not be flagged");
     }
 }
 
@@ -408,11 +439,19 @@ async fn check_bfla(
             continue; // skip the documented method
         }
 
-        let Some((status, _)) = get_with_token(client, &ep.full_url, method, token).await else {
+        let Some((status, body)) = get_with_token(client, &ep.full_url, method, token).await else {
             continue;
         };
 
         if matches!(status, 200..=299) {
+            let body_lower = String::from_utf8_lossy(&body).to_lowercase();
+            let is_real_error = BFLA_ERROR_INDICATORS
+                .iter()
+                .any(|kw| body_lower.contains(kw));
+            if is_real_error {
+                continue;
+            }
+
             let mut f = Finding::new(
                 format!("BFLA — méthode {} non documentée acceptée", method),
                 Severity::High,

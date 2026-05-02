@@ -111,6 +111,56 @@ pub async fn discover_endpoints(
     Ok(found)
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn wordlist_is_not_empty() {
+        assert!(!WORDLIST.is_empty());
+    }
+
+    #[test]
+    fn wordlist_entries_have_leading_slash() {
+        for (path, _method) in WORDLIST {
+            assert!(
+                path.starts_with('/'),
+                "Wordlist path must start with '/': {}",
+                path
+            );
+        }
+    }
+
+    #[test]
+    fn wordlist_methods_are_valid() {
+        const VALID: &[&str] = &["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"];
+        for (path, method) in WORDLIST {
+            assert!(
+                VALID.contains(method),
+                "Invalid HTTP method '{}' for path '{}'",
+                method,
+                path
+            );
+        }
+    }
+
+    #[test]
+    fn probe_url_is_built_correctly() {
+        let base = "https://api.example.com";
+        let path = "/health";
+        let url = format!("{}{}", base.trim_end_matches('/'), path);
+        assert_eq!(url, "https://api.example.com/health");
+    }
+
+    #[test]
+    fn base_url_trailing_slash_is_trimmed() {
+        let base = "https://api.example.com/";
+        let path = "/health";
+        let url = format!("{}{}", base.trim_end_matches('/'), path);
+        assert_eq!(url, "https://api.example.com/health");
+    }
+}
+
 async fn probe_path(
     client: reqwest::Client,
     url: String,
