@@ -30,6 +30,8 @@ pub struct Finding {
     pub title: String,
     pub severity: Severity,
     pub cvss_score: f64,
+    /// CVSS v3.1 vector string, e.g. "AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+    pub cvss_vector: Option<String>,
     pub module: String,
     pub endpoint: String,
     pub method: String,
@@ -55,6 +57,7 @@ impl Finding {
             title: title.into(),
             severity,
             cvss_score,
+            cvss_vector: None,
             module: module.into(),
             endpoint: endpoint.into(),
             method: method.into(),

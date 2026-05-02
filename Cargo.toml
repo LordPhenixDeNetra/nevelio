@@ -6,6 +6,7 @@ members = [
     "crates/modules/injection",
     "crates/modules/access-control",
     "crates/modules/business-logic",
+    "crates/modules/graphql",
     "crates/modules/infra",
     "crates/recon",
     "crates/reporting",
@@ -39,3 +40,5 @@ chrono             = { version = "0.4", features = ["serde"] }
 async-trait        = "0.1"
 base64             = "0.22"
 toml               = "0.8"
+ratatui            = "0.29"
+crossterm          = { version = "0.28", features = ["event-stream"] }

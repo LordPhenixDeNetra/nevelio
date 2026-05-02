@@ -1,11 +1,48 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="fr" data-theme="dark">
 
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Nevelio — Rapport de Sécurité API</title>
   <style>
+    :root {
+      --c-bg: #0f1117;
+      --c-elevated: #1a1f2e;
+      --c-surface: #1e293b;
+      --c-border: #334155;
+      --c-border-strong: #475569;
+      --c-text: #e2e8f0;
+      --c-text-body: #cbd5e1;
+      --c-text-secondary: #94a3b8;
+      --c-text-muted: #64748b;
+      --c-text-dim: #475569;
+      --c-link: #60a5fa;
+      --c-pre: #0f1117;
+      --c-input-bg: #1e293b;
+      --c-shadow: rgba(0, 0, 0, .3);
+      --c-toggle-bg: #334155;
+      --c-toggle-text: #e2e8f0;
+    }
+    [data-theme="light"] {
+      --c-bg: #f8fafc;
+      --c-elevated: #f1f5f9;
+      --c-surface: #ffffff;
+      --c-border: #e2e8f0;
+      --c-border-strong: #cbd5e1;
+      --c-text: #1e293b;
+      --c-text-body: #334155;
+      --c-text-secondary: #475569;
+      --c-text-muted: #64748b;
+      --c-text-dim: #94a3b8;
+      --c-link: #2563eb;
+      --c-pre: #f1f5f9;
+      --c-input-bg: #f8fafc;
+      --c-shadow: rgba(0, 0, 0, .1);
+      --c-toggle-bg: #e2e8f0;
+      --c-toggle-text: #1e293b;
+    }
+
     * {
       box-sizing: border-box;
       margin: 0;
@@ -14,18 +51,19 @@
 
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background: #0f1117;
-      color: #e2e8f0;
-      line-height: 1.5
+      background: var(--c-bg);
+      color: var(--c-text);
+      line-height: 1.5;
+      transition: background .2s, color .2s
     }
 
     a {
-      color: #60a5fa
+      color: var(--c-link)
     }
 
     header {
-      background: linear-gradient(135deg, #1a1f2e, #0f1117);
-      border-bottom: 1px solid #1e293b;
+      background: linear-gradient(135deg, var(--c-elevated), var(--c-bg));
+      border-bottom: 1px solid var(--c-surface);
       padding: 1.5rem 2rem;
       display: flex;
       align-items: center;
@@ -35,20 +73,38 @@
     .logo {
       font-size: 1.4rem;
       font-weight: 700;
-      color: #60a5fa;
+      color: var(--c-link);
       letter-spacing: -.5px
     }
 
     .logo span {
-      color: #94a3b8;
+      color: var(--c-text-secondary);
       font-weight: 400;
       font-size: 0.9rem
     }
 
     .meta-row {
       font-size: .8rem;
-      color: #64748b;
+      color: var(--c-text-muted);
       margin-top: .25rem
+    }
+
+    .theme-toggle {
+      background: var(--c-toggle-bg);
+      color: var(--c-toggle-text);
+      border: none;
+      border-radius: 2rem;
+      padding: .35rem .8rem;
+      font-size: .75rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: .35rem;
+      transition: background .15s, color .15s;
+      white-space: nowrap
+    }
+    .theme-toggle:hover {
+      opacity: .85
     }
 
     main {
@@ -66,12 +122,12 @@
     }
 
     .card {
-      background: #1e293b;
+      background: var(--c-surface);
       border-radius: .75rem;
       padding: 1.25rem;
       text-align: center;
       border-top: 3px solid transparent;
-      transition: transform .15s
+      transition: transform .15s, background .2s
     }
 
     .card:hover {
@@ -136,13 +192,13 @@
       font-size: .7rem;
       text-transform: uppercase;
       letter-spacing: .1em;
-      color: #64748b;
+      color: var(--c-text-muted);
       margin-top: .25rem
     }
 
     /* Scan info */
     .scan-info {
-      background: #1e293b;
+      background: var(--c-surface);
       border-radius: .75rem;
       padding: 1.25rem 1.5rem;
       margin-bottom: 1.5rem;
@@ -155,13 +211,13 @@
       font-size: .7rem;
       text-transform: uppercase;
       letter-spacing: .1em;
-      color: #64748b;
+      color: var(--c-text-muted);
       display: block
     }
 
     .info-item value {
       font-size: .9rem;
-      color: #e2e8f0
+      color: var(--c-text)
     }
 
     /* Filters */
@@ -175,7 +231,7 @@
 
     .filter-label {
       font-size: .75rem;
-      color: #64748b;
+      color: var(--c-text-muted);
       margin-right: .25rem
     }
 
@@ -190,14 +246,14 @@
     }
 
     .btn-all {
-      background: #334155;
-      color: #e2e8f0
+      background: var(--c-border);
+      color: var(--c-text)
     }
 
     .btn-all.active,
     .btn-all:hover {
-      background: #60a5fa;
-      color: #0f1117
+      background: var(--c-link);
+      color: var(--c-bg)
     }
 
     .btn-critical {
@@ -230,7 +286,7 @@
     .btn-medium.active,
     .btn-medium:hover {
       background: #eab308;
-      color: #0f1117
+      color: var(--c-bg)
     }
 
     .btn-low {
@@ -260,39 +316,39 @@
     }
 
     .search-box input {
-      background: #1e293b;
-      border: 1px solid #334155;
+      background: var(--c-input-bg);
+      border: 1px solid var(--c-border);
       border-radius: .375rem;
       padding: .375rem .75rem;
-      color: #e2e8f0;
+      color: var(--c-text);
       font-size: .8rem;
       width: 220px;
       outline: none
     }
 
     .search-box input:focus {
-      border-color: #60a5fa
+      border-color: var(--c-link)
     }
 
     /* Findings */
     .no-findings {
       text-align: center;
       padding: 3rem;
-      color: #64748b;
+      color: var(--c-text-muted);
       font-size: 1.1rem
     }
 
     .finding {
-      background: #1e293b;
+      background: var(--c-surface);
       border-radius: .75rem;
       margin-bottom: .75rem;
       border-left: 4px solid transparent;
       overflow: hidden;
-      transition: box-shadow .15s
+      transition: box-shadow .15s, background .2s
     }
 
     .finding:hover {
-      box-shadow: 0 4px 20px rgba(0, 0, 0, .3)
+      box-shadow: 0 4px 20px var(--c-shadow)
     }
 
     .finding.critical {
@@ -363,7 +419,7 @@
     .finding-title {
       font-size: .95rem;
       font-weight: 600;
-      color: #e2e8f0;
+      color: var(--c-text);
       flex: 1
     }
 
@@ -375,8 +431,8 @@
     }
 
     .module-tag {
-      background: #0f1117;
-      border: 1px solid #334155;
+      background: var(--c-bg);
+      border: 1px solid var(--c-border);
       border-radius: .25rem;
       padding: .1rem .45rem;
       font-size: .65rem;
@@ -392,11 +448,18 @@
     .cvss-tag {
       font-size: .7rem;
       font-weight: 600;
-      color: #94a3b8
+      color: var(--c-text-secondary)
+    }
+
+    .cvss-vector {
+      font-size: .65rem;
+      font-family: monospace;
+      color: var(--c-text-muted);
+      margin-left: .25rem
     }
 
     .toggle-icon {
-      color: #64748b;
+      color: var(--c-text-muted);
       font-size: .9rem;
       transition: transform .2s;
       flex-shrink: 0
@@ -428,19 +491,19 @@
       font-size: .7rem;
       text-transform: uppercase;
       letter-spacing: .1em;
-      color: #64748b;
+      color: var(--c-text-muted);
       margin-bottom: .4rem
     }
 
     .detail-section p,
     .detail-section pre {
       font-size: .85rem;
-      color: #cbd5e1
+      color: var(--c-text-body)
     }
 
     .detail-section pre {
-      background: #0f1117;
-      border: 1px solid #1e293b;
+      background: var(--c-pre);
+      border: 1px solid var(--c-surface);
       border-radius: .375rem;
       padding: .75rem;
       overflow-x: auto;
@@ -474,9 +537,9 @@
     footer {
       text-align: center;
       padding: 2rem;
-      color: #334155;
+      color: var(--c-border-strong);
       font-size: .75rem;
-      border-top: 1px solid #1e293b;
+      border-top: 1px solid var(--c-surface);
       margin-top: 2rem
     }
 
@@ -493,9 +556,12 @@
       <div class="logo">Nevelio <span>Security Report</span></div>
       <div class="meta-row">Généré le {{ generated_at }} · Scan ID: {{ scan.scan_id }}</div>
     </div>
-    <div style="text-align:right;font-size:.8rem;color:#475569">
-      <div>{{ scan.summary.total }} finding(s)</div>
-      <div>{{ scan.duration_secs | round(precision=2) }}s</div>
+    <div style="display:flex;align-items:center;gap:1rem">
+      <div style="text-align:right;font-size:.8rem;color:var(--c-text-dim)">
+        <div>{{ scan.summary.total }} finding(s)</div>
+        <div>{{ scan.duration_secs | round(precision=2) }}s</div>
+      </div>
+      <button class="theme-toggle" onclick="toggleTheme()" id="theme-btn" title="Basculer le thème">☀ Light</button>
     </div>
   </header>
 
@@ -571,7 +637,7 @@
           <span class="finding-meta">
             <span class="module-tag">{{ f.module }}</span>
             <span class="endpoint-tag">{{ f.method }} {{ f.endpoint }}</span>
-            {% if f.cvss_score > 0.0 %}<span class="cvss-tag">CVSS {{ f.cvss_score }}</span>{% endif %}
+            {% if f.cvss_score > 0.0 %}<span class="cvss-tag">CVSS {{ f.cvss_score }}{% if f.cvss_vector %}<span class="cvss-vector">{{ f.cvss_vector }}</span>{% endif %}</span>{% endif %}
           </span>
           <span class="toggle-icon">▼</span>
         </div>
@@ -617,6 +683,25 @@
   </footer>
 
   <script>
+    // ---------- Theme toggle ----------
+    (function () {
+      var saved = localStorage.getItem('nevelio-theme') || 'dark';
+      document.documentElement.setAttribute('data-theme', saved);
+      document.addEventListener('DOMContentLoaded', function () { updateBtn(saved); });
+    })();
+    function toggleTheme() {
+      var cur = document.documentElement.getAttribute('data-theme');
+      var next = cur === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', next);
+      localStorage.setItem('nevelio-theme', next);
+      updateBtn(next);
+    }
+    function updateBtn(theme) {
+      var btn = document.getElementById('theme-btn');
+      if (btn) btn.textContent = theme === 'dark' ? '☀ Light' : '🌙 Dark';
+    }
+
+    // ---------- Findings ----------
     var activeFilter = 'all';
     function toggle(header) {
       var body = header.nextElementSibling;

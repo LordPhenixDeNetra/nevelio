@@ -36,8 +36,21 @@ pub fn display_and_confirm() -> anyhow::Result<()> {
     }
 }
 
+const ASCII_ART: &str = r#"
+  _   _                _ _
+ | \ | | _____   _____| (_) ___
+ |  \| |/ _ \ \ / / _ \ | |/ _ \
+ | |\  |  __/\ V /  __/ | | (_) |
+ |_| \_|\___| \_/ \___|_|_|\___/
+"#;
+
 pub fn display_banner() {
-    println!("{}", "Nevelio v0.1.0 — Outil de Pentest d'API".bold().cyan());
-    println!("{}", "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━".cyan());
+    println!("{}", ASCII_ART.cyan().bold());
+    println!(
+        "  {}  {}",
+        format!("v{}", env!("CARGO_PKG_VERSION")).bold().white(),
+        "API Security Scanner — Usage autorisé uniquement".dimmed()
+    );
+    println!("{}", "  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━".cyan());
     println!();
 }

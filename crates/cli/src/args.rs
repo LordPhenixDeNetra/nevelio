@@ -88,9 +88,21 @@ pub struct ScanArgs {
     #[arg(long, value_name = "SEVERITY")]
     pub fail_on: Option<FailOnArg>,
 
+    /// Resume a previous scan: load findings + skip completed modules from <out-dir>
+    #[arg(long)]
+    pub resume: bool,
+
     /// Simulate the scan without sending real HTTP requests
     #[arg(long)]
     pub dry_run: bool,
+
+    /// Disable the ratatui TUI dashboard (use plain stdout)
+    #[arg(long)]
+    pub no_tui: bool,
+
+    /// Generate AI-powered remediation suggestions via Claude API (requires ANTHROPIC_API_KEY)
+    #[arg(long)]
+    pub ai_suggestions: bool,
 }
 
 #[derive(Debug, clap::Args)]

@@ -15,6 +15,7 @@ nevelio-module-auth           = { path = "../modules/auth" }
 nevelio-module-injection      = { path = "../modules/injection" }
 nevelio-module-access-control = { path = "../modules/access-control" }
 nevelio-module-business-logic = { path = "../modules/business-logic" }
+nevelio-module-graphql        = { path = "../modules/graphql" }
 nevelio-module-infra          = { path = "../modules/infra" }
 
 clap.workspace               = true
@@ -28,3 +29,6 @@ colored.workspace            = true
 indicatif.workspace          = true
 chrono.workspace             = true
 toml.workspace               = true
+ratatui.workspace            = true
+crossterm.workspace          = true
+reqwest.workspace            = true

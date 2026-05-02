@@ -2,7 +2,9 @@ use anyhow::{Context, Result};
 use clap::Parser;
 use colored::Colorize;
 use indicatif::{ProgressBar, ProgressStyle};
+use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
+use std::sync::mpsc as std_mpsc;
 use std::time::Duration;
 use tracing_subscriber::{fmt, EnvFilter};
 
@@ -11,6 +13,7 @@ use nevelio_core::{AttackModule, HttpClient, ScanSession};
 use nevelio_module_access_control::AccessControlModule;
 use nevelio_module_auth::AuthModule;
 use nevelio_module_business_logic::BusinessLogicModule;
+use nevelio_module_graphql::GraphqlModule;
 use nevelio_module_infra::InfraModule;
 use nevelio_module_injection::InjectionModule;
 use nevelio_reporting::{
@@ -18,10 +21,12 @@ use nevelio_reporting::{
     ScanReport,
 };
 
+use crate::ai_suggestions;
 use crate::args::{Cli, Commands, FailOnArg, ModulesAction, OutputFormat};
 use crate::config::NevelioConfig;
 use crate::legal;
 use crate::output;
+use crate::tui::{self, ScanEvent};
 
 pub async fn run() -> Result<()> {
     let cli = Cli::parse();
@@ -161,15 +166,21 @@ async fn handle_scan(args: crate::args::ScanArgs, verbose: bool) -> Result<()> {
         dry_run: args.dry_run,
     };
 
-    println!("{:<12}: {}", "Cible", target.cyan().bold());
-    if let Some(ref spec) = args.spec {
-        println!("{:<12}: {}", "Spec", spec);
+    let use_tui = !args.no_tui && !args.dry_run;
+    let ai_suggestions = args.ai_suggestions;
+
+    // Print startup info only in plain mode (TUI replaces this display)
+    if !use_tui {
+        println!("{:<12}: {}", "Cible", target.cyan().bold());
+        if let Some(ref spec) = args.spec {
+            println!("{:<12}: {}", "Spec", spec);
+        }
+        println!("{:<12}: {:?}", "Profil", config.profile);
+        if config.dry_run {
+            println!("{}", "  [mode dry-run — aucune requête réelle envoyée]".yellow());
+        }
+        println!();
     }
-    println!("{:<12}: {:?}", "Profil", config.profile);
-    if config.dry_run {
-        println!("{}", "  [mode dry-run — aucune requête réelle envoyée]".yellow());
-    }
-    println!();
 
     let http_client = HttpClient::new(&config).context("Impossible de créer le client HTTP")?;
     let raw_client = http_client.inner().clone();
@@ -195,72 +206,158 @@ async fn handle_scan(args: crate::args::ScanArgs, verbose: bool) -> Result<()> {
         }]
     };
 
-    println!("{} endpoint(s) découvert(s)", endpoints.len());
+    if !use_tui {
+        println!("{} endpoint(s) découvert(s)", endpoints.len());
+    }
 
     let mut session = ScanSession::new(config);
-
-    let pb = ProgressBar::new(endpoints.len() as u64);
-    pb.set_style(
-        ProgressStyle::with_template(
-            "[{bar:40.cyan/blue}] {pos}/{len} endpoints — {elapsed_precise}",
-        )?
-        .progress_chars("█▓░"),
-    );
 
     let all_modules: Vec<Box<dyn AttackModule>> = vec![
         Box::new(AuthModule),
         Box::new(InjectionModule),
         Box::new(AccessControlModule),
         Box::new(BusinessLogicModule),
+        Box::new(GraphqlModule),
         Box::new(InfraModule),
     ];
 
-    let active_modules: Vec<&Box<dyn AttackModule>> = if session.config.modules.is_empty() {
-        all_modules.iter().collect()
+    let module_names: Vec<String> = all_modules.iter().map(|m| m.name().to_string()).collect();
+
+    // Resume: load previous findings and completed modules from <out_dir>
+    let mut completed_modules: Vec<String> = Vec::new();
+    if args.resume {
+        if let Some(prev) = load_progress(&out_dir) {
+            if !use_tui {
+                println!(
+                    "{}",
+                    format!(
+                        "↩ Reprise du scan — {} module(s) déjà complété(s) : {}",
+                        prev.completed_modules.len(),
+                        prev.completed_modules.join(", ")
+                    )
+                    .yellow()
+                );
+            }
+            completed_modules = prev.completed_modules.clone();
+            if let Ok(prev_report) = load_findings_json(&out_dir) {
+                for f in prev_report.findings {
+                    session.add_finding(f);
+                }
+            }
+        } else if !use_tui {
+            println!("{}", "Aucun fichier de progression trouvé — démarrage d'un nouveau scan".yellow());
+        }
+    }
+
+    let active_modules: Vec<&Box<dyn AttackModule>> = all_modules
+        .iter()
+        .filter(|m| {
+            let in_scope = session.config.modules.is_empty()
+                || session.config.modules.iter().any(|n| n == m.name());
+            let already_done = completed_modules.iter().any(|c| c == m.name());
+            in_scope && !already_done
+        })
+        .collect();
+
+    // --- TUI setup ---
+    let tui_tx: Option<std_mpsc::Sender<ScanEvent>> = if use_tui {
+        let (tx, rx) = std_mpsc::channel();
+        let names = module_names.clone();
+        std::thread::spawn(move || {
+            if let Err(e) = tui::run_tui_blocking(rx, names) {
+                eprintln!("TUI erreur: {}", e);
+            }
+        });
+        let _ = tx.send(ScanEvent::EndpointScanned {
+            total: endpoints.len(),
+            done: 0,
+        });
+        Some(tx)
     } else {
-        all_modules
-            .iter()
-            .filter(|m| session.config.modules.iter().any(|n| n == m.name()))
-            .collect()
+        None
+    };
+
+    // --- Plain mode progress bar ---
+    let pb = if !use_tui {
+        let bar = ProgressBar::new(endpoints.len() as u64);
+        bar.set_style(
+            ProgressStyle::with_template(
+                "[{bar:40.cyan/blue}] {pos}/{len} endpoints — {elapsed_precise}",
+            )?
+            .progress_chars("█▓░"),
+        );
+        Some(bar)
+    } else {
+        None
     };
 
     if !session.config.dry_run {
         for module in &active_modules {
             tracing::info!("Running module: {}", module.name());
+            if let Some(ref tx) = tui_tx {
+                let _ = tx.send(ScanEvent::ModuleStarted { name: module.name().to_string() });
+            }
             let findings = module.run(&session, &http_client, &endpoints).await;
             for f in findings {
-                output::print_finding(&f);
+                if let Some(ref tx) = tui_tx {
+                    let _ = tx.send(ScanEvent::FindingFound(Box::new(f.clone())));
+                } else {
+                    output::print_finding(&f);
+                }
                 session.add_finding(f);
             }
+            completed_modules.push(module.name().to_string());
+            if let Some(ref tx) = tui_tx {
+                let _ = tx.send(ScanEvent::ModuleFinished { name: module.name().to_string() });
+            }
+            save_progress(&out_dir, &completed_modules, &session.config.target);
+            let checkpoint = JsonReporter::generate(&session);
+            let _ = JsonReporter::write_to_file(&checkpoint, &out_dir.join("findings.json"));
         }
     }
 
-    for _ in &endpoints {
-        pb.inc(1);
+    for (i, _) in endpoints.iter().enumerate() {
+        if let Some(ref tx) = tui_tx {
+            let _ = tx.send(ScanEvent::EndpointScanned {
+                total: endpoints.len(),
+                done: i + 1,
+            });
+        }
+        if let Some(ref bar) = pb {
+            bar.inc(1);
+        }
         if session.config.dry_run {
             tokio::time::sleep(Duration::from_millis(10)).await;
         }
     }
-    pb.finish_with_message("Scan terminé");
+
+    if let Some(ref tx) = tui_tx {
+        let _ = tx.send(ScanEvent::ScanComplete);
+    }
+    if let Some(bar) = pb {
+        bar.finish_with_message("Scan terminé");
+    }
 
     session.finish();
 
     let report = JsonReporter::generate(&session);
     let out_dir = session.config.out_dir.clone();
 
-    // Always write JSON (canonical result)
     let json_path = out_dir.join("findings.json");
     JsonReporter::write_to_file(&report, &json_path)
         .context("Échec de l'écriture de findings.json")?;
 
     let report_format: ReportFormat = output_format.into();
-
-    // Also write in the requested format if different from JSON
     let report_path = if matches!(report_format, ReportFormat::Json) {
         json_path
     } else {
         write_report(&report, &report_format, &out_dir)?
     };
+
+    // Wait a moment for TUI thread to receive ScanComplete before we print to stdout
+    if use_tui {
+        tokio::time::sleep(Duration::from_millis(200)).await;
+    }
 
     println!();
     output::print_summary(&session.findings);
@@ -269,6 +366,16 @@ async fn handle_scan(args: crate::args::ScanArgs, verbose: bool) -> Result<()> {
         "Rapport",
         report_path.display().to_string().cyan()
     );
+
+    // --- AI suggestions ---
+    if ai_suggestions {
+        println!();
+        println!("{}", "Génération des suggestions IA...".cyan());
+        match ai_suggestions::generate_and_save(&session.findings, &out_dir).await {
+            Ok(()) => {}
+            Err(e) => eprintln!("{}", format!("Suggestions IA : {}", e).yellow()),
+        }
+    }
 
     let exit_code = resolve_exit_code(&session.findings, args.fail_on);
     std::process::exit(exit_code);
@@ -316,6 +423,7 @@ fn handle_modules(args: crate::args::ModulesArgs) -> Result<()> {
         Box::new(InjectionModule),
         Box::new(AccessControlModule),
         Box::new(BusinessLogicModule),
+        Box::new(GraphqlModule),
         Box::new(InfraModule),
     ];
 
@@ -388,6 +496,38 @@ fn resolve_exit_code(findings: &[Finding], fail_on: Option<FailOnArg>) -> i32 {
 // ---------------------------------------------------------------------------
 // Config file merge helpers
 // ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// Resume / progress helpers
+// ---------------------------------------------------------------------------
+
+#[derive(Serialize, Deserialize)]
+struct ScanProgress {
+    target: String,
+    completed_modules: Vec<String>,
+}
+
+fn save_progress(out_dir: &Path, completed: &[String], target: &str) {
+    let progress = ScanProgress {
+        target: target.to_string(),
+        completed_modules: completed.to_vec(),
+    };
+    if let Ok(json) = serde_json::to_string_pretty(&progress) {
+        let _ = std::fs::write(out_dir.join("scan_progress.json"), json);
+    }
+}
+
+fn load_progress(out_dir: &Path) -> Option<ScanProgress> {
+    let path = out_dir.join("scan_progress.json");
+    let content = std::fs::read_to_string(path).ok()?;
+    serde_json::from_str(&content).ok()
+}
+
+fn load_findings_json(out_dir: &Path) -> Result<ScanReport> {
+    let path = out_dir.join("findings.json");
+    let content = std::fs::read_to_string(path).context("findings.json introuvable")?;
+    serde_json::from_str(&content).context("findings.json invalide")
+}
 
 fn parse_profile(s: Option<&str>) -> Option<ScanProfile> {
     match s? {
