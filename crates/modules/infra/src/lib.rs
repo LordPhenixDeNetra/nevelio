@@ -351,6 +351,74 @@ fn extract_max_age(hsts: &str) -> Option<u64> {
         .and_then(|s| s["max-age=".len()..].parse().ok())
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn extract_max_age_standard() {
+        assert_eq!(
+            extract_max_age("max-age=31536000; includeSubDomains"),
+            Some(31_536_000)
+        );
+    }
+
+    #[test]
+    fn extract_max_age_only() {
+        assert_eq!(extract_max_age("max-age=0"), Some(0));
+    }
+
+    #[test]
+    fn extract_max_age_case_insensitive() {
+        assert_eq!(extract_max_age("Max-Age=86400"), Some(86_400));
+    }
+
+    #[test]
+    fn extract_max_age_missing() {
+        assert_eq!(extract_max_age("includeSubDomains; preload"), None);
+        assert_eq!(extract_max_age(""), None);
+    }
+
+    #[test]
+    fn secret_patterns_non_empty() {
+        assert!(!SECRET_PATTERNS.is_empty());
+        assert!(SECRET_PATTERNS.iter().any(|(p, _, _)| *p == "api_key"));
+    }
+
+    #[test]
+    fn stack_trace_patterns_non_empty() {
+        assert!(!STACK_TRACE_PATTERNS.is_empty());
+        assert!(STACK_TRACE_PATTERNS.iter().any(|&p| p.contains("traceback")));
+    }
+
+    #[test]
+    fn check_secrets_detects_api_key() {
+        let body = r#"{"api_key": "sk-prod-abc123", "data": []}"#;
+        let findings = check_secrets_in_response("https://x.com/api", body);
+        assert!(!findings.is_empty(), "should detect api_key");
+        assert!(findings[0].title.contains("API Key"));
+    }
+
+    #[test]
+    fn check_secrets_clean_response() {
+        let body = r#"{"user": "alice", "email": "alice@example.com"}"#;
+        let findings = check_secrets_in_response("https://x.com/api", body);
+        assert!(findings.is_empty());
+    }
+
+    #[test]
+    fn check_stack_traces_detects_php_error() {
+        let body = "PHP Fatal error: Uncaught exception in /var/www/html/app.php on line 42";
+        assert!(check_stack_traces("https://x.com/page", body).is_some());
+    }
+
+    #[test]
+    fn check_stack_traces_clean_response() {
+        let body = r#"{"status": "ok", "data": [1, 2, 3]}"#;
+        assert!(check_stack_traces("https://x.com/api", body).is_none());
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Phase 8 additions
 // ---------------------------------------------------------------------------

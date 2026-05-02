@@ -99,6 +99,61 @@ impl AttackModule for AccessControlModule {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn extract_numeric_id_finds_id_in_path() {
+        let (prefix, id, suffix) =
+            extract_numeric_id("https://api.example.com/users/42/profile").unwrap();
+        assert_eq!(id, 42);
+        assert!(prefix.ends_with("/users"), "prefix: {}", prefix);
+        assert_eq!(suffix, "/profile");
+    }
+
+    #[test]
+    fn extract_numeric_id_root_id() {
+        let (_, id, suffix) =
+            extract_numeric_id("https://api.example.com/items/123").unwrap();
+        assert_eq!(id, 123);
+        assert!(suffix.is_empty());
+    }
+
+    #[test]
+    fn extract_numeric_id_returns_none_without_id() {
+        assert!(extract_numeric_id("https://api.example.com/users").is_none());
+        assert!(extract_numeric_id("https://api.example.com/").is_none());
+    }
+
+    #[test]
+    fn is_uuid_valid() {
+        assert!(is_uuid("a1b2c3d4-e5f6-7890-abcd-ef1234567890"));
+        assert!(is_uuid("00000000-0000-0000-0000-000000000000"));
+    }
+
+    #[test]
+    fn is_uuid_invalid() {
+        assert!(!is_uuid("not-a-uuid"));
+        assert!(!is_uuid("123"));
+        assert!(!is_uuid("a1b2c3d4-e5f6-7890-abcd-ef123456789")); // too short
+        assert!(!is_uuid(""));
+    }
+
+    #[test]
+    fn extract_uuid_finds_uuid_in_url() {
+        let url = "https://api.example.com/resources/a1b2c3d4-e5f6-7890-abcd-ef1234567890/details";
+        let (_, uuid, suffix) = extract_uuid(url).unwrap();
+        assert_eq!(uuid, "a1b2c3d4-e5f6-7890-abcd-ef1234567890");
+        assert_eq!(suffix, "/details");
+    }
+
+    #[test]
+    fn extract_uuid_returns_none_without_uuid() {
+        assert!(extract_uuid("https://api.example.com/users/123").is_none());
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------

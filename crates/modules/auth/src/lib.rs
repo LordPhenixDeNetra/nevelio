@@ -110,6 +110,56 @@ impl AttackModule for AuthModule {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn is_jwt_valid_token() {
+        // A real HS256 JWT (header.payload.signature)
+        let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9\
+                     .eyJzdWIiOiIxMjM0In0\
+                     .SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c";
+        assert!(is_jwt(token));
+    }
+
+    #[test]
+    fn is_jwt_rejects_non_jwt() {
+        assert!(!is_jwt("Bearer abc123"));
+        assert!(!is_jwt("not-a-token"));
+        assert!(!is_jwt(""));
+        assert!(!is_jwt("only.two"));
+    }
+
+    #[test]
+    fn forge_alg_none_produces_three_parts() {
+        let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9\
+                     .eyJzdWIiOiIxMjM0In0\
+                     .SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c";
+        let forged = forge_alg_none(token).expect("should produce a token");
+        let parts: Vec<&str> = forged.split('.').collect();
+        assert_eq!(parts.len(), 3, "JWT must have 3 segments");
+        assert!(forged.ends_with('.'), "alg:none token must end with empty signature");
+    }
+
+    #[test]
+    fn forge_alg_none_preserves_payload() {
+        let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9\
+                     .eyJzdWIiOiIxMjM0In0\
+                     .SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c";
+        let forged = forge_alg_none(token).unwrap();
+        let parts: Vec<&str> = forged.split('.').collect();
+        let original_parts: Vec<&str> = token.split('.').collect();
+        assert_eq!(parts[1], original_parts[1], "payload must be unchanged");
+    }
+
+    #[test]
+    fn forge_alg_none_rejects_invalid_token() {
+        assert!(forge_alg_none("not.valid").is_none());
+        assert!(forge_alg_none("").is_none());
+    }
+}
+
 // ---------------------------------------------------------------------------
 // JWT helpers
 // ---------------------------------------------------------------------------

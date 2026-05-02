@@ -43,6 +43,58 @@ const USER_AGENTS: &[&str] = &[
     "Go-http-client/1.1",
 ];
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use nevelio_core::types::Endpoint;
+
+    fn ep(path: &str, method: &str) -> Endpoint {
+        Endpoint {
+            method: method.to_string(),
+            path: path.to_string(),
+            full_url: format!("https://api.example.com{}", path),
+            parameters: vec![],
+            auth_required: false,
+        }
+    }
+
+    #[test]
+    fn is_mutation_endpoint_detects_financial_keywords() {
+        assert!(is_mutation_endpoint(&ep("/api/payment/confirm", "POST")));
+        assert!(is_mutation_endpoint(&ep("/checkout/submit", "POST")));
+        assert!(is_mutation_endpoint(&ep("/cart/buy", "POST")));
+        assert!(is_mutation_endpoint(&ep("/coupon/redeem", "POST")));
+    }
+
+    #[test]
+    fn is_mutation_endpoint_ignores_non_financial() {
+        assert!(!is_mutation_endpoint(&ep("/users/profile", "GET")));
+        assert!(!is_mutation_endpoint(&ep("/docs/openapi.json", "GET")));
+    }
+
+    #[test]
+    fn financial_keywords_cover_common_patterns() {
+        let keywords = FINANCIAL_KEYWORDS;
+        assert!(keywords.contains(&"payment"));
+        assert!(keywords.contains(&"checkout"));
+        assert!(keywords.contains(&"refund"));
+        assert!(keywords.contains(&"coupon"));
+    }
+
+    #[test]
+    fn numeric_field_names_cover_price_fields() {
+        assert!(NUMERIC_FIELD_NAMES.contains(&"price"));
+        assert!(NUMERIC_FIELD_NAMES.contains(&"amount"));
+        assert!(NUMERIC_FIELD_NAMES.contains(&"quantity"));
+    }
+
+    #[test]
+    fn rate_limit_probe_count_reasonable() {
+        assert!(RATE_LIMIT_PROBE_COUNT >= 10);
+        assert!(RACE_PROBE_COUNT >= 5);
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Module
 // ---------------------------------------------------------------------------
@@ -131,7 +183,7 @@ async fn send_request(
 /// worth probing for race conditions (heuristic: ends with a verb or noun).
 fn is_mutation_endpoint(ep: &Endpoint) -> bool {
     let path = ep.path.to_lowercase();
-    let verbs = ["submit", "create", "apply", "use", "redeem", "buy", "pay", "confirm"];
+    let verbs = ["submit", "create", "apply", "redeem", "buy", "pay", "confirm"];
     verbs.iter().any(|v| path.contains(v))
         || FINANCIAL_KEYWORDS.iter().any(|kw| path.contains(kw))
 }

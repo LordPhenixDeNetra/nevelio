@@ -122,6 +122,59 @@ pub enum ParameterLocation {
     Body,
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn severity_ordering() {
+        assert!(Severity::Critical > Severity::High);
+        assert!(Severity::High > Severity::Medium);
+        assert!(Severity::Medium > Severity::Low);
+        assert!(Severity::Low > Severity::Informative);
+    }
+
+    #[test]
+    fn severity_display() {
+        assert_eq!(Severity::Critical.to_string(), "CRITICAL");
+        assert_eq!(Severity::Informative.to_string(), "INFORMATIVE");
+    }
+
+    #[test]
+    fn finding_new_has_id_and_fields() {
+        let f = Finding::new("XSS", Severity::High, 7.5, "injection", "https://x.com/q", "GET");
+        assert!(!f.id.is_empty());
+        assert_eq!(f.title, "XSS");
+        assert_eq!(f.severity, Severity::High);
+        assert_eq!(f.cvss_score, 7.5);
+        assert_eq!(f.module, "injection");
+        assert_eq!(f.method, "GET");
+        assert!(f.description.is_empty());
+        assert!(f.cwe.is_none());
+    }
+
+    #[test]
+    fn finding_ids_are_unique() {
+        let a = Finding::new("A", Severity::Low, 1.0, "m", "u", "GET");
+        let b = Finding::new("B", Severity::Low, 1.0, "m", "u", "GET");
+        assert_ne!(a.id, b.id);
+    }
+
+    #[test]
+    fn scan_profile_concurrency() {
+        assert_eq!(ScanProfile::Stealth.concurrency(), 5);
+        assert_eq!(ScanProfile::Normal.concurrency(), 20);
+        assert_eq!(ScanProfile::Aggressive.concurrency(), 100);
+    }
+
+    #[test]
+    fn scan_profile_rate_limit() {
+        assert_eq!(ScanProfile::Stealth.rate_limit_per_sec(), 10);
+        assert_eq!(ScanProfile::Normal.rate_limit_per_sec(), 50);
+        assert_eq!(ScanProfile::Aggressive.rate_limit_per_sec(), 200);
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct ScanConfig {
     pub target: String,

@@ -148,6 +148,53 @@ impl AttackModule for InjectionModule {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn urlencoding_encode_safe_chars() {
+        assert_eq!(urlencoding_encode("hello"), "hello");
+        assert_eq!(urlencoding_encode("abc123"), "abc123");
+        assert_eq!(urlencoding_encode("a-b_c.d~e"), "a-b_c.d~e");
+    }
+
+    #[test]
+    fn urlencoding_encode_special_chars() {
+        let encoded = urlencoding_encode("' OR '1'='1");
+        assert!(!encoded.contains('\''));
+        assert!(!encoded.contains(' '));
+        assert!(encoded.contains('%'));
+    }
+
+    #[test]
+    fn inject_query_no_existing_params() {
+        let url = inject_query("https://api.example.com/users", "id", "1");
+        assert_eq!(url, "https://api.example.com/users?id=1");
+    }
+
+    #[test]
+    fn inject_query_with_existing_params() {
+        let url = inject_query("https://api.example.com/search?q=foo", "id", "1");
+        assert!(url.contains("?q=foo&id=1"), "got: {}", url);
+    }
+
+    #[test]
+    fn inject_query_encodes_payload() {
+        let url = inject_query("https://api.example.com/x", "q", "' OR 1=1--");
+        // Must not contain raw SQL characters unencoded
+        let query_part = url.split('?').nth(1).unwrap_or("");
+        assert!(!query_part.contains('\''));
+        assert!(!query_part.contains(' '));
+    }
+
+    #[test]
+    fn sql_errors_list_is_non_empty() {
+        assert!(!SQL_ERRORS.is_empty());
+        assert!(SQL_ERRORS.iter().any(|&e| e.contains("sql")));
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Helpers: HTTP request builders
 // ---------------------------------------------------------------------------
