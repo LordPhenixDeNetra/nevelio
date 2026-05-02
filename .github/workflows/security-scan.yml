@@ -1,0 +1,91 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# Nevelio — API Security Scan template
+#
+# Copy this file into YOUR project's .github/workflows/ directory.
+# Set the following repository secrets:
+#   API_STAGING_URL  — base URL of your staging API (e.g. https://staging.api.example.com)
+#   API_TOKEN        — Bearer token for authenticated scans (optional)
+# ──────────────────────────────────────────────────────────────────────────────
+
+name: API Security Scan
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+  schedule:
+    # Run every Monday at 08:00 UTC
+    - cron: "0 8 * * 1"
+
+jobs:
+  nevelio-scan:
+    name: Nevelio API Pentest
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # ── Option A: scan from an OpenAPI spec ──────────────────────────────
+      - name: Nevelio scan (OpenAPI spec)
+        if: ${{ hashFiles('openapi.yaml') != '' || hashFiles('openapi.json') != '' }}
+        run: |
+          SPEC=$(test -f openapi.yaml && echo openapi.yaml || echo openapi.json)
+          docker run --rm \
+            -v "${{ github.workspace }}:/workspace" \
+            nevelio/nevelio:latest \
+            --accept-legal scan \
+            --spec "/workspace/$SPEC" \
+            --target "${{ secrets.API_STAGING_URL }}" \
+            --auth-token "${{ secrets.API_TOKEN }}" \
+            --profile normal \
+            --output junit \
+            --out-dir /workspace
+        continue-on-error: true   # collect findings even on Critical (exit 3)
+
+      # ── Option B: scan from URL only (no spec) ───────────────────────────
+      - name: Nevelio scan (URL only)
+        if: ${{ hashFiles('openapi.yaml') == '' && hashFiles('openapi.json') == '' }}
+        run: |
+          docker run --rm \
+            -v "${{ github.workspace }}:/workspace" \
+            nevelio/nevelio:latest \
+            --accept-legal scan \
+            --url "${{ secrets.API_STAGING_URL }}" \
+            --auth-token "${{ secrets.API_TOKEN }}" \
+            --profile normal \
+            --output junit \
+            --out-dir /workspace
+        continue-on-error: true
+
+      # ── Publish JUnit results in the Actions UI ───────────────────────────
+      - name: Publish Security Findings
+        uses: dorny/test-reporter@v1
+        if: always()
+        with:
+          name: Nevelio Security Findings
+          path: security-report.xml
+          reporter: java-junit
+          fail-on-error: false
+
+      # ── Upload raw JSON findings as artifact ──────────────────────────────
+      - name: Upload findings artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: nevelio-findings
+          path: |
+            findings.json
+            security-report.xml
+          retention-days: 30
+
+      # ── Fail the pipeline on Critical findings (exit code 3) ─────────────
+      - name: Enforce security gate
+        run: |
+          docker run --rm \
+            -v "${{ github.workspace }}:/workspace" \
+            nevelio/nevelio:latest \
+            report \
+            --input /workspace/findings.json \
+            --format json \
+            --out-dir /workspace
+          # Re-run with exit code propagation (no continue-on-error)

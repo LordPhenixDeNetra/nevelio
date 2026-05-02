@@ -1,0 +1,12 @@
+target/
+.git/
+.github/
+.gitlab-ci.yml
+.idea/
+.vscode/
+.trae/
+docker-compose.yml
+findings.json
+*.md
+**/*.rs.bk
+.rustc_info.json
