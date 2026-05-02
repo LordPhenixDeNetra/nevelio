@@ -2,6 +2,7 @@ use anyhow::{Context, Result};
 use clap::Parser;
 use colored::Colorize;
 use indicatif::{ProgressBar, ProgressStyle};
+use rust_i18n::t;
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use std::sync::mpsc as std_mpsc;
@@ -30,6 +31,10 @@ use crate::tui::{self, ScanEvent};
 
 pub async fn run() -> Result<()> {
     let cli = Cli::parse();
+
+    // Detect and apply locale before any user-facing output
+    let locale = crate::locale::detect(cli.lang.as_deref());
+    rust_i18n::set_locale(&locale);
 
     let filter = if cli.verbose {
         EnvFilter::new("debug")
@@ -120,13 +125,10 @@ async fn handle_scan(args: crate::args::ScanArgs, verbose: bool) -> Result<()> {
         .target
         .or(args.url)
         .or(cfg_target)
-        .context("--target / --url requis (ou défini dans .nevelio.toml)")?;
+        .context(t!("error.no_target").to_string())?;
 
     if !target.starts_with("http://") && !target.starts_with("https://") {
-        anyhow::bail!(
-            "Cible invalide : l'URL doit commencer par http:// ou https:// (reçu : {})",
-            target
-        );
+        anyhow::bail!("{}", t!("error.invalid_url", url = target.as_str()));
     }
 
     let profile: ScanProfile = args
@@ -177,46 +179,41 @@ async fn handle_scan(args: crate::args::ScanArgs, verbose: bool) -> Result<()> {
         out_dir: out_dir.clone(),
         modules,
         dry_run: args.dry_run,
+        locale: rust_i18n::locale().to_string(),
     };
 
     use std::io::IsTerminal;
     let use_tui = !args.no_tui && !args.dry_run && std::io::stdout().is_terminal();
     let ai_suggestions = args.ai_suggestions;
 
-    // Avertissement précoce si --ai-suggestions demandé sans clé API
     if ai_suggestions && std::env::var("ANTHROPIC_API_KEY").is_err() {
-        eprintln!(
-            "{}",
-            "⚠  --ai-suggestions ignoré : ANTHROPIC_API_KEY non défini".yellow()
-        );
+        eprintln!("{}", t!("scan.ai_warning").yellow());
     }
 
-    // Print startup info only in plain mode (TUI replaces this display)
     if !use_tui {
-        println!("{:<12}: {}", "Cible",  target.cyan().bold());
+        println!("{:<12}: {}", t!("scan.label.target"), target.cyan().bold());
         if let Some(ref spec) = args.spec {
-            println!("{:<12}: {}", "Spec", spec);
+            println!("{:<12}: {}", t!("scan.label.spec"), spec);
         }
-        println!("{:<12}: {:?}", "Profil", config.profile);
-        println!("{:<12}: {}", "Sortie", out_dir.display().to_string().dimmed());
+        println!("{:<12}: {:?}", t!("scan.label.profile"), config.profile);
+        println!("{:<12}: {}", t!("scan.label.output"), out_dir.display().to_string().dimmed());
         if config.dry_run {
-            println!("{}", "  [mode dry-run — aucune requête réelle envoyée]".yellow());
+            println!("{}", t!("scan.dry_run").yellow());
         }
         println!();
     }
 
-    // Afficher les modules qui vont tourner (avant la recon)
     if !use_tui && !config.dry_run {
         let names: Vec<&str> = if config.modules.is_empty() {
             vec!["auth", "injection", "access-control", "business-logic", "graphql", "infra"]
         } else {
             config.modules.iter().map(String::as_str).collect()
         };
-        println!("{:<12}: {}", "Modules", names.join(", ").dimmed());
+        println!("{:<12}: {}", t!("scan.label.modules"), names.join(", ").dimmed());
         println!();
     }
 
-    let http_client = HttpClient::new(&config).context("Impossible de créer le client HTTP")?;
+    let http_client = HttpClient::new(&config).context(t!("error.http_client").to_string())?;
     let raw_client = http_client.inner().clone();
 
     // --- Recon ---
@@ -224,11 +221,11 @@ async fn handle_scan(args: crate::args::ScanArgs, verbose: bool) -> Result<()> {
         if let Some(ref spec_path) = args.spec {
             nevelio_recon::openapi::parse_spec(spec_path, &target, &raw_client)
                 .await
-                .context("Échec de la lecture du spec OpenAPI")?
+                .context(t!("error.spec_read").to_string())?
         } else {
             nevelio_recon::discover_endpoints(&target, &raw_client)
                 .await
-                .context("Échec de la découverte des endpoints")?
+                .context(t!("error.discovery").to_string())?
         }
     } else {
         vec![nevelio_core::types::Endpoint {
@@ -241,7 +238,7 @@ async fn handle_scan(args: crate::args::ScanArgs, verbose: bool) -> Result<()> {
     };
 
     if !use_tui {
-        println!("{} endpoint(s) découvert(s)", endpoints.len());
+        println!("{}", t!("scan.endpoints_found", count = endpoints.len()));
     }
 
     let mut session = ScanSession::new(config);
@@ -262,15 +259,11 @@ async fn handle_scan(args: crate::args::ScanArgs, verbose: bool) -> Result<()> {
     if args.resume {
         if let Some(prev) = load_progress(&out_dir) {
             if !use_tui {
-                println!(
-                    "{}",
-                    format!(
-                        "↩ Reprise du scan — {} module(s) déjà complété(s) : {}",
-                        prev.completed_modules.len(),
-                        prev.completed_modules.join(", ")
-                    )
-                    .yellow()
-                );
+                println!("{}", t!(
+                    "scan.resume",
+                    count = prev.completed_modules.len(),
+                    modules = prev.completed_modules.join(", ").as_str()
+                ).yellow());
             }
             completed_modules = prev.completed_modules.clone();
             if let Ok(prev_report) = load_findings_json(&out_dir) {
@@ -279,7 +272,7 @@ async fn handle_scan(args: crate::args::ScanArgs, verbose: bool) -> Result<()> {
                 }
             }
         } else if !use_tui {
-            println!("{}", "Aucun fichier de progression trouvé — démarrage d'un nouveau scan".yellow());
+            println!("{}", t!("scan.no_progress").yellow());
         }
     }
 
@@ -299,7 +292,7 @@ async fn handle_scan(args: crate::args::ScanArgs, verbose: bool) -> Result<()> {
         let names = module_names.clone();
         std::thread::spawn(move || {
             if let Err(e) = tui::run_tui_blocking(rx, names) {
-                eprintln!("TUI erreur: {}", e);
+                eprintln!("{}", t!("error.tui", msg = e.to_string().as_str()));
             }
         });
         let _ = tx.send(ScanEvent::EndpointScanned {
@@ -369,7 +362,7 @@ async fn handle_scan(args: crate::args::ScanArgs, verbose: bool) -> Result<()> {
         let _ = tx.send(ScanEvent::ScanComplete);
     }
     if let Some(bar) = pb {
-        bar.finish_with_message("Scan terminé");
+        bar.finish_with_message(t!("scan.finished").to_string());
     }
 
     session.finish();
@@ -379,7 +372,7 @@ async fn handle_scan(args: crate::args::ScanArgs, verbose: bool) -> Result<()> {
 
     let json_path = out_dir.join("findings.json");
     JsonReporter::write_to_file(&report, &json_path)
-        .context("Échec de l'écriture de findings.json")?;
+        .context(t!("error.json_write").to_string())?;
 
     let report_format: ReportFormat = output_format.into();
     let report_path = if matches!(report_format, ReportFormat::Json) {
@@ -397,17 +390,16 @@ async fn handle_scan(args: crate::args::ScanArgs, verbose: bool) -> Result<()> {
     output::print_summary(&session.findings);
     println!(
         "{:<12}: {}",
-        "Rapport",
+        t!("scan.report_label"),
         report_path.display().to_string().cyan()
     );
 
-    // --- AI suggestions ---
     if ai_suggestions {
         println!();
-        println!("{}", "Génération des suggestions IA...".cyan());
+        println!("{}", t!("scan.ai_generating").cyan());
         match ai_suggestions::generate_and_save(&session.findings, &out_dir).await {
             Ok(()) => {}
-            Err(e) => eprintln!("{}", format!("Suggestions IA : {}", e).yellow()),
+            Err(e) => eprintln!("{}", t!("scan.ai_saved", path = e.to_string().as_str()).yellow()),
         }
     }
 
@@ -459,19 +451,12 @@ const NEVELIO_TOML_TEMPLATE: &str = r#"# .nevelio.toml — Configuration Nevelio
 fn handle_init() -> Result<()> {
     let path = std::path::Path::new(".nevelio.toml");
     if path.exists() {
-        eprintln!(
-            "{}",
-            ".nevelio.toml existe déjà — supprimez-le d'abord si vous souhaitez le recréer."
-                .yellow()
-        );
+        eprintln!("{}", t!("error.toml_exists").yellow());
         std::process::exit(1);
     }
     std::fs::write(path, NEVELIO_TOML_TEMPLATE)
-        .context("Impossible de créer .nevelio.toml")?;
-    println!(
-        "{}",
-        "✓ .nevelio.toml créé — éditez-le puis lancez : nevelio scan".green()
-    );
+        .context(t!("error.toml_create").to_string())?;
+    println!("{}", t!("init.created").green());
     Ok(())
 }
 
@@ -480,29 +465,23 @@ fn handle_init() -> Result<()> {
 // ---------------------------------------------------------------------------
 
 async fn handle_report(args: crate::args::ReportArgs) -> Result<()> {
-    let json =
-        std::fs::read_to_string(&args.input).context("Impossible de lire le fichier JSON")?;
-    let report: ScanReport = serde_json::from_str(&json).context("Fichier JSON invalide")?;
+    let json = std::fs::read_to_string(&args.input)
+        .context(t!("error.json_read").to_string())?;
+    let report: ScanReport = serde_json::from_str(&json)
+        .context(t!("error.json_invalid").to_string())?;
 
-    println!(
-        "Rapport : {} finding(s) — Cible: {} — Durée: {:.2}s",
-        report.findings.len(),
-        report.target,
-        report.duration_secs
-    );
-    println!(
-        "Résumé  : {} Critical  {} High  {} Medium  {} Low  {} Informative",
-        report.summary.critical,
-        report.summary.high,
-        report.summary.medium,
-        report.summary.low,
-        report.summary.informative
-    );
+    println!("{}", t!(
+        "scan.report_line",
+        count = report.findings.len(),
+        target = report.target.as_str(),
+        secs = format!("{:.2}", report.duration_secs).as_str()
+    ));
+    output::print_summary(&report.findings);
     println!();
 
     let format: ReportFormat = args.format.into();
     let path = write_report(&report, &format, &args.out_dir)?;
-    println!("{}", format!("→ {}", path.display()).cyan());
+    println!("{}", t!("scan.finding_arrow", title = path.display().to_string().as_str()).cyan());
 
     Ok(())
 }
@@ -523,7 +502,7 @@ fn handle_modules(args: crate::args::ModulesArgs) -> Result<()> {
 
     match args.action {
         ModulesAction::List => {
-            println!("{:<20} {}", "NOM".bold(), "DESCRIPTION".bold());
+            println!("{:<20} {}", t!("modules.header.name").bold(), t!("modules.header.desc").bold());
             println!("{}", "─".repeat(70));
             for m in &modules {
                 println!("{:<20} {}", m.name(), m.description());
@@ -531,10 +510,10 @@ fn handle_modules(args: crate::args::ModulesArgs) -> Result<()> {
         }
         ModulesAction::Show { name } => {
             if let Some(m) = modules.iter().find(|m| m.name() == name) {
-                println!("Module      : {}", m.name().bold().cyan());
-                println!("Description : {}", m.description());
+                println!("{}", t!("modules.show.name", name = m.name().bold().cyan().to_string().as_str()));
+                println!("{}", t!("modules.show.desc", desc = m.description()));
             } else {
-                eprintln!("Module inconnu : {}", name);
+                eprintln!("{}", t!("error.unknown_module", name = name.as_str()));
                 std::process::exit(1);
             }
         }
@@ -619,8 +598,8 @@ fn load_progress(out_dir: &Path) -> Option<ScanProgress> {
 
 fn load_findings_json(out_dir: &Path) -> Result<ScanReport> {
     let path = out_dir.join("findings.json");
-    let content = std::fs::read_to_string(path).context("findings.json introuvable")?;
-    serde_json::from_str(&content).context("findings.json invalide")
+    let content = std::fs::read_to_string(path).context(t!("error.findings_missing").to_string())?;
+    serde_json::from_str(&content).context(t!("error.findings_invalid").to_string())
 }
 
 fn parse_profile(s: Option<&str>) -> Option<ScanProfile> {

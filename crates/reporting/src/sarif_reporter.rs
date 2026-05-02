@@ -230,6 +230,7 @@ mod tests {
             profile: "normal".to_string(),
             summary: ReportSummary::from_findings(&findings),
             findings,
+            locale: "en".to_string(),
         }
     }
 

@@ -1,6 +1,7 @@
 use std::path::Path;
 
 use anyhow::{bail, Context, Result};
+use rust_i18n::t;
 use chrono::Utc;
 use nevelio_core::types::Finding;
 use serde_json::json;
@@ -10,13 +11,10 @@ const MODEL: &str = "claude-haiku-4-5-20251001";
 
 fn build_prompt(findings: &[Finding]) -> String {
     if findings.is_empty() {
-        return "Aucun finding détecté lors du scan.".to_string();
+        return t!("ai.prompt_no_findings").to_string();
     }
 
-    let mut lines = vec![
-        "Tu es un expert en sécurité des API. Voici les findings détectés lors d'un pentest automatisé :".to_string(),
-        String::new(),
-    ];
+    let mut lines = vec![t!("ai.prompt_header").to_string(), String::new()];
 
     for (i, f) in findings.iter().enumerate() {
         lines.push(format!(
@@ -28,27 +26,21 @@ fn build_prompt(findings: &[Finding]) -> String {
             f.module,
         ));
         if !f.description.is_empty() {
-            lines.push(format!("   Description : {}", f.description));
+            lines.push(t!("ai.prompt_desc", desc = f.description.as_str()).to_string());
         }
         if !f.recommendation.is_empty() {
-            lines.push(format!("   Recommandation actuelle : {}", f.recommendation));
+            lines.push(t!("ai.prompt_rec", rec = f.recommendation.as_str()).to_string());
         }
         lines.push(String::new());
     }
 
-    lines.push("Pour chaque finding, fournis :".to_string());
-    lines.push("- Une explication claire du risque en 1-2 phrases".to_string());
-    lines.push("- Des étapes concrètes de remédiation (code ou configuration si applicable)".to_string());
-    lines.push("- La priorité de correction (Immédiate / Court terme / Long terme)".to_string());
-    lines.push(String::new());
-    lines.push("Réponds en français, format Markdown.".to_string());
-
+    lines.push(t!("ai.prompt_footer").to_string());
     lines.join("\n")
 }
 
 pub async fn generate_and_save(findings: &[Finding], out_dir: &Path) -> Result<()> {
     let api_key = std::env::var("ANTHROPIC_API_KEY")
-        .context("ANTHROPIC_API_KEY non défini — impossible de générer les suggestions IA")?;
+        .context(t!("ai.no_key").to_string())?;
 
     let prompt = build_prompt(findings);
 
@@ -69,21 +61,22 @@ pub async fn generate_and_save(findings: &[Finding], out_dir: &Path) -> Result<(
         .json(&body)
         .send()
         .await
-        .context("Échec de l'appel à l'API Anthropic")?;
+        .context(t!("ai.api_error").to_string())?;
 
     if !resp.status().is_success() {
         let status = resp.status();
         let text = resp.text().await.unwrap_or_default();
-        bail!("API Anthropic erreur {} : {}", status, text);
+        bail!("{}", t!("ai.api_status", status = status.as_str(), body = text.as_str()));
     }
 
-    let data: serde_json::Value = resp.json().await.context("Réponse API invalide")?;
+    let data: serde_json::Value = resp.json().await
+        .context(t!("ai.invalid_response").to_string())?;
 
     let content = data["content"]
         .as_array()
         .and_then(|arr| arr.first())
         .and_then(|block| block["text"].as_str())
-        .context("Réponse API inattendue — champ 'content[0].text' manquant")?;
+        .context(t!("ai.missing_field").to_string())?;
 
     let header = format!(
         "# Suggestions IA — Nevelio\n\n> Généré par Claude ({}) le {}\n\n---\n\n",
@@ -94,9 +87,9 @@ pub async fn generate_and_save(findings: &[Finding], out_dir: &Path) -> Result<(
 
     let path = out_dir.join("ai_suggestions.md");
     std::fs::write(&path, &output)
-        .context("Impossible d'écrire ai_suggestions.md")?;
+        .context(t!("ai.write_error").to_string())?;
 
-    println!("{:<12}: {}", "IA Rapport", path.display());
+    println!("{:<12}: {}", t!("scan.ia_label"), path.display());
 
     Ok(())
 }

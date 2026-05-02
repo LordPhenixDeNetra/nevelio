@@ -2,6 +2,7 @@ use std::io;
 use std::sync::mpsc;
 use std::time::Duration;
 use std::time::Instant;
+use rust_i18n::t;
 
 use crossterm::{
     event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyEventKind},
@@ -125,9 +126,9 @@ fn draw(f: &mut Frame, app: &TuiApp) {
 fn draw_header(f: &mut Frame, app: &TuiApp, area: Rect) {
     let elapsed = app.start.elapsed().as_secs();
     let status = if app.done {
-        "Terminé ✓".to_string()
+        t!("tui.done").to_string()
     } else {
-        format!("En cours... {}s", elapsed)
+        t!("tui.in_progress", secs = elapsed).to_string()
     };
 
     let progress = if app.endpoints_total > 0 {
@@ -139,10 +140,7 @@ fn draw_header(f: &mut Frame, app: &TuiApp, area: Rect) {
     let gauge = Gauge::default()
         .block(
             Block::default()
-                .title(format!(
-                    " Nevelio — {} endpoints — {} ",
-                    app.endpoints_total, status
-                ))
+                .title(t!("tui.header_title", count = app.endpoints_total, status = status.as_str()).to_string())
                 .borders(Borders::ALL)
                 .border_style(Style::default().fg(Color::Cyan)),
         )
@@ -172,7 +170,7 @@ fn draw_modules(f: &mut Frame, app: &TuiApp, area: Rect) {
 
     let list = List::new(items).block(
         Block::default()
-            .title(" Modules ")
+            .title(t!("tui.modules_panel").to_string())
             .borders(Borders::ALL)
             .border_style(Style::default().fg(Color::Blue)),
     );
@@ -182,10 +180,10 @@ fn draw_modules(f: &mut Frame, app: &TuiApp, area: Rect) {
 
 fn draw_findings(f: &mut Frame, app: &TuiApp, area: Rect) {
     let header = Row::new(vec![
-        Cell::from("Sév.").style(Style::default().add_modifier(Modifier::BOLD)),
-        Cell::from("Module").style(Style::default().add_modifier(Modifier::BOLD)),
-        Cell::from("Titre").style(Style::default().add_modifier(Modifier::BOLD)),
-        Cell::from("Endpoint").style(Style::default().add_modifier(Modifier::BOLD)),
+        Cell::from(t!("tui.col_severity").to_string()).style(Style::default().add_modifier(Modifier::BOLD)),
+        Cell::from(t!("tui.col_module").to_string()).style(Style::default().add_modifier(Modifier::BOLD)),
+        Cell::from(t!("tui.col_title").to_string()).style(Style::default().add_modifier(Modifier::BOLD)),
+        Cell::from(t!("tui.col_endpoint").to_string()).style(Style::default().add_modifier(Modifier::BOLD)),
     ])
     .style(Style::default().fg(Color::Yellow));
 
@@ -195,7 +193,7 @@ fn draw_findings(f: &mut Frame, app: &TuiApp, area: Rect) {
         .rev()
         .take(50)
         .map(|f| {
-            let sev = format!("{:?}", f.severity);
+            let sev = f.severity.to_string();
             Row::new(vec![
                 Cell::from(sev).style(Style::default().fg(severity_color(&f.severity))),
                 Cell::from(f.module.as_str()),
@@ -206,15 +204,11 @@ fn draw_findings(f: &mut Frame, app: &TuiApp, area: Rect) {
         .collect();
 
     let (c, h, m, l, i) = app.severity_counts();
-    let title = format!(
-        " Findings ({} — C:{} H:{} M:{} L:{} I:{}) ",
-        app.findings.len(),
-        c,
-        h,
-        m,
-        l,
-        i
-    );
+    let title = t!(
+        "tui.findings_panel",
+        total = app.findings.len(),
+        c = c, h = h, m = m, l = l, i = i
+    ).to_string();
 
     let table = Table::new(
         rows,
@@ -238,11 +232,11 @@ fn draw_findings(f: &mut Frame, app: &TuiApp, area: Rect) {
 
 fn draw_footer(f: &mut Frame, app: &TuiApp, area: Rect) {
     let msg = if let Some(ref err) = app.last_error {
-        format!(" Erreur : {}", err)
+        t!("tui.error", msg = err.as_str()).to_string()
     } else if app.done {
-        " Scan terminé — appuyez sur [q] pour quitter".to_string()
+        t!("tui.scan_done").to_string()
     } else {
-        " [q] Annuler".to_string()
+        t!("tui.cancel").to_string()
     };
 
     let paragraph = Paragraph::new(msg)

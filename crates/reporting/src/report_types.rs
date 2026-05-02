@@ -93,6 +93,7 @@ mod tests {
             out_dir: PathBuf::from("."),
             modules: vec![],
             dry_run: false,
+            locale: "en".to_string(),
         };
         let mut session = ScanSession::new(config);
         session.add_finding(make_finding(Severity::High));
@@ -119,4 +120,10 @@ pub struct ScanReport {
     pub profile: String,
     pub summary: ReportSummary,
     pub findings: Vec<Finding>,
+    #[serde(default = "default_locale")]
+    pub locale: String,
+}
+
+fn default_locale() -> String {
+    "en".to_string()
 }

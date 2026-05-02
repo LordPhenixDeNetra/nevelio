@@ -32,3 +32,4 @@ toml.workspace               = true
 ratatui.workspace            = true
 crossterm.workspace          = true
 reqwest.workspace            = true
+rust-i18n.workspace          = true

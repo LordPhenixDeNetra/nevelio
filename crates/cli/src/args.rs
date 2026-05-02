@@ -41,6 +41,10 @@ pub struct Cli {
     /// Disable coloured output
     #[arg(long, global = true)]
     pub no_color: bool,
+
+    /// Interface language: fr | en | es (auto-detected from $LANG if absent)
+    #[arg(long, value_name = "LANG", global = true)]
+    pub lang: Option<String>,
 }
 
 #[derive(Debug, Subcommand)]

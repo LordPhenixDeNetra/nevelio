@@ -1,8 +1,8 @@
 {
-  "scan_id": "86988c9e-af93-4c9b-9402-5c701d46fbca",
+  "scan_id": "9d107d52-7783-4a30-a61f-7c09fd07f577",
   "target": "https://httpbin.org",
-  "started_at": "2026-05-01T20:22:34.873236Z",
-  "finished_at": "2026-05-01T20:22:34.884600Z",
+  "started_at": "2026-05-02T21:05:36.542238Z",
+  "finished_at": "2026-05-02T21:05:36.554074Z",
   "duration_secs": 0.011,
   "profile": "normal",
   "summary": {
@@ -13,5 +13,6 @@
     "informative": 0,
     "total": 0
   },
-  "findings": []
+  "findings": [],
+  "locale": "es"
 }

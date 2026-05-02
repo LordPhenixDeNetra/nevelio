@@ -1,25 +1,8 @@
 use chrono::Utc;
 use colored::Colorize;
+use rust_i18n::t;
 use std::io::{self, Write};
 use std::path::PathBuf;
-
-const LEGAL_TEXT: &str = "
-\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}
-                  AVERTISSEMENT LEGAL
-\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}
-Nevelio est un outil de pentest d'API conçu EXCLUSIVEMENT
-pour des systèmes que vous possédez ou sur lesquels vous
-avez une autorisation écrite explicite.
-
-Utiliser cet outil sans autorisation est ILLEGAL dans la
-plupart des juridictions (CFAA, Directive UE sur les
-attaques informatiques, Sénégal Loi n° 2008-11).
-
-En continuant, vous confirmez que :
-  1. Vous avez une autorisation explicite pour tester la cible.
-  2. Vous acceptez l'entière responsabilité légale de vos actes.
-  3. Vous traiterez toutes les découvertes comme confidentielles.
-\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}";
 
 fn marker_path() -> Option<PathBuf> {
     std::env::var("HOME").ok().map(|h| {
@@ -55,20 +38,30 @@ pub fn display_and_confirm() -> anyhow::Result<()> {
         return Ok(());
     }
 
-    println!("{}", LEGAL_TEXT.yellow());
-    print!("Acceptez-vous ces conditions ? [o/N] : ");
+    let sep = "━".repeat(51);
+    let legal_text = format!(
+        "\n{}\n                  {}\n{}\n{}\n{}",
+        sep,
+        t!("legal.title"),
+        sep,
+        t!("legal.body"),
+        sep,
+    );
+    println!("{}", legal_text.yellow());
+    print!("{}", t!("legal.prompt"));
     io::stdout().flush()?;
 
     let mut input = String::new();
     io::stdin().read_line(&mut input)?;
 
+    // Accept in all supported languages: French (o/oui), English (y/yes), Spanish (s/sí/si)
     match input.trim().to_lowercase().as_str() {
-        "o" | "oui" | "y" | "yes" => {
+        "o" | "oui" | "y" | "yes" | "s" | "sí" | "si" => {
             persist_acceptance();
             Ok(())
         }
         _ => {
-            eprintln!("{}", "Scan annulé. Avertissement légal non accepté.".red());
+            eprintln!("{}", t!("legal.cancelled").red());
             std::process::exit(1);
         }
     }
@@ -87,7 +80,7 @@ pub fn display_banner() {
     println!(
         "  {}  {}",
         format!("v{}", env!("CARGO_PKG_VERSION")).bold().white(),
-        "API Security Scanner — Usage autorisé uniquement".dimmed()
+        t!("legal.tagline").dimmed()
     );
     println!("{}", "  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━".cyan());
     println!();

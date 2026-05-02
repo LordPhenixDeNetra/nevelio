@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="fr" data-theme="dark">
+<html lang="{{ scan.locale }}" data-theme="dark">
 
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Nevelio — Rapport de Sécurité API</title>
+  <title>{{ i18n.title }}</title>
   <style>
     {% include "report.css" %}
   </style>
@@ -15,14 +15,14 @@
   <header>
     <div>
       <div class="logo">Nevelio <span>Security Report</span></div>
-      <div class="meta-row">Généré le {{ generated_at }} · Scan ID: {{ scan.scan_id }}</div>
+      <div class="meta-row">{{ generated_at }} · Scan ID: {{ scan.scan_id }}</div>
     </div>
     <div style="display:flex;align-items:center;gap:1rem">
       <div style="text-align:right;font-size:.8rem;color:var(--c-text-dim)">
         <div>{{ scan.summary.total }} finding(s)</div>
         <div>{{ scan.duration_secs | round(precision=2) }}s</div>
       </div>
-      <button class="theme-toggle" onclick="toggleTheme()" id="theme-btn" title="Basculer le thème">☀ Light</button>
+      <button class="theme-toggle" onclick="toggleTheme()" id="theme-btn" title="{{ i18n.toggle_theme }}">☀ Light</button>
     </div>
   </header>
 
@@ -31,19 +31,19 @@
     <!-- Scan info -->
     <div class="scan-info">
       <div class="info-item">
-        <label>Cible</label>
+        <label>{{ i18n.target }}</label>
         <value>{{ scan.target }}</value>
       </div>
       <div class="info-item">
-        <label>Profil</label>
+        <label>{{ i18n.profile }}</label>
         <value>{{ scan.profile }}</value>
       </div>
       <div class="info-item">
-        <label>Démarré</label>
+        <label>{{ i18n.started }}</label>
         <value>{{ scan.started_at }}</value>
       </div>
       <div class="info-item">
-        <label>Durée</label>
+        <label>{{ i18n.duration }}</label>
         <value>{{ scan.duration_secs | round(precision=2) }}s</value>
       </div>
     </div>
@@ -52,41 +52,41 @@
     <div class="summary">
       <div class="card all"      onclick="setFilter('all')">
         <div class="card-count">{{ scan.summary.total }}</div>
-        <div class="card-label">Total</div>
+        <div class="card-label">{{ i18n.total }}</div>
       </div>
       <div class="card critical" onclick="setFilter('critical')">
         <div class="card-count">{{ scan.summary.critical }}</div>
-        <div class="card-label">Critical</div>
+        <div class="card-label">{{ i18n.critical }}</div>
       </div>
       <div class="card high"     onclick="setFilter('high')">
         <div class="card-count">{{ scan.summary.high }}</div>
-        <div class="card-label">High</div>
+        <div class="card-label">{{ i18n.high }}</div>
       </div>
       <div class="card medium"   onclick="setFilter('medium')">
         <div class="card-count">{{ scan.summary.medium }}</div>
-        <div class="card-label">Medium</div>
+        <div class="card-label">{{ i18n.medium }}</div>
       </div>
       <div class="card low"      onclick="setFilter('low')">
         <div class="card-count">{{ scan.summary.low }}</div>
-        <div class="card-label">Low</div>
+        <div class="card-label">{{ i18n.low }}</div>
       </div>
       <div class="card info"     onclick="setFilter('informative')">
         <div class="card-count">{{ scan.summary.informative }}</div>
-        <div class="card-label">Informative</div>
+        <div class="card-label">{{ i18n.informative }}</div>
       </div>
     </div>
 
     <!-- Filters -->
     <div class="filters">
-      <span class="filter-label">Filtrer :</span>
-      <button class="btn btn-all      active" id="btn-all"         onclick="setFilter('all')">Tous</button>
-      <button class="btn btn-critical"        id="btn-critical"    onclick="setFilter('critical')">Critical</button>
-      <button class="btn btn-high"            id="btn-high"        onclick="setFilter('high')">High</button>
-      <button class="btn btn-medium"          id="btn-medium"      onclick="setFilter('medium')">Medium</button>
-      <button class="btn btn-low"             id="btn-low"         onclick="setFilter('low')">Low</button>
-      <button class="btn btn-info"            id="btn-info"        onclick="setFilter('informative')">Informative</button>
+      <span class="filter-label">{{ i18n.filter }}</span>
+      <button class="btn btn-all      active" id="btn-all"         onclick="setFilter('all')">{{ i18n.all }}</button>
+      <button class="btn btn-critical"        id="btn-critical"    onclick="setFilter('critical')">{{ i18n.critical }}</button>
+      <button class="btn btn-high"            id="btn-high"        onclick="setFilter('high')">{{ i18n.high }}</button>
+      <button class="btn btn-medium"          id="btn-medium"      onclick="setFilter('medium')">{{ i18n.medium }}</button>
+      <button class="btn btn-low"             id="btn-low"         onclick="setFilter('low')">{{ i18n.low }}</button>
+      <button class="btn btn-info"            id="btn-info"        onclick="setFilter('informative')">{{ i18n.informative }}</button>
       <div class="search-box">
-        <input type="text" id="search" placeholder="Rechercher..." oninput="applyFilters()">
+        <input type="text" id="search" placeholder="{{ i18n.search }}" oninput="applyFilters()">
       </div>
     </div>
 
@@ -119,24 +119,24 @@
           <div class="finding-body">
             <div class="detail-grid">
               <div class="detail-section">
-                <h4>Description</h4>
+                <h4>{{ i18n.description }}</h4>
                 <p>{{ f.description }}</p>
                 {% if f.cwe %}<span class="cwe-tag">{{ f.cwe }}</span>{% endif %}
               </div>
               <div class="detail-section">
-                <h4>Recommandation</h4>
+                <h4>{{ i18n.recommendation }}</h4>
                 <p>{{ f.recommendation }}</p>
               </div>
             </div>
             {% if f.proof %}
             <div class="detail-section" style="margin-bottom:.75rem">
-              <h4>Preuve</h4>
+              <h4>{{ i18n.proof }}</h4>
               <pre>{{ f.proof }}</pre>
             </div>
             {% endif %}
             {% if f.references %}
             <div class="detail-section refs">
-              <h4>Références</h4>
+              <h4>{{ i18n.references }}</h4>
               {% for ref in f.references %}
               <a href="{{ ref }}" target="_blank" rel="noopener">{{ ref }}</a>
               {% endfor %}
@@ -147,15 +147,15 @@
         </div>
         {% endfor %}
       {% else %}
-        <div class="no-findings">✓ Aucun finding détecté</div>
+        <div class="no-findings">{{ i18n.no_findings }}</div>
       {% endif %}
     </div>
 
   </main>
 
   <footer>
-    Généré par <strong>Nevelio v0.1.0</strong> — Outil de Pentest API ·
-    Usage autorisé uniquement sur systèmes avec autorisation explicite
+    {{ i18n.generated_by }} <strong>Nevelio v{{ version }}</strong> —
+    {{ i18n.footer_suffix }}
   </footer>
 
   <script>

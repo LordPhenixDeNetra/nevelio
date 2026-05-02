@@ -54,6 +54,7 @@ mod tests {
             out_dir: PathBuf::from("."),
             modules: vec![],
             dry_run: false,
+            locale: "en".to_string(),
         })
     }
 

@@ -191,4 +191,5 @@ pub struct ScanConfig {
     pub out_dir: PathBuf,
     pub modules: Vec<String>,
     pub dry_run: bool,
+    pub locale: String,
 }
