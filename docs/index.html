@@ -984,6 +984,7 @@
 
   <div class="nav-section">
     <div class="nav-section-label">Référence</div>
+    <a class="nav-link" href="#i18n"><span class="nav-icon">🌐</span>Internationalisation</a>
     <a class="nav-link" href="#flags-ref"><span class="nav-icon">📖</span>Tous les flags</a>
   </div>
 </nav>
@@ -2147,6 +2148,84 @@ nevelio scan --target https://api.example.com \
     </div>
   </section>
 
+  <!-- ── i18n ─────────────────────────────────────────────────────────── -->
+  <section class="doc-section" id="i18n">
+    <h2><span class="section-icon">🌐</span> Internationalisation</h2>
+    <p>Nevelio supporte <strong>3 langues</strong> — français (<code>fr</code>), anglais (<code>en</code>), espagnol (<code>es</code>).
+    Tous les messages CLI, le TUI, le disclaimer légal, les suggestions IA et le rapport HTML sont traduits automatiquement.</p>
+
+    <h3>Détection automatique</h3>
+    <p>La langue est résolue dans cet ordre de priorité :</p>
+    <div class="table-wrap">
+    <table>
+      <thead><tr><th>Priorité</th><th>Source</th><th>Exemple</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>Flag <code>--lang</code></td><td><code>nevelio --lang es scan …</code></td></tr>
+        <tr><td>2</td><td>Variable <code>NEVELIO_LANG</code></td><td><code>NEVELIO_LANG=fr nevelio scan …</code></td></tr>
+        <tr><td>3</td><td>Variable système <code>$LANGUAGE</code> / <code>$LANG</code></td><td><code>LANG=fr_FR.UTF-8</code> → <code>fr</code></td></tr>
+        <tr><td>4</td><td>Défaut</td><td><code>en</code></td></tr>
+      </tbody>
+    </table>
+    </div>
+    <p>La normalisation est automatique : <code>fr_FR.UTF-8</code>, <code>fr-FR</code> et <code>fr</code> donnent tous <code>fr</code>.</p>
+
+    <h3>Exemples</h3>
+    <div class="tab-group">
+      <div class="tab-bar">
+        <button class="tab active" onclick="switchTab(this,'i18n-fr')">🇫🇷 Français</button>
+        <button class="tab" onclick="switchTab(this,'i18n-en')">🇬🇧 English</button>
+        <button class="tab" onclick="switchTab(this,'i18n-es')">🇪🇸 Español</button>
+      </div>
+      <div class="tab-content active" id="i18n-fr">
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copier</button><pre><code class="language-bash">LANG=fr_FR.UTF-8 nevelio scan --target https://api.example.com --dry-run
+# Cible       : https://api.example.com
+# Profil      : Normal
+# Sortie      : .
+#   [mode dry-run — aucune requête réelle envoyée]
+# Résumé  :  0 Critical  0 High  0 Medium  0 Low  0 Informative</code></pre></div>
+      </div>
+      <div class="tab-content" id="i18n-en">
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copier</button><pre><code class="language-bash">nevelio --lang en scan --target https://api.example.com --dry-run
+# Target      : https://api.example.com
+# Profile     : Normal
+# Output      : .
+#   [dry-run mode — no real HTTP requests sent]
+# Summary  :  0 Critical  0 High  0 Medium  0 Low  0 Informative</code></pre></div>
+      </div>
+      <div class="tab-content" id="i18n-es">
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copier</button><pre><code class="language-bash">NEVELIO_LANG=es nevelio scan --target https://api.example.com --dry-run
+# Objetivo    : https://api.example.com
+# Perfil      : Normal
+# Salida      : .
+#   [modo dry-run — no se envían solicitudes HTTP reales]
+# Resumen  :  0 Crítico  0 Alto  0 Medio  0 Bajo  0 Informativo</code></pre></div>
+      </div>
+    </div>
+
+    <h3>Disclaimer légal multilingue</h3>
+    <p>Le texte légal affiché au premier lancement est traduit. La réponse positive varie selon la langue :</p>
+    <div class="table-wrap">
+    <table>
+      <thead><tr><th>Langue</th><th>Réponses acceptées</th></tr></thead>
+      <tbody>
+        <tr><td>Français</td><td><code>o</code>, <code>oui</code></td></tr>
+        <tr><td>Anglais</td><td><code>y</code>, <code>yes</code></td></tr>
+        <tr><td>Espagnol</td><td><code>s</code>, <code>sí</code>, <code>si</code></td></tr>
+      </tbody>
+    </table>
+    </div>
+
+    <h3>Rapport HTML localisé</h3>
+    <p>Le rapport HTML généré (<code>report.html</code>) hérite de la langue du scan.
+    Tous ses labels (Cible / Target / Objetivo, Description, Recommandation…) sont traduits automatiquement.</p>
+
+    <h3>Suggestions IA localisées</h3>
+    <p>Avec <code>--ai-suggestions</code>, le prompt envoyé à Claude est rédigé dans la langue sélectionnée — les suggestions reçues sont donc dans la même langue.</p>
+    <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copier</button><pre><code class="language-bash">nevelio --lang es scan --target https://api.example.com \
+  --ai-suggestions --accept-legal
+# → Les suggestions IA seront en espagnol</code></pre></div>
+  </section>
+
   <!-- ── 13. Flags ref ──────────────────────────────────────────────────── -->
   <section class="doc-section" id="flags-ref">
     <h2><span class="section-icon">📖</span> Référence complète des flags</h2>
@@ -2185,6 +2264,7 @@ nevelio scan --target https://api.example.com \
         <tr><td class="flag">--verbose</td><td>Logs détaillés et requêtes HTTP</td></tr>
         <tr><td class="flag">--accept-legal</td><td>Accepter le disclaimer sans prompt</td></tr>
         <tr><td class="flag">--no-color</td><td>Désactiver les couleurs ANSI</td></tr>
+        <tr><td class="flag">--lang LANG</td><td>Langue : <code>fr</code> | <code>en</code> | <code>es</code> (détection auto via <code>$LANG</code> si absent)</td></tr>
       </tbody>
     </table>
     </div>
@@ -2207,6 +2287,7 @@ nevelio scan --target https://api.example.com \
       <thead><tr><th>Variable</th><th>Description</th></tr></thead>
       <tbody>
         <tr><td class="flag">ANTHROPIC_API_KEY</td><td>Clé API Claude (requis pour --ai-suggestions)</td></tr>
+        <tr><td class="flag">NEVELIO_LANG</td><td>Forcer la langue sans flag (<code>fr</code> / <code>en</code> / <code>es</code>). Prioritaire sur <code>$LANG</code>.</td></tr>
       </tbody>
     </table>
     </div>

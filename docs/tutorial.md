@@ -23,6 +23,7 @@
 13. [Intégration CI/CD](#13-intégration-cicd)
 14. [Scénarios pratiques complets](#14-scénarios-pratiques-complets)
 15. [Référence rapide des flags](#15-référence-rapide-des-flags)
+16. [Internationalisation (`--lang`)](#16-internationalisation---lang)
 
 ---
 
@@ -1280,6 +1281,7 @@ nevelio scan \
 | `--verbose` | Logs détaillés et requêtes HTTP |
 | `--accept-legal` | Accepter le disclaimer sans prompt |
 | `--no-color` | Désactiver les couleurs ANSI |
+| `--lang LANG` | Langue de l'interface : `fr` \| `en` \| `es` (détection auto si absent) |
 
 ### Commande `nevelio report` / `nevelio convert`
 
@@ -1301,6 +1303,85 @@ nevelio modules show <nom>     # détail d'un module
 | Variable | Description |
 |---|---|
 | `ANTHROPIC_API_KEY` | Clé API Claude (requis pour `--ai-suggestions`) |
+| `NEVELIO_LANG` | Forcer la langue (`fr`/`en`/`es`) sans passer par `--lang` |
+
+---
+
+## 16. Internationalisation (`--lang`)
+
+Nevelio supporte **3 langues** : français (`fr`), anglais (`en`) et espagnol (`es`).
+Tous les messages CLI, le TUI, le disclaimer légal, les suggestions IA et le rapport HTML
+sont traduits automatiquement.
+
+### Détection automatique de la langue
+
+La langue est déterminée dans l'ordre de priorité suivant :
+
+| Priorité | Source | Exemple |
+|---|---|---|
+| 1 | Flag `--lang` | `nevelio --lang es scan …` |
+| 2 | Variable `NEVELIO_LANG` | `NEVELIO_LANG=fr nevelio scan …` |
+| 3 | Variable système `$LANGUAGE` ou `$LANG` | `LANG=fr_FR.UTF-8` → détecte `fr` |
+| 4 | Défaut | `en` |
+
+La normalisation est automatique : `fr_FR.UTF-8`, `fr-FR` et `fr` donnent tous `fr`.
+
+### Exemples
+
+**Français (via `$LANG` système) :**
+
+```bash
+LANG=fr_FR.UTF-8 nevelio scan --target https://api.example.com --dry-run
+# Cible       : https://api.example.com
+# Profil      : Normal
+# Résumé  :  0 Critical  0 High  0 Medium  0 Low  0 Informative
+```
+
+**Anglais (via flag) :**
+
+```bash
+nevelio --lang en scan --target https://api.example.com --dry-run
+# Target      : https://api.example.com
+# Profile     : Normal
+# Summary  :  0 Critical  0 High  0 Medium  0 Low  0 Informative
+```
+
+**Espagnol (via variable) :**
+
+```bash
+NEVELIO_LANG=es nevelio scan --target https://api.example.com --dry-run
+# Objetivo    : https://api.example.com
+# Perfil      : Normal
+# Resumen  :  0 Crítico  0 Alto  0 Medio  0 Bajo  0 Informativo
+```
+
+### Disclaimer légal multilingue
+
+Le texte légal affiché au premier lancement est lui aussi traduit.
+La réponse positive acceptée varie selon la langue :
+
+| Langue | Réponses acceptées |
+|---|---|
+| Français | `o`, `oui` |
+| Anglais | `y`, `yes` |
+| Espagnol | `s`, `sí`, `si` |
+
+### Rapport HTML localisé
+
+Le rapport HTML généré (`report.html`) reprend la langue du scan :
+ses labels (Cible / Target / Objetivo, Description, Recommandation…)
+sont automatiquement traduits dans la langue sélectionnée.
+
+### Suggestions IA localisées
+
+Avec `--ai-suggestions`, le prompt envoyé à Claude est rédigé dans la langue
+sélectionnée — les suggestions reçues sont donc dans la même langue.
+
+```bash
+nevelio --lang es scan --target https://api.example.com \
+  --ai-suggestions --accept-legal
+# → Les suggestions IA seront en espagnol
+```
 
 ---
 
