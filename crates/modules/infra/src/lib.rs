@@ -80,6 +80,41 @@ impl AttackModule for InfraModule {
             }
         }
 
+        // --- TLS check (once on base target) ---
+        findings.extend(check_tls(client, &base).await);
+
+        // --- Per-endpoint extended checks ---
+        for endpoint in endpoints {
+            let url = &endpoint.full_url;
+            if let Ok(resp) = client
+                .inner()
+                .get(url)
+                .timeout(std::time::Duration::from_secs(5))
+                .send()
+                .await
+            {
+                let headers = resp.headers().clone();
+                let body = resp.text().await.unwrap_or_default();
+
+                // CSP
+                if let Some(f) = check_csp(url, &headers) {
+                    findings.push(f);
+                }
+                // Referrer-Policy
+                if let Some(f) = check_referrer_policy(url, &headers) {
+                    findings.push(f);
+                }
+                // Cookie flags
+                findings.extend(check_cookie_flags(url, &headers));
+                // Secrets in response body
+                findings.extend(check_secrets_in_response(url, &body));
+                // Stack traces in response body
+                if let Some(f) = check_stack_traces(url, &body) {
+                    findings.push(f);
+                }
+            }
+        }
+
         findings
     }
 }
@@ -314,4 +349,367 @@ fn extract_max_age(hsts: &str) -> Option<u64> {
         .map(|s| s.trim())
         .find(|s| s.to_lowercase().starts_with("max-age="))
         .and_then(|s| s["max-age=".len()..].parse().ok())
+}
+
+// ---------------------------------------------------------------------------
+// Phase 8 additions
+// ---------------------------------------------------------------------------
+
+// --- CSP ---
+
+fn check_csp(url: &str, headers: &reqwest::header::HeaderMap) -> Option<Finding> {
+    let csp = match headers.get("content-security-policy") {
+        None => {
+            let mut f = Finding::new(
+                "Content-Security-Policy header missing",
+                Severity::Medium,
+                5.4,
+                "infra",
+                url,
+                "GET",
+            );
+            f.description =
+                "The Content-Security-Policy header is absent. Without CSP, the application \
+                 is exposed to XSS and data injection attacks."
+                    .to_string();
+            f.recommendation =
+                "Define a strict CSP: default-src 'self'; avoid 'unsafe-inline' and 'unsafe-eval'."
+                    .to_string();
+            f.cwe = Some("CWE-1021".to_string());
+            f.references = vec![
+                "https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP".to_string(),
+                "https://cheatsheetseries.owasp.org/cheatsheets/Content_Security_Policy_Cheat_Sheet.html".to_string(),
+            ];
+            return Some(f);
+        }
+        Some(v) => v.to_str().unwrap_or("").to_lowercase(),
+    };
+
+    // CSP present but contains dangerous directives
+    let dangerous: Vec<&str> = ["'unsafe-inline'", "'unsafe-eval'", "data:", "*"]
+        .iter()
+        .filter(|&&kw| csp.contains(kw))
+        .copied()
+        .collect();
+
+    if !dangerous.is_empty() {
+        let mut f = Finding::new(
+            "Content-Security-Policy contains unsafe directives",
+            Severity::Medium,
+            5.4,
+            "infra",
+            url,
+            "GET",
+        );
+        f.description = format!(
+            "The CSP header contains potentially dangerous directives: {}. \
+             These weaken XSS protection.",
+            dangerous.join(", ")
+        );
+        f.recommendation =
+            "Remove 'unsafe-inline' and 'unsafe-eval'. Use nonces or hashes for inline scripts."
+                .to_string();
+        f.cwe = Some("CWE-1021".to_string());
+        f.references = vec![
+            "https://cheatsheetseries.owasp.org/cheatsheets/Content_Security_Policy_Cheat_Sheet.html".to_string(),
+        ];
+        return Some(f);
+    }
+
+    None
+}
+
+// --- Referrer-Policy ---
+
+fn check_referrer_policy(url: &str, headers: &reqwest::header::HeaderMap) -> Option<Finding> {
+    if headers.get("referrer-policy").is_some() {
+        return None;
+    }
+    let mut f = Finding::new(
+        "Referrer-Policy header missing",
+        Severity::Low,
+        3.1,
+        "infra",
+        url,
+        "GET",
+    );
+    f.description =
+        "The Referrer-Policy header is absent. The browser may leak the full URL \
+         (including tokens or paths) in the Referer header to third-party sites."
+            .to_string();
+    f.recommendation =
+        "Add 'Referrer-Policy: strict-origin-when-cross-origin' or 'no-referrer'."
+            .to_string();
+    f.cwe = Some("CWE-200".to_string());
+    Some(f)
+}
+
+// --- Cookie Flags ---
+
+fn check_cookie_flags(url: &str, headers: &reqwest::header::HeaderMap) -> Vec<Finding> {
+    let mut findings = Vec::new();
+
+    for value in headers.get_all("set-cookie") {
+        let raw = match value.to_str() {
+            Ok(s) => s,
+            Err(_) => continue,
+        };
+        let lower = raw.to_lowercase();
+
+        // Extract cookie name (first segment before '=')
+        let name = raw.split('=').next().unwrap_or("?").trim();
+
+        if !lower.contains("secure") && url.starts_with("https") {
+            let mut f = Finding::new(
+                format!("Cookie '{}' missing Secure flag", name),
+                Severity::Medium,
+                5.9,
+                "infra",
+                url,
+                "GET",
+            );
+            f.description = format!(
+                "The cookie '{}' is set without the Secure flag. It may be transmitted \
+                 over unencrypted HTTP connections.",
+                name
+            );
+            f.recommendation =
+                "Add the Secure flag to all cookies set on HTTPS endpoints.".to_string();
+            f.cwe = Some("CWE-614".to_string());
+            f.references = vec![
+                "https://owasp.org/www-community/controls/SecureCookieAttribute".to_string(),
+            ];
+            findings.push(f);
+        }
+
+        if !lower.contains("httponly") {
+            let mut f = Finding::new(
+                format!("Cookie '{}' missing HttpOnly flag", name),
+                Severity::Medium,
+                4.7,
+                "infra",
+                url,
+                "GET",
+            );
+            f.description = format!(
+                "The cookie '{}' is set without the HttpOnly flag. \
+                 It is accessible via JavaScript and can be stolen by XSS.",
+                name
+            );
+            f.recommendation =
+                "Add the HttpOnly flag to all session and authentication cookies.".to_string();
+            f.cwe = Some("CWE-1004".to_string());
+            f.references = vec![
+                "https://owasp.org/www-community/HttpOnly".to_string(),
+            ];
+            findings.push(f);
+        }
+
+        if !lower.contains("samesite") {
+            let mut f = Finding::new(
+                format!("Cookie '{}' missing SameSite attribute", name),
+                Severity::Low,
+                3.5,
+                "infra",
+                url,
+                "GET",
+            );
+            f.description = format!(
+                "The cookie '{}' has no SameSite attribute, exposing it to CSRF attacks.",
+                name
+            );
+            f.recommendation =
+                "Set SameSite=Strict or SameSite=Lax on all cookies.".to_string();
+            f.cwe = Some("CWE-352".to_string());
+            findings.push(f);
+        }
+    }
+
+    findings
+}
+
+// --- TLS / HTTP without HTTPS ---
+
+async fn check_tls(client: &HttpClient, base: &str) -> Vec<Finding> {
+    let mut findings = Vec::new();
+
+    // If the target is already HTTP — no TLS at all
+    if base.starts_with("http://") {
+        let mut f = Finding::new(
+            "API served over plain HTTP (no TLS)",
+            Severity::Critical,
+            9.8,
+            "infra",
+            base,
+            "GET",
+        );
+        f.description =
+            "The API is accessible over HTTP without TLS encryption. All traffic \
+             (including credentials and tokens) is transmitted in cleartext."
+                .to_string();
+        f.recommendation =
+            "Serve all API traffic exclusively over HTTPS (TLS 1.2+). Redirect HTTP → HTTPS \
+             and set HSTS."
+                .to_string();
+        f.cwe = Some("CWE-319".to_string());
+        f.references = vec![
+            "https://owasp.org/www-project-api-security/".to_string(),
+        ];
+        findings.push(f);
+        return findings;
+    }
+
+    // If HTTPS — check whether HTTP (non-TLS) is also accessible without a redirect
+    if base.starts_with("https://") {
+        let http_url = format!("http://{}", &base[8..]);
+        let req = client.inner().get(&http_url).build();
+        if let Ok(req) = req {
+            // Use inner client directly so we don't follow redirects automatically
+            let result = client
+                .inner()
+                .execute(req)
+                .await;
+            if let Ok(resp) = result {
+                let status = resp.status().as_u16();
+                // If the server returns 200 on HTTP instead of redirecting → finding
+                if matches!(status, 200..=299) {
+                    let mut f = Finding::new(
+                        "API accessible over HTTP without HTTPS redirect",
+                        Severity::High,
+                        7.4,
+                        "infra",
+                        &http_url,
+                        "GET",
+                    );
+                    f.description = format!(
+                        "The HTTP endpoint {} returns HTTP {} without redirecting to HTTPS. \
+                         Traffic can be intercepted by a man-in-the-middle attacker.",
+                        http_url, status
+                    );
+                    f.proof = format!("GET {} → HTTP {}", http_url, status);
+                    f.recommendation =
+                        "Configure your server to return 301/308 for all HTTP requests \
+                         and add HSTS to prevent future HTTP access."
+                            .to_string();
+                    f.cwe = Some("CWE-319".to_string());
+                    findings.push(f);
+                }
+            }
+        }
+    }
+
+    findings
+}
+
+// --- Secrets in response body ---
+
+const SECRET_PATTERNS: &[(&str, &str, &str)] = &[
+    // (pattern substring, label, CWE)
+    ("api_key",      "API Key",           "CWE-312"),
+    ("apikey",       "API Key",           "CWE-312"),
+    ("api-key",      "API Key",           "CWE-312"),
+    ("secret_key",   "Secret Key",        "CWE-312"),
+    ("client_secret","OAuth Client Secret","CWE-312"),
+    ("access_token", "Access Token",      "CWE-312"),
+    ("private_key",  "Private Key",       "CWE-312"),
+    ("password",     "Password",          "CWE-256"),
+    ("passwd",       "Password",          "CWE-256"),
+    ("db_password",  "DB Password",       "CWE-256"),
+    ("aws_secret",   "AWS Secret",        "CWE-312"),
+    ("AKIA",         "AWS Access Key ID", "CWE-312"),
+];
+
+fn check_secrets_in_response(url: &str, body: &str) -> Vec<Finding> {
+    let lower = body.to_lowercase();
+    let mut findings = Vec::new();
+    let mut already_flagged = std::collections::HashSet::new();
+
+    for &(pattern, label, cwe) in SECRET_PATTERNS {
+        if lower.contains(pattern) && already_flagged.insert(label) {
+            let mut f = Finding::new(
+                format!("Sensitive data in response — {}", label),
+                Severity::Critical,
+                9.1,
+                "infra",
+                url,
+                "GET",
+            );
+            f.description = format!(
+                "The response body of {} appears to contain a {} (keyword: '{}'). \
+                 Exposing secrets in API responses is a critical security risk.",
+                url, label, pattern
+            );
+            f.proof = format!("Keyword '{}' found in response body", pattern);
+            f.recommendation = format!(
+                "Never return {} in API responses. Audit all serializers and response \
+                 schemas to exclude sensitive fields.",
+                label
+            );
+            f.cwe = Some(cwe.to_string());
+            f.references = vec![
+                "https://owasp.org/API-Security/editions/2023/en/0xa3-broken-object-property-level-authorization/".to_string(),
+            ];
+            findings.push(f);
+        }
+    }
+
+    findings
+}
+
+// --- Stack traces in response body ---
+
+const STACK_TRACE_PATTERNS: &[&str] = &[
+    "traceback (most recent call last)",
+    "at java.",
+    "at org.springframework",
+    "at com.sun.",
+    "exception in thread",
+    "unhandledexception",
+    "system.nullreferenceexception",
+    "php fatal error",
+    "php warning:",
+    "php parse error",
+    "warning: include(",
+    "failed to open stream",
+    "stack trace:",
+    "panic: runtime error",
+    "goroutine 1 [running]",
+    "/var/www/",
+    "/home/ubuntu/",
+    "/usr/local/lib/",
+    "app/controllers/",
+    "app/models/",
+];
+
+fn check_stack_traces(url: &str, body: &str) -> Option<Finding> {
+    let lower = body.to_lowercase();
+
+    let matched = STACK_TRACE_PATTERNS
+        .iter()
+        .find(|&&p| lower.contains(p))?;
+
+    let mut f = Finding::new(
+        "Stack trace / internal path exposed in response",
+        Severity::Medium,
+        5.3,
+        "infra",
+        url,
+        "GET",
+    );
+    f.description = format!(
+        "The response of {} contains what appears to be a server-side stack trace or \
+         internal file path (matched: '{}'). This leaks implementation details that \
+         help attackers fingerprint and exploit the application.",
+        url, matched
+    );
+    f.proof = format!("Pattern '{}' found in response body", matched);
+    f.recommendation =
+        "Disable detailed error messages in production. Return generic error responses \
+         (HTTP 500) without internal details. Use structured logging instead."
+            .to_string();
+    f.cwe = Some("CWE-209".to_string());
+    f.references = vec![
+        "https://owasp.org/www-community/Improper_Error_Handling".to_string(),
+    ];
+    Some(f)
 }
