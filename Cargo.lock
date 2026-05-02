@@ -1200,8 +1200,13 @@ dependencies = [
  "anyhow",
  "async-trait",
  "nevelio-core",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "serde_yaml",
  "tokio",
  "tracing",
+ "uuid",
 ]
 
 [[package]]
@@ -1251,6 +1256,10 @@ dependencies = [
  "anyhow",
  "async-trait",
  "nevelio-core",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "serde_yaml",
  "tokio",
  "tracing",
 ]
