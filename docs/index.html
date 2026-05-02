@@ -1,0 +1,2367 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Nevelio — Documentation</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css" id="hljs-theme" />
+  <style>
+    /* ── Reset & variables ─────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --sidebar-w: 280px;
+      --header-h: 56px;
+      --radius: 8px;
+      --font-mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+      --font-sans: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      --transition: 0.2s ease;
+    }
+
+    [data-theme="dark"] {
+      --bg:          #0d1117;
+      --bg-sidebar:  #161b22;
+      --bg-card:     #161b22;
+      --bg-code:     #0d1117;
+      --bg-hover:    #21262d;
+      --bg-active:   #1f2937;
+      --border:      #30363d;
+      --text:        #e6edf3;
+      --text-muted:  #8b949e;
+      --text-sidebar:#c9d1d9;
+      --accent:      #58a6ff;
+      --accent-dim:  #1c3a5a;
+      --critical:    #ff7b72;
+      --high:        #ffa657;
+      --medium:      #e3b341;
+      --low:         #3fb950;
+      --info:        #58a6ff;
+      --tag-bg:      #21262d;
+      --shadow:      rgba(0,0,0,0.4);
+    }
+
+    [data-theme="light"] {
+      --bg:          #ffffff;
+      --bg-sidebar:  #f6f8fa;
+      --bg-card:     #f6f8fa;
+      --bg-code:     #f0f4f8;
+      --bg-hover:    #eaeef2;
+      --bg-active:   #dbeafe;
+      --border:      #d0d7de;
+      --text:        #1f2328;
+      --text-muted:  #636c76;
+      --text-sidebar:#1f2328;
+      --accent:      #0969da;
+      --accent-dim:  #dbeafe;
+      --critical:    #cf222e;
+      --high:        #d1242f;
+      --medium:      #9a6700;
+      --low:         #1a7f37;
+      --info:        #0969da;
+      --tag-bg:      #eaeef2;
+      --shadow:      rgba(0,0,0,0.1);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: var(--font-sans);
+      background: var(--bg);
+      color: var(--text);
+      font-size: 15px;
+      line-height: 1.7;
+    }
+
+    /* ── Header ────────────────────────────────────────────────────────── */
+    .header {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      height: var(--header-h);
+      background: var(--bg-sidebar);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      padding: 0 20px;
+      gap: 16px;
+      z-index: 100;
+    }
+
+    .header-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+      color: var(--text);
+      font-weight: 700;
+      font-size: 17px;
+      letter-spacing: -0.3px;
+    }
+
+    .header-logo .logo-icon {
+      width: 32px;
+      height: 32px;
+      background: linear-gradient(135deg, var(--accent), #a371f7);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+
+    .header-version {
+      font-size: 11px;
+      font-weight: 500;
+      background: var(--accent-dim);
+      color: var(--accent);
+      padding: 2px 8px;
+      border-radius: 20px;
+      border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+    }
+
+    .header-spacer { flex: 1; }
+
+    .header-search {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 6px 12px;
+      width: 240px;
+      transition: border-color var(--transition);
+    }
+
+    .header-search:focus-within { border-color: var(--accent); }
+
+    .header-search input {
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--text);
+      font-size: 13px;
+      width: 100%;
+      font-family: var(--font-sans);
+    }
+
+    .header-search input::placeholder { color: var(--text-muted); }
+
+    .header-search svg { color: var(--text-muted); flex-shrink: 0; }
+
+    .theme-btn {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 6px 8px;
+      display: flex;
+      align-items: center;
+      transition: all var(--transition);
+    }
+
+    .theme-btn:hover { background: var(--bg-hover); color: var(--text); }
+
+    .menu-btn {
+      display: none;
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 4px;
+    }
+
+    /* ── Sidebar ────────────────────────────────────────────────────────── */
+    .sidebar {
+      position: fixed;
+      top: var(--header-h);
+      left: 0;
+      bottom: 0;
+      width: var(--sidebar-w);
+      background: var(--bg-sidebar);
+      border-right: 1px solid var(--border);
+      overflow-y: auto;
+      padding: 20px 0 40px;
+      z-index: 90;
+      transition: transform var(--transition);
+    }
+
+    .sidebar::-webkit-scrollbar { width: 4px; }
+    .sidebar::-webkit-scrollbar-track { background: transparent; }
+    .sidebar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+    .nav-section {
+      margin-bottom: 4px;
+    }
+
+    .nav-section-label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--text-muted);
+      padding: 12px 20px 6px;
+    }
+
+    .nav-link {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 20px;
+      color: var(--text-sidebar);
+      text-decoration: none;
+      font-size: 13.5px;
+      border-left: 3px solid transparent;
+      transition: all var(--transition);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .nav-link:hover { background: var(--bg-hover); color: var(--text); }
+
+    .nav-link.active {
+      background: var(--bg-active);
+      color: var(--accent);
+      border-left-color: var(--accent);
+      font-weight: 500;
+    }
+
+    .nav-link .nav-icon { font-size: 14px; flex-shrink: 0; width: 16px; text-align: center; }
+
+    .nav-sub {
+      padding-left: 44px;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .nav-sub:hover { color: var(--text); }
+
+    /* ── Main content ───────────────────────────────────────────────────── */
+    .main {
+      margin-left: var(--sidebar-w);
+      margin-top: var(--header-h);
+      min-height: calc(100vh - var(--header-h));
+    }
+
+    .content {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 48px 40px 80px;
+    }
+
+    /* ── Hero ───────────────────────────────────────────────────────────── */
+    .hero {
+      text-align: center;
+      padding: 60px 0 48px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 60px;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--accent-dim);
+      color: var(--accent);
+      border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 500;
+      padding: 4px 12px;
+      margin-bottom: 20px;
+    }
+
+    .hero h1 {
+      font-size: 42px;
+      font-weight: 800;
+      letter-spacing: -1px;
+      line-height: 1.1;
+      margin-bottom: 16px;
+      background: linear-gradient(135deg, var(--text), var(--accent));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero p {
+      font-size: 17px;
+      color: var(--text-muted);
+      max-width: 560px;
+      margin: 0 auto 32px;
+    }
+
+    .hero-actions {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 20px;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 500;
+      text-decoration: none;
+      cursor: pointer;
+      border: none;
+      transition: all var(--transition);
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
+
+    .btn-secondary {
+      background: var(--bg-card);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    .btn-secondary:hover { background: var(--bg-hover); }
+
+    .hero-stats {
+      display: flex;
+      gap: 32px;
+      justify-content: center;
+      margin-top: 40px;
+      flex-wrap: wrap;
+    }
+
+    .stat {
+      text-align: center;
+    }
+
+    .stat-value {
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--accent);
+      line-height: 1;
+    }
+
+    .stat-label {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    /* ── Sections ───────────────────────────────────────────────────────── */
+    .doc-section {
+      margin-bottom: 64px;
+      scroll-margin-top: calc(var(--header-h) + 24px);
+    }
+
+    h2 {
+      font-size: 26px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    h2 .section-icon {
+      font-size: 22px;
+    }
+
+    h3 {
+      font-size: 18px;
+      font-weight: 600;
+      margin: 32px 0 12px;
+      color: var(--text);
+    }
+
+    h4 {
+      font-size: 14px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+      margin: 24px 0 8px;
+    }
+
+    p { margin-bottom: 14px; }
+
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    strong { font-weight: 600; color: var(--text); }
+
+    /* ── Cards ──────────────────────────────────────────────────────────── */
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 16px;
+      margin: 20px 0;
+    }
+
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      transition: all var(--transition);
+    }
+
+    .card:hover {
+      border-color: var(--accent);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px var(--shadow);
+    }
+
+    .card-icon { font-size: 24px; margin-bottom: 10px; }
+    .card-title { font-weight: 600; font-size: 14px; margin-bottom: 6px; }
+    .card-desc { font-size: 12px; color: var(--text-muted); line-height: 1.5; }
+
+    /* ── Feature grid ───────────────────────────────────────────────────── */
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 16px;
+      margin: 24px 0;
+    }
+
+    .feature-item {
+      display: flex;
+      gap: 12px;
+      padding: 16px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+    }
+
+    .feature-item-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      flex-shrink: 0;
+      background: var(--bg-hover);
+    }
+
+    .feature-item-body .title { font-weight: 600; font-size: 13px; margin-bottom: 4px; }
+    .feature-item-body .desc { font-size: 12px; color: var(--text-muted); line-height: 1.5; }
+
+    /* ── Code blocks ────────────────────────────────────────────────────── */
+    .code-block {
+      position: relative;
+      margin: 16px 0;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      overflow: hidden;
+    }
+
+    .code-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 14px;
+      background: var(--bg-hover);
+      border-bottom: 1px solid var(--border);
+      font-size: 12px;
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+    }
+
+    .copy-btn {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 3px 8px;
+      font-size: 11px;
+      transition: all var(--transition);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .copy-btn:hover { background: var(--bg-active); color: var(--text); }
+    .copy-btn.copied { color: var(--low); border-color: var(--low); }
+
+    .code-block pre {
+      margin: 0;
+      padding: 16px;
+      overflow-x: auto;
+      background: var(--bg-code) !important;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .code-block code { font-family: var(--font-mono); }
+
+    /* Inline code */
+    :not(pre) > code {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      background: var(--bg-hover);
+      padding: 2px 6px;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+      color: var(--accent);
+    }
+
+    /* ── Tables ─────────────────────────────────────────────────────────── */
+    .table-wrap { overflow-x: auto; margin: 16px 0; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13.5px;
+    }
+
+    th {
+      background: var(--bg-hover);
+      padding: 10px 14px;
+      text-align: left;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+
+    td {
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: var(--bg-hover); }
+
+    td code {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      background: var(--bg-hover);
+      padding: 2px 5px;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+      white-space: nowrap;
+    }
+
+    /* ── Callouts ───────────────────────────────────────────────────────── */
+    .callout {
+      display: flex;
+      gap: 12px;
+      padding: 14px 16px;
+      border-radius: var(--radius);
+      border-left: 3px solid;
+      margin: 16px 0;
+      font-size: 14px;
+    }
+
+    .callout-icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+
+    .callout.warning {
+      background: color-mix(in srgb, var(--high) 10%, transparent);
+      border-color: var(--high);
+    }
+
+    .callout.info {
+      background: color-mix(in srgb, var(--info) 10%, transparent);
+      border-color: var(--info);
+    }
+
+    .callout.danger {
+      background: color-mix(in srgb, var(--critical) 10%, transparent);
+      border-color: var(--critical);
+    }
+
+    .callout.success {
+      background: color-mix(in srgb, var(--low) 10%, transparent);
+      border-color: var(--low);
+    }
+
+    /* ── Severity badges ────────────────────────────────────────────────── */
+    .badge {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 20px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .badge-critical { background: color-mix(in srgb, var(--critical) 15%, transparent); color: var(--critical); }
+    .badge-high     { background: color-mix(in srgb, var(--high)     15%, transparent); color: var(--high); }
+    .badge-medium   { background: color-mix(in srgb, var(--medium)   15%, transparent); color: var(--medium); }
+    .badge-low      { background: color-mix(in srgb, var(--low)      15%, transparent); color: var(--low); }
+    .badge-info     { background: color-mix(in srgb, var(--info)     15%, transparent); color: var(--info); }
+
+    /* ── Steps ──────────────────────────────────────────────────────────── */
+    .steps { counter-reset: step; margin: 20px 0; }
+
+    .step {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 24px;
+      align-items: flex-start;
+    }
+
+    .step-num {
+      counter-increment: step;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--accent-dim);
+      color: var(--accent);
+      border: 2px solid var(--accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 13px;
+      flex-shrink: 0;
+    }
+
+    .step-num::before { content: counter(step); }
+
+    .step-body { flex: 1; padding-top: 4px; }
+    .step-title { font-weight: 600; margin-bottom: 6px; }
+
+    /* ── Profiles ───────────────────────────────────────────────────────── */
+    .profile-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin: 20px 0;
+    }
+
+    .profile-card {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      text-align: center;
+      transition: all var(--transition);
+    }
+
+    .profile-card:hover { border-color: var(--accent); }
+
+    .profile-card.stealth { border-top: 3px solid var(--low); }
+    .profile-card.normal  { border-top: 3px solid var(--medium); }
+    .profile-card.aggressive { border-top: 3px solid var(--critical); }
+
+    .profile-name { font-size: 16px; font-weight: 700; margin-bottom: 8px; }
+    .profile-meta { font-size: 12px; color: var(--text-muted); margin-bottom: 12px; }
+    .profile-tag { font-size: 11px; background: var(--tag-bg); padding: 3px 8px; border-radius: 4px; }
+
+    /* ── Module cards ───────────────────────────────────────────────────── */
+    .module-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 16px;
+      margin: 24px 0;
+    }
+
+    .module-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      transition: all var(--transition);
+      cursor: default;
+    }
+
+    .module-card:hover {
+      border-color: var(--accent);
+      box-shadow: 0 4px 16px var(--shadow);
+    }
+
+    .module-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .module-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      background: var(--bg-hover);
+    }
+
+    .module-name { font-weight: 700; font-size: 14px; }
+    .module-cmd { font-size: 11px; color: var(--text-muted); font-family: var(--font-mono); }
+
+    .module-checks {
+      list-style: none;
+      margin-top: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .module-checks li {
+      font-size: 12px;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .module-checks li::before { content: "→"; color: var(--accent); font-size: 10px; }
+
+    /* ── Check accordion ────────────────────────────────────────────────── */
+    .check-list { margin: 16px 0; }
+
+    .check-item {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      margin-bottom: 8px;
+      overflow: hidden;
+    }
+
+    .check-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 16px;
+      cursor: pointer;
+      background: var(--bg-card);
+      transition: background var(--transition);
+      user-select: none;
+    }
+
+    .check-header:hover { background: var(--bg-hover); }
+
+    .check-header.open { background: var(--bg-active); }
+
+    .check-title { font-weight: 600; font-size: 14px; flex: 1; }
+    .check-cwe { font-size: 11px; color: var(--text-muted); font-family: var(--font-mono); }
+    .check-arrow { color: var(--text-muted); transition: transform var(--transition); }
+    .check-header.open .check-arrow { transform: rotate(90deg); }
+
+    .check-body {
+      display: none;
+      padding: 16px;
+      border-top: 1px solid var(--border);
+      background: var(--bg);
+      font-size: 13.5px;
+    }
+
+    .check-body.open { display: block; }
+
+    /* ── Formats grid ───────────────────────────────────────────────────── */
+    .format-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 12px;
+      margin: 20px 0;
+    }
+
+    .format-card {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      text-align: center;
+      transition: all var(--transition);
+    }
+
+    .format-card:hover { border-color: var(--accent); background: var(--bg-hover); }
+    .format-icon { font-size: 28px; margin-bottom: 8px; }
+    .format-name { font-weight: 700; font-size: 14px; }
+    .format-ext { font-size: 11px; color: var(--text-muted); font-family: var(--font-mono); margin: 2px 0; }
+    .format-use { font-size: 11px; color: var(--text-muted); }
+
+    /* ── Flag reference table ───────────────────────────────────────────── */
+    .flag { font-family: var(--font-mono); font-size: 13px; color: var(--accent); white-space: nowrap; }
+
+    /* ── Scenario tabs ──────────────────────────────────────────────────── */
+    .tabs { margin: 24px 0; }
+
+    .tab-list {
+      display: flex;
+      gap: 2px;
+      border-bottom: 1px solid var(--border);
+      overflow-x: auto;
+      margin-bottom: 0;
+    }
+
+    .tab-btn {
+      background: none;
+      border: none;
+      border-bottom: 2px solid transparent;
+      padding: 10px 16px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-muted);
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all var(--transition);
+      font-family: var(--font-sans);
+    }
+
+    .tab-btn:hover { color: var(--text); }
+    .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+    .tab-panel { display: none; padding: 20px 0; }
+    .tab-panel.active { display: block; }
+
+    /* ── TOC ────────────────────────────────────────────────────────────── */
+    .toc {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px 24px;
+      margin-bottom: 40px;
+    }
+
+    .toc h3 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); margin: 0 0 12px; }
+
+    .toc ol {
+      padding-left: 20px;
+      margin: 0;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 4px 24px;
+    }
+
+    .toc li { font-size: 13px; }
+    .toc a { color: var(--text-muted); }
+    .toc a:hover { color: var(--accent); text-decoration: none; }
+
+    /* ── Footer ─────────────────────────────────────────────────────────── */
+    .footer {
+      border-top: 1px solid var(--border);
+      padding: 24px 40px;
+      margin-left: var(--sidebar-w);
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 12px;
+    }
+
+    /* ── Search results overlay ─────────────────────────────────────────── */
+    .search-results {
+      position: fixed;
+      top: var(--header-h);
+      left: 50%;
+      transform: translateX(-50%);
+      width: 560px;
+      max-height: 400px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: 0 16px 48px var(--shadow);
+      z-index: 200;
+      overflow-y: auto;
+      display: none;
+    }
+
+    .search-results.visible { display: block; }
+
+    .search-result-item {
+      display: block;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      text-decoration: none;
+      color: var(--text);
+      transition: background var(--transition);
+    }
+
+    .search-result-item:hover { background: var(--bg-hover); }
+    .search-result-item:last-child { border-bottom: none; }
+    .search-result-title { font-weight: 600; font-size: 13px; }
+    .search-result-section { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+    .search-result-preview { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+
+    mark { background: color-mix(in srgb, var(--accent) 25%, transparent); color: var(--accent); border-radius: 2px; }
+
+    /* ── Responsive ─────────────────────────────────────────────────────── */
+    @media (max-width: 900px) {
+      :root { --sidebar-w: 0px; }
+      .sidebar { transform: translateX(-280px); width: 280px; }
+      .sidebar.open { transform: translateX(0); }
+      .menu-btn { display: flex; }
+      .header-search { width: 160px; }
+      .profile-grid { grid-template-columns: 1fr; }
+      .content { padding: 32px 20px 60px; }
+      .footer { margin-left: 0; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Header ──────────────────────────────────────────────────────────── -->
+<header class="header">
+  <button class="menu-btn" onclick="toggleSidebar()" aria-label="Menu">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+    </svg>
+  </button>
+
+  <a class="header-logo" href="#hero">
+    <div class="logo-icon">🔐</div>
+    Nevelio
+  </a>
+  <span class="header-version">v0.1</span>
+
+  <div class="header-spacer"></div>
+
+  <div class="header-search">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+    </svg>
+    <input type="text" id="searchInput" placeholder="Rechercher..." autocomplete="off" />
+  </div>
+
+  <button class="theme-btn" onclick="toggleTheme()" id="themeBtn" aria-label="Changer de thème">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" id="themeIcon">
+      <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+      <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+    </svg>
+  </button>
+</header>
+
+<!-- ── Search results ───────────────────────────────────────────────────── -->
+<div class="search-results" id="searchResults"></div>
+
+<!-- ── Sidebar ──────────────────────────────────────────────────────────── -->
+<nav class="sidebar" id="sidebar">
+  <div class="nav-section">
+    <div class="nav-section-label">Démarrage</div>
+    <a class="nav-link" href="#installation"><span class="nav-icon">⚡</span>Installation</a>
+    <a class="nav-link" href="#legal"><span class="nav-icon">⚖️</span>Disclaimer légal</a>
+    <a class="nav-link" href="#config"><span class="nav-icon">⚙️</span>Configuration</a>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-section-label">Commandes</div>
+    <a class="nav-link" href="#scan"><span class="nav-icon">🔍</span>nevelio scan</a>
+    <a class="nav-link nav-sub" href="#scan-target">↳ Cible & spec</a>
+    <a class="nav-link nav-sub" href="#scan-profiles">↳ Profils</a>
+    <a class="nav-link nav-sub" href="#scan-modules">↳ Modules</a>
+    <a class="nav-link nav-sub" href="#scan-auth">↳ Authentification</a>
+    <a class="nav-link nav-sub" href="#scan-output">↳ Sortie</a>
+    <a class="nav-link nav-sub" href="#scan-modes">↳ Modes spéciaux</a>
+    <a class="nav-link" href="#report"><span class="nav-icon">📄</span>nevelio report</a>
+    <a class="nav-link" href="#modules-cmd"><span class="nav-icon">📦</span>nevelio modules</a>
+    <a class="nav-link" href="#tui"><span class="nav-icon">🖥️</span>TUI Dashboard</a>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-section-label">Modules d'attaque</div>
+    <a class="nav-link" href="#mod-auth"><span class="nav-icon">🔑</span>auth</a>
+    <a class="nav-link" href="#mod-injection"><span class="nav-icon">💉</span>injection</a>
+    <a class="nav-link" href="#mod-access"><span class="nav-icon">🚪</span>access-control</a>
+    <a class="nav-link" href="#mod-graphql"><span class="nav-icon">◈</span>graphql</a>
+    <a class="nav-link" href="#mod-infra"><span class="nav-icon">🏗️</span>infra</a>
+    <a class="nav-link" href="#mod-business"><span class="nav-icon">💼</span>business-logic</a>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-section-label">Sorties & intégrations</div>
+    <a class="nav-link" href="#formats"><span class="nav-icon">📋</span>Formats de sortie</a>
+    <a class="nav-link" href="#ai"><span class="nav-icon">🤖</span>Suggestions IA</a>
+    <a class="nav-link" href="#cicd"><span class="nav-icon">🔄</span>CI/CD</a>
+    <a class="nav-link" href="#scenarios"><span class="nav-icon">🎯</span>Scénarios pratiques</a>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-section-label">Référence</div>
+    <a class="nav-link" href="#flags-ref"><span class="nav-icon">📖</span>Tous les flags</a>
+  </div>
+</nav>
+
+<!-- ── Main ─────────────────────────────────────────────────────────────── -->
+<main class="main">
+<div class="content">
+
+  <!-- Hero -->
+  <section class="hero" id="hero">
+    <div class="hero-badge">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+      API Security Scanner
+    </div>
+    <h1>Nevelio</h1>
+    <p>Outil de test de pénétration d'API REST et GraphQL, écrit en Rust.<br/>
+    Rapide, précis, et conçu pour s'intégrer dans vos pipelines CI/CD.</p>
+    <div class="hero-actions">
+      <a href="#installation" class="btn btn-primary">
+        ⚡ Démarrer
+      </a>
+      <a href="#scan" class="btn btn-secondary">
+        📖 Référence CLI
+      </a>
+      <a href="tutorial.md" class="btn btn-secondary">
+        📝 Version Markdown
+      </a>
+    </div>
+    <div class="hero-stats">
+      <div class="stat"><div class="stat-value">6</div><div class="stat-label">Modules d'attaque</div></div>
+      <div class="stat"><div class="stat-value">32+</div><div class="stat-label">Vérifications</div></div>
+      <div class="stat"><div class="stat-value">5</div><div class="stat-label">Formats de sortie</div></div>
+      <div class="stat"><div class="stat-value">79</div><div class="stat-label">Tests</div></div>
+    </div>
+  </section>
+
+  <!-- TOC -->
+  <div class="toc">
+    <h3>Table des matières</h3>
+    <ol>
+      <li><a href="#installation">Installation</a></li>
+      <li><a href="#legal">Disclaimer légal</a></li>
+      <li><a href="#config">Configuration (init)</a></li>
+      <li><a href="#scan">Commande scan</a></li>
+      <li><a href="#tui">TUI Dashboard</a></li>
+      <li><a href="#modules">Modules d'attaque</a></li>
+      <li><a href="#formats">Formats de sortie</a></li>
+      <li><a href="#ai">Suggestions IA</a></li>
+      <li><a href="#report">Commande report</a></li>
+      <li><a href="#modules-cmd">Commande modules</a></li>
+      <li><a href="#cicd">Intégration CI/CD</a></li>
+      <li><a href="#scenarios">Scénarios pratiques</a></li>
+      <li><a href="#flags-ref">Référence des flags</a></li>
+    </ol>
+  </div>
+
+  <!-- ── 1. Installation ─────────────────────────────────────────────── -->
+  <section class="doc-section" id="installation">
+    <h2><span class="section-icon">⚡</span> Installation</h2>
+
+    <h3>Prérequis</h3>
+    <div class="feature-grid">
+      <div class="feature-item">
+        <div class="feature-item-icon">🦀</div>
+        <div class="feature-item-body">
+          <div class="title">Rust stable ≥ 1.75</div>
+          <div class="desc">Installer via <code>rustup update stable</code></div>
+        </div>
+      </div>
+      <div class="feature-item">
+        <div class="feature-item-icon">🌐</div>
+        <div class="feature-item-body">
+          <div class="title">Accès réseau à la cible</div>
+          <div class="desc">HTTPS recommandé, HTTP supporté</div>
+        </div>
+      </div>
+      <div class="feature-item">
+        <div class="feature-item-icon">📋</div>
+        <div class="feature-item-body">
+          <div class="title">Autorisation écrite</div>
+          <div class="desc">Obligation légale dans toutes les juridictions</div>
+        </div>
+      </div>
+    </div>
+
+    <h3>Compilation</h3>
+    <div class="code-block">
+      <div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)">Copier</button></div>
+      <pre><code class="language-bash">git clone https://github.com/your-org/nevelio.git
+cd nevelio
+cargo build --release
+
+# Le binaire est dans target/release/nevelio
+./target/release/nevelio --version</code></pre>
+    </div>
+
+    <h3>Installation globale (optionnel)</h3>
+    <div class="code-block">
+      <div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)">Copier</button></div>
+      <pre><code class="language-bash"># Copier dans $PATH
+cp target/release/nevelio ~/.local/bin/
+
+# ou via cargo
+cargo install --path crates/cli
+
+# Vérification
+nevelio --version   # nevelio 0.1.0
+nevelio --help</code></pre>
+    </div>
+  </section>
+
+  <!-- ── 2. Legal ─────────────────────────────────────────────────────── -->
+  <section class="doc-section" id="legal">
+    <h2><span class="section-icon">⚖️</span> Disclaimer légal</h2>
+
+    <div class="callout warning">
+      <span class="callout-icon">⚠️</span>
+      <div>Nevelio est conçu <strong>exclusivement</strong> pour des systèmes que vous possédez
+      ou sur lesquels vous avez une autorisation écrite explicite. L'utilisation sans
+      autorisation est illégale (CFAA, Directive UE, Sénégal Loi n° 2008-11).</div>
+    </div>
+
+    <h3>Premier lancement</h3>
+    <p>Au premier scan, Nevelio affiche un avertissement et demande confirmation :</p>
+
+    <div class="code-block">
+      <div class="code-header"><span>terminal</span><button class="copy-btn" onclick="copyCode(this)">Copier</button></div>
+      <pre><code class="language-text">━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+                  AVERTISSEMENT LEGAL
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+En continuant, vous confirmez que :
+  1. Vous avez une autorisation explicite pour tester la cible.
+  2. Vous acceptez l'entière responsabilité légale de vos actes.
+  3. Vous traiterez toutes les découvertes comme confidentielles.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Acceptez-vous ces conditions ? [o/N] : o</code></pre>
+    </div>
+
+    <h3>Persistance automatique</h3>
+    <p>Après acceptation, un marqueur est écrit dans <code>~/.config/nevelio/legal_accepted</code>.
+    Les lancements suivants ne demandent plus confirmation.</p>
+
+    <div class="code-block">
+      <div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)">Copier</button></div>
+      <pre><code class="language-bash">cat ~/.config/nevelio/legal_accepted
+# 2026-05-02T14:23:45Z
+
+# Réinitialiser l'acceptation
+rm ~/.config/nevelio/legal_accepted</code></pre>
+    </div>
+
+    <h3>Mode non interactif (CI/CD)</h3>
+    <div class="code-block">
+      <div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)">Copier</button></div>
+      <pre><code class="language-bash"># --accept-legal accepte et persiste sans prompt
+nevelio scan --target https://api.example.com --accept-legal</code></pre>
+    </div>
+  </section>
+
+  <!-- ── 3. Config ─────────────────────────────────────────────────────── -->
+  <section class="doc-section" id="config">
+    <h2><span class="section-icon">⚙️</span> Configuration — <code>nevelio init</code></h2>
+
+    <p>Génère un fichier <code>.nevelio.toml</code> commenté dans le répertoire courant :</p>
+
+    <div class="code-block">
+      <div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)">Copier</button></div>
+      <pre><code class="language-bash">cd mon-projet
+nevelio init
+# Crée .nevelio.toml avec tous les champs documentés</code></pre>
+    </div>
+
+    <h3>Référence des champs</h3>
+    <div class="table-wrap">
+    <table>
+      <thead><tr><th>Champ</th><th>Type</th><th>Défaut</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td><code>target</code></td><td>string</td><td>—</td><td>URL de base de l'API cible</td></tr>
+        <tr><td><code>spec</code></td><td>string</td><td>—</td><td>Spec OpenAPI (fichier local ou URL)</td></tr>
+        <tr><td><code>profile</code></td><td>stealth / normal / aggressive</td><td>normal</td><td>Profil de scan</td></tr>
+        <tr><td><code>modules</code></td><td>liste</td><td>tous</td><td>Modules à exécuter</td></tr>
+        <tr><td><code>concurrency</code></td><td>entier</td><td>du profil</td><td>Requêtes simultanées</td></tr>
+        <tr><td><code>rate_limit</code></td><td>entier</td><td>du profil</td><td>Req/s maximum</td></tr>
+        <tr><td><code>timeout</code></td><td>secondes</td><td>10</td><td>Timeout par requête</td></tr>
+        <tr><td><code>auth_token</code></td><td>string</td><td>—</td><td>Header Authorization complet</td></tr>
+        <tr><td><code>proxy</code></td><td>URL</td><td>—</td><td>Proxy HTTP (Burp Suite, etc.)</td></tr>
+        <tr><td><code>out_dir</code></td><td>chemin</td><td>.</td><td>Répertoire de sortie</td></tr>
+        <tr><td><code>fail_on</code></td><td>none / low / medium / high / critical</td><td>—</td><td>Seuil d'échec CI</td></tr>
+      </tbody>
+    </table>
+    </div>
+
+    <div class="code-block">
+      <div class="code-header"><span>.nevelio.toml</span><button class="copy-btn" onclick="copyCode(this)">Copier</button></div>
+      <pre><code class="language-toml">target = "https://api.example.com"
+# spec  = "./openapi.yaml"
+profile = "normal"
+# modules = ["auth", "injection", "access-control"]
+# concurrency = 5
+# rate_limit  = 10
+# timeout     = 10
+# auth_token  = "Bearer eyJhbGciOiJIUzI1NiJ9..."
+# proxy       = "http://127.0.0.1:8080"
+out_dir  = "./results"
+# fail_on = "high"</code></pre>
+    </div>
+
+    <div class="callout info">
+      <span class="callout-icon">ℹ️</span>
+      <div><strong>Priorité :</strong> les flags CLI écrasent toujours <code>.nevelio.toml</code>,
+      qui écrase les défauts du profil.</div>
+    </div>
+  </section>
+
+  <!-- ── 4. Scan ───────────────────────────────────────────────────────── -->
+  <section class="doc-section" id="scan">
+    <h2><span class="section-icon">🔍</span> Commande <code>scan</code></h2>
+
+    <!-- 4.1 Cible -->
+    <h3 id="scan-target">Cible et spec</h3>
+    <div class="table-wrap">
+    <table>
+      <thead><tr><th>Flag</th><th>Description</th><th>Exemple</th></tr></thead>
+      <tbody>
+        <tr><td><code>--target URL</code></td><td>URL de base de l'API</td><td><code>--target https://api.example.com</code></td></tr>
+        <tr><td><code>--url URL</code></td><td>Alias de --target</td><td><code>--url https://api.example.com</code></td></tr>
+        <tr><td><code>--spec FILE|URL</code></td><td>Spec OpenAPI JSON ou YAML</td><td><code>--spec ./openapi.yaml</code></td></tr>
+      </tbody>
+    </table>
+    </div>
+
+    <div class="code-block">
+      <div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)">Copier</button></div>
+      <pre><code class="language-bash"># Avec spec OpenAPI — couverture maximale
+nevelio scan --target https://api.example.com --spec ./openapi.yaml --accept-legal
+
+# Sans spec — découverte automatique des endpoints
+nevelio scan --target https://api.example.com --accept-legal</code></pre>
+    </div>
+
+    <!-- 4.2 Profils -->
+    <h3 id="scan-profiles">Profils de scan</h3>
+    <div class="profile-grid">
+      <div class="profile-card stealth">
+        <div class="profile-name">🌿 stealth</div>
+        <div class="profile-meta">1 req simultanée · 2 req/s</div>
+        <span class="profile-tag">Production sensible</span>
+        <p style="margin-top:12px;font-size:12px;color:var(--text-muted)">Évite les alertes IDS/WAF. Scan lent mais discret.</p>
+      </div>
+      <div class="profile-card normal">
+        <div class="profile-name">⚖️ normal</div>
+        <div class="profile-meta">5 req simultanées · 10 req/s</div>
+        <span class="profile-tag">Défaut recommandé</span>
+        <p style="margin-top:12px;font-size:12px;color:var(--text-muted)">Équilibre vitesse/discrétion. Idéal pour le staging.</p>
+      </div>
+      <div class="profile-card aggressive">
+        <div class="profile-name">⚡ aggressive</div>
+        <div class="profile-meta">20 req simultanées · 50 req/s</div>
+        <span class="profile-tag">Lab uniquement</span>
+        <p style="margin-top:12px;font-size:12px;color:var(--text-muted)">Scan rapide. Ne pas utiliser en production.</p>
+      </div>
+    </div>
+
+    <div class="code-block">
+      <div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)">Copier</button></div>
+      <pre><code class="language-bash">nevelio scan --target https://api.example.com --profile stealth   --accept-legal
+nevelio scan --target https://api.example.com --profile normal    --accept-legal
+nevelio scan --target https://api.example.com --profile aggressive --accept-legal</code></pre>
+    </div>
+
+    <!-- 4.3 Modules -->
+    <h3 id="scan-modules">Sélection de modules</h3>
+    <p>Par défaut, tous les modules sont exécutés. Pour restreindre :</p>
+    <div class="code-block">
+      <div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)">Copier</button></div>
+      <pre><code class="language-bash"># Un seul module
+nevelio scan --target https://api.example.com --module auth --accept-legal
+
+# Plusieurs modules (espace-séparés)
+nevelio scan --target https://api.example.com \
+             --module auth injection access-control \
+             --accept-legal</code></pre>
+    </div>
+
+    <!-- 4.4 Auth -->
+    <h3 id="scan-auth">Authentification et proxy</h3>
+    <div class="code-block">
+      <div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)">Copier</button></div>
+      <pre><code class="language-bash"># JWT Bearer token
+nevelio scan --target https://api.example.com \
+             --auth-token "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." \
+             --accept-legal
+
+# Basic auth (user:password encodé en base64)
+nevelio scan --target https://api.example.com \
+             --auth-token "Basic dXNlcjpwYXNz" \
+             --accept-legal
+
+# Via proxy Burp Suite
+nevelio scan --target https://api.example.com \
+             --proxy http://127.0.0.1:8080 \
+             --accept-legal</code></pre>
+    </div>
+
+    <!-- 4.5 Output -->
+    <h3 id="scan-output">Sortie et rapports</h3>
+    <div class="code-block">
+      <div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)">Copier</button></div>
+      <pre><code class="language-bash"># HTML (défaut) — findings.json + report.html
+nevelio scan --target https://api.example.com --accept-legal
+
+# SARIF pour GitHub Security
+nevelio scan --target https://api.example.com \
+             --output sarif \
+             --out-dir ./sarif-results \
+             --accept-legal
+
+# Bloquer CI sur findings HIGH ou CRITICAL
+nevelio scan --target https://api.example.com \
+             --fail-on high \
+             --accept-legal
+echo $?   # 1 si HIGH/CRITICAL trouvé</code></pre>
+    </div>
+
+    <h3 id="scan-modes">Modes spéciaux</h3>
+    <div class="table-wrap">
+    <table>
+      <thead><tr><th>Flag</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td><code>--resume</code></td><td>Reprendre un scan interrompu depuis <code>--out-dir</code></td></tr>
+        <tr><td><code>--dry-run</code></td><td>Simuler sans envoyer de requêtes réelles</td></tr>
+        <tr><td><code>--no-tui</code></td><td>Désactiver le dashboard TUI (CI/CD, pipes)</td></tr>
+        <tr><td><code>--ai-suggestions</code></td><td>Suggestions IA après le scan (nécessite <code>ANTHROPIC_API_KEY</code>)</td></tr>
+        <tr><td><code>--verbose</code></td><td>Logs détaillés et requêtes HTTP</td></tr>
+        <tr><td><code>--accept-legal</code></td><td>Accepter le disclaimer sans prompt</td></tr>
+        <tr><td><code>--no-color</code></td><td>Désactiver les couleurs ANSI (logs CI)</td></tr>
+      </tbody>
+    </table>
+    </div>
+  </section>
+
+  <!-- ── 5. TUI ─────────────────────────────────────────────────────────── -->
+  <section class="doc-section" id="tui">
+    <h2><span class="section-icon">🖥️</span> TUI Dashboard</h2>
+
+    <p>Le dashboard ratatui s'active automatiquement quand la sortie est un <strong>terminal interactif</strong>
+    (TTY détecté) et que <code>--no-tui</code> est absent.</p>
+
+    <div class="code-block">
+      <div class="code-header"><span>terminal</span><button class="copy-btn" onclick="copyCode(this)">Copier</button></div>
+      <pre><code class="language-text">┌─ Nevelio — API Security Scanner ────────────────────────────────┐
+│ Progression  [████████████░░░░░░░░░░░░░░]  45%   ETA: 1m23s    │
+├─ Modules ────────────────────────────────┬─ Findings ───────────┤
+│  ✓ auth          (5 checks)  2 findings  │ CRITICAL  JWT alg:none│
+│  ✓ injection     (4 checks)  1 finding   │ HIGH      SQLi détecté│
+│  ▶ access-control en cours...            │ MEDIUM    CORS ouvert │
+│  ○ graphql       en attente              │ LOW       HSTS absent │
+│  ○ infra         en attente              │                       │
+│  ○ business-logic en attente             │                       │
+├──────────────────────────────────────────┴───────────────────────┤
+│  Target: https://api.example.com    Profil: normal    Req: 47/s  │
+└──────────────────────────────────────────────────────────────────┘</code></pre>
+    </div>
+
+    <div class="feature-grid">
+      <div class="feature-item">
+        <div class="feature-item-icon">📊</div>
+        <div class="feature-item-body">
+          <div class="title">Barre de progression</div>
+          <div class="desc">Avancement global avec ETA estimé en temps réel</div>
+        </div>
+      </div>
+      <div class="feature-item">
+        <div class="feature-item-icon">📦</div>
+        <div class="feature-item-body">
+          <div class="title">État des modules</div>
+          <div class="desc">En attente, en cours ou terminé pour chaque module</div>
+        </div>
+      </div>
+      <div class="feature-item">
+        <div class="feature-item-icon">🚨</div>
+        <div class="feature-item-body">
+          <div class="title">Findings en direct</div>
+          <div class="desc">Vulnérabilités découvertes affichées immédiatement</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="code-block">
+      <div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)">Copier</button></div>
+      <pre><code class="language-bash"># Désactiver le TUI (CI/CD, pipes, redirection)
+nevelio scan --target https://api.example.com --no-tui --accept-legal</code></pre>
+    </div>
+  </section>
+
+  <!-- ── 6. Modules ────────────────────────────────────────────────────── -->
+  <section class="doc-section" id="modules">
+    <h2><span class="section-icon">🧩</span> Modules d'attaque</h2>
+
+    <div class="module-grid">
+      <div class="module-card">
+        <div class="module-header">
+          <div class="module-icon">🔑</div>
+          <div><div class="module-name">auth</div><div class="module-cmd">--module auth</div></div>
+        </div>
+        <ul class="module-checks">
+          <li>Missing Authentication (CWE-306)</li>
+          <li>JWT alg:none (CWE-327)</li>
+          <li>JWT weak secret (CWE-330)</li>
+          <li>JWT claims manipulation (CWE-269)</li>
+          <li>Basic auth brute force (CWE-521)</li>
+        </ul>
+      </div>
+      <div class="module-card">
+        <div class="module-header">
+          <div class="module-icon">💉</div>
+          <div><div class="module-name">injection</div><div class="module-cmd">--module injection</div></div>
+        </div>
+        <ul class="module-checks">
+          <li>SQL Injection (CWE-89)</li>
+          <li>NoSQL Injection (CWE-943)</li>
+          <li>SSTI (CWE-94)</li>
+          <li>Command Injection (CWE-77)</li>
+        </ul>
+      </div>
+      <div class="module-card">
+        <div class="module-header">
+          <div class="module-icon">🚪</div>
+          <div><div class="module-name">access-control</div><div class="module-cmd">--module access-control</div></div>
+        </div>
+        <ul class="module-checks">
+          <li>IDOR numérique (CWE-639)</li>
+          <li>IDOR UUID (CWE-639)</li>
+          <li>BFLA (CWE-285)</li>
+          <li>Élévation de privilèges (CWE-269)</li>
+          <li>Mass Assignment (CWE-915)</li>
+        </ul>
+      </div>
+      <div class="module-card">
+        <div class="module-header">
+          <div class="module-icon">◈</div>
+          <div><div class="module-name">graphql</div><div class="module-cmd">--module graphql</div></div>
+        </div>
+        <ul class="module-checks">
+          <li>Introspection exposée (CWE-200)</li>
+          <li>Field suggestions (CWE-209)</li>
+          <li>Depth DoS (CWE-400)</li>
+        </ul>
+      </div>
+      <div class="module-card">
+        <div class="module-header">
+          <div class="module-icon">🏗️</div>
+          <div><div class="module-name">infra</div><div class="module-cmd">--module infra</div></div>
+        </div>
+        <ul class="module-checks">
+          <li>CORS misconfiguration</li>
+          <li>HSTS / Security headers</li>
+          <li>Server version disclosure</li>
+          <li>20 debug endpoints</li>
+          <li>Cookie flags, TLS, CSP</li>
+          <li>Secrets & stack traces</li>
+        </ul>
+      </div>
+      <div class="module-card">
+        <div class="module-header">
+          <div class="module-icon">💼</div>
+          <div><div class="module-name">business-logic</div><div class="module-cmd">--module business-logic</div></div>
+        </div>
+        <ul class="module-checks">
+          <li>Rate limiting absent</li>
+          <li>X-Forwarded-For bypass</li>
+          <li>User-Agent bypass</li>
+          <li>Race condition</li>
+          <li>Valeurs négatives / prix</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Module details -->
+    <h3 id="mod-auth">Module auth — Détail</h3>
+    <div class="check-list">
+      <div class="check-item">
+        <div class="check-header" onclick="toggleCheck(this)">
+          <span class="badge badge-high">HIGH</span>
+          <span class="check-title">Missing Authentication</span>
+          <span class="check-cwe">CWE-306</span>
+          <span class="check-arrow">▶</span>
+        </div>
+        <div class="check-body">
+          <p>Teste chaque endpoint <strong>sans header Authorization</strong>. Un code 200/201 indique une authentification manquante.</p>
+          <strong>Exemple de finding :</strong>
+          <div class="code-block"><div class="code-header"><span>json</span><button class="copy-btn" onclick="copyCode(this)">Copier</button></div>
+          <pre><code class="language-json">{
+  "title": "Missing Authentication",
+  "severity": "High",
+  "cwe": "CWE-306",
+  "endpoint": "GET /api/v1/users",
+  "recommendation": "Implémenter un middleware d'authentification obligatoire."
+}</code></pre></div>
+        </div>
+      </div>
+      <div class="check-item">
+        <div class="check-header" onclick="toggleCheck(this)">
+          <span class="badge badge-critical">CRITICAL</span>
+          <span class="check-title">JWT Algorithm None</span>
+          <span class="check-cwe">CWE-327</span>
+          <span class="check-arrow">▶</span>
+        </div>
+        <div class="check-body">
+          <p>Envoie un JWT avec <code>"alg": "none"</code> et signature vide. Si le serveur l'accepte, il ne valide pas la signature.</p>
+          <div class="code-block"><div class="code-header"><span>payload forgé</span><button class="copy-btn" onclick="copyCode(this)">Copier</button></div>
+          <pre><code class="language-text">eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.eyJzdWIiOiIxMjM0In0.</code></pre></div>
+          <p><strong>Remédiation :</strong> Rejeter explicitement l'algorithme "none". Utiliser RS256 ou ES256.</p>
+        </div>
+      </div>
+      <div class="check-item">
+        <div class="check-header" onclick="toggleCheck(this)">
+          <span class="badge badge-high">HIGH</span>
+          <span class="check-title">JWT Weak Secret</span>
+          <span class="check-cwe">CWE-330</span>
+          <span class="check-arrow">▶</span>
+        </div>
+        <div class="check-body">
+          <p>Tente de valider la signature HMAC-SHA256 avec des secrets faibles communs : <code>secret</code>, <code>password</code>, <code>123456</code>, <code>changeme</code>…</p>
+        </div>
+      </div>
+      <div class="check-item">
+        <div class="check-header" onclick="toggleCheck(this)">
+          <span class="badge badge-high">HIGH</span>
+          <span class="check-title">JWT Claims Manipulation</span>
+          <span class="check-cwe">CWE-269</span>
+          <span class="check-arrow">▶</span>
+        </div>
+        <div class="check-body">
+          <p>Modifie les claims <code>role</code> → admin, <code>is_admin</code> → true, et re-signe avec le secret faible découvert.</p>
+        </div>
+      </div>
+      <div class="check-item">
+        <div class="check-header" onclick="toggleCheck(this)">
+          <span class="badge badge-medium">MEDIUM</span>
+          <span class="check-title">Basic Auth Brute Force</span>
+          <span class="check-cwe">CWE-521</span>
+          <span class="check-arrow">▶</span>
+        </div>
+        <div class="check-body">
+          <p>Sur les endpoints avec <code>WWW-Authenticate: Basic</code>, teste un dictionnaire de couples user:password communs.</p>
+        </div>
+      </div>
+    </div>
+
+    <h3 id="mod-injection">Module injection — Détail</h3>
+    <div class="check-list">
+      <div class="check-item">
+        <div class="check-header" onclick="toggleCheck(this)">
+          <span class="badge badge-critical">CRITICAL</span>
+          <span class="check-title">SQL Injection</span>
+          <span class="check-cwe">CWE-89</span>
+          <span class="check-arrow">▶</span>
+        </div>
+        <div class="check-body">
+          <p>4 techniques sur chaque paramètre :</p>
+          <div class="table-wrap"><table>
+            <thead><tr><th>Technique</th><th>Payload</th><th>Détection</th></tr></thead>
+            <tbody>
+              <tr><td>Time-based</td><td><code>' OR SLEEP(5)--</code></td><td>Délai ≥ 4s</td></tr>
+              <tr><td>Error-based</td><td><code>' OR 1=1--</code></td><td>Message SQL dans réponse</td></tr>
+              <tr><td>Union-based</td><td><code>' UNION SELECT NULL--</code></td><td>Données injectées</td></tr>
+              <tr><td>Boolean-based</td><td><code>' AND 1=1--</code> vs <code>' AND 1=2--</code></td><td>Contenu différent</td></tr>
+            </tbody>
+          </table></div>
+        </div>
+      </div>
+      <div class="check-item">
+        <div class="check-header" onclick="toggleCheck(this)">
+          <span class="badge badge-high">HIGH</span>
+          <span class="check-title">NoSQL Injection</span>
+          <span class="check-cwe">CWE-943</span>
+          <span class="check-arrow">▶</span>
+        </div>
+        <div class="check-body">
+          <div class="code-block"><div class="code-header"><span>json — opérateurs MongoDB</span><button class="copy-btn" onclick="copyCode(this)">Copier</button></div>
+          <pre><code class="language-json">{"username": {"$gt": ""}, "password": {"$gt": ""}}
+{"username": {"$regex": ".*"}}</code></pre></div>
+        </div>
+      </div>
+      <div class="check-item">
+        <div class="check-header" onclick="toggleCheck(this)">
+          <span class="badge badge-high">HIGH</span>
+          <span class="check-title">Server-Side Template Injection (SSTI)</span>
+          <span class="check-cwe">CWE-94</span>
+          <span class="check-arrow">▶</span>
+        </div>
+        <div class="check-body">
+          <div class="table-wrap"><table>
+            <thead><tr><th>Moteur</th><th>Payload</th><th>Résultat</th></tr></thead>
+            <tbody>
+              <tr><td>Jinja2 / Twig</td><td><code>{{7*7}}</code></td><td><code>49</code></td></tr>
+              <tr><td>FreeMarker</td><td><code>${7*7}</code></td><td><code>49</code></td></tr>
+              <tr><td>Pebble</td><td><code>{{7*'7'}}</code></td><td><code>7777777</code></td></tr>
+            </tbody>
+          </table></div>
+        </div>
+      </div>
+      <div class="check-item">
+        <div class="check-header" onclick="toggleCheck(this)">
+          <span class="badge badge-critical">CRITICAL</span>
+          <span class="check-title">Command Injection</span>
+          <span class="check-cwe">CWE-77</span>
+          <span class="check-arrow">▶</span>
+        </div>
+        <div class="check-body">
+          <div class="code-block"><div class="code-header"><span>payloads</span><button class="copy-btn" onclick="copyCode(this)">Copier</button></div>
+          <pre><code class="language-text">; id
+| whoami
+`id`
+$(id)
+& ping -c 1 127.0.0.1</code></pre></div>
+          <p>Détection : délai (sleep) ou présence de <code>uid=</code> dans la réponse.</p>
+        </div>
+      </div>
+    </div>
+
+    <h3 id="mod-access">Module access-control — Détail</h3>
+    <div class="check-list">
+      <div class="check-item">
+        <div class="check-header" onclick="toggleCheck(this)">
+          <span class="badge badge-high">HIGH</span>
+          <span class="check-title">IDOR numérique / UUID</span>
+          <span class="check-cwe">CWE-639</span>
+          <span class="check-arrow">▶</span>
+        </div>
+        <div class="check-body">
+          <p>Substitue les IDs dans l'URL par des valeurs voisines (<code>/users/42</code> → <code>/users/41</code>) ou des UUIDs aléatoires.
+          Compare les réponses pour détecter un accès à des ressources d'autres utilisateurs.</p>
+        </div>
+      </div>
+      <div class="check-item">
+        <div class="check-header" onclick="toggleCheck(this)">
+          <span class="badge badge-high">HIGH</span>
+          <span class="check-title">BFLA — Broken Function Level Authorization</span>
+          <span class="check-cwe">CWE-285</span>
+          <span class="check-arrow">▶</span>
+        </div>
+        <div class="check-body">
+          <p>Teste les endpoints <code>/admin/*</code>, <code>/management/*</code>, <code>/internal/*</code> avec le token utilisateur standard.
+          Un code 200 indique une autorisation mal configurée par rôle.</p>
+        </div>
+      </div>
+      <div class="check-item">
+        <div class="check-header" onclick="toggleCheck(this)">
+          <span class="badge badge-high">HIGH</span>
+          <span class="check-title">Mass Assignment</span>
+          <span class="check-cwe">CWE-915</span>
+          <span class="check-arrow">▶</span>
+        </div>
+        <div class="check-body">
+          <div class="code-block"><div class="code-header"><span>json — champs injectés</span><button class="copy-btn" onclick="copyCode(this)">Copier</button></div>
+          <pre><code class="language-json">{"name": "John", "role": "admin", "is_admin": true, "credits": 999999}</code></pre></div>
+        </div>
+      </div>
+    </div>
+
+    <h3 id="mod-graphql">Module graphql — Détail</h3>
+    <div class="check-list">
+      <div class="check-item">
+        <div class="check-header" onclick="toggleCheck(this)">
+          <span class="badge badge-medium">MEDIUM</span>
+          <span class="check-title">Introspection exposée</span>
+          <span class="check-cwe">CWE-200</span>
+          <span class="check-arrow">▶</span>
+        </div>
+        <div class="check-body">
+          <div class="code-block"><div class="code-header"><span>graphql</span><button class="copy-btn" onclick="copyCode(this)">Copier</button></div>
+          <pre><code class="language-graphql">{ __schema { types { name fields { name } } } }</code></pre></div>
+          <p>Si le serveur répond avec le schéma complet, la structure interne est exposée à un attaquant.</p>
+        </div>
+      </div>
+      <div class="check-item">
+        <div class="check-header" onclick="toggleCheck(this)">
+          <span class="badge badge-medium">MEDIUM</span>
+          <span class="check-title">Depth DoS</span>
+          <span class="check-cwe">CWE-400</span>
+          <span class="check-arrow">▶</span>
+        </div>
+        <div class="check-body">
+          <div class="code-block"><div class="code-header"><span>graphql</span><button class="copy-btn" onclick="copyCode(this)">Copier</button></div>
+          <pre><code class="language-graphql">{ user { friends { friends { friends { friends { id name } } } } } }</code></pre></div>
+          <p>Sans limite de profondeur, le serveur peut subir une surcharge CPU/mémoire.</p>
+        </div>
+      </div>
+    </div>
+
+    <h3 id="mod-infra">Module infra — Vérifications</h3>
+    <div class="table-wrap">
+    <table>
+      <thead><tr><th>Vérification</th><th>Sévérité</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td>CORS misconfiguration</td><td><span class="badge badge-high">HIGH</span></td><td><code>Origin: evil.com</code> reflété dans la réponse</td></tr>
+        <tr><td>HSTS absent</td><td><span class="badge badge-medium">MEDIUM</span></td><td>Pas de <code>Strict-Transport-Security</code> sur HTTPS</td></tr>
+        <tr><td>Security headers</td><td><span class="badge badge-medium">MEDIUM</span></td><td>X-Content-Type-Options, X-Frame-Options, X-XSS-Protection</td></tr>
+        <tr><td>Server disclosure</td><td><span class="badge badge-low">LOW</span></td><td>Header <code>Server:</code> exposant la version exacte</td></tr>
+        <tr><td>Debug endpoints</td><td><span class="badge badge-high">HIGH</span></td><td>/actuator, /debug, /metrics, /swagger-ui, /.env…</td></tr>
+        <tr><td>Content-Security-Policy</td><td><span class="badge badge-medium">MEDIUM</span></td><td>Absent ou permissif (unsafe-inline, *)</td></tr>
+        <tr><td>Cookie flags</td><td><span class="badge badge-medium">MEDIUM</span></td><td>Secure, HttpOnly, SameSite manquants</td></tr>
+        <tr><td>TLS obsolète</td><td><span class="badge badge-high">HIGH</span></td><td>TLS 1.0 / 1.1 accepté (RFC 8996)</td></tr>
+        <tr><td>Secrets dans réponses</td><td><span class="badge badge-critical">CRITICAL</span></td><td>Clés AWS, tokens GitHub, clés PEM…</td></tr>
+        <tr><td>Stack traces</td><td><span class="badge badge-medium">MEDIUM</span></td><td>NullPointerException, Traceback… dans les erreurs</td></tr>
+      </tbody>
+    </table>
+    </div>
+
+    <h3 id="mod-business">Module business-logic — Vérifications</h3>
+    <div class="check-list">
+      <div class="check-item">
+        <div class="check-header" onclick="toggleCheck(this)">
+          <span class="badge badge-high">HIGH</span>
+          <span class="check-title">Rate Limiting absent</span>
+          <span class="check-cwe">CWE-770</span>
+          <span class="check-arrow">▶</span>
+        </div>
+        <div class="check-body">
+          <p>Envoie 20 requêtes rapides et vérifie l'absence de réponse <code>429 Too Many Requests</code>.
+          Sans rate limiting, login/OTP/reset sont vulnérables au brute force.</p>
+        </div>
+      </div>
+      <div class="check-item">
+        <div class="check-header" onclick="toggleCheck(this)">
+          <span class="badge badge-medium">MEDIUM</span>
+          <span class="check-title">X-Forwarded-For bypass</span>
+          <span class="check-cwe">CWE-290</span>
+          <span class="check-arrow">▶</span>
+        </div>
+        <div class="check-body">
+          <div class="code-block"><div class="code-header"><span>headers injectés</span><button class="copy-btn" onclick="copyCode(this)">Copier</button></div>
+          <pre><code class="language-text">X-Forwarded-For: 127.0.0.1
+X-Real-IP: 127.0.0.1
+CF-Connecting-IP: 192.168.1.1</code></pre></div>
+        </div>
+      </div>
+      <div class="check-item">
+        <div class="check-header" onclick="toggleCheck(this)">
+          <span class="badge badge-high">HIGH</span>
+          <span class="check-title">Race Condition</span>
+          <span class="check-cwe">CWE-362</span>
+          <span class="check-arrow">▶</span>
+        </div>
+        <div class="check-body">
+          <p>Envoie simultanément 10 requêtes identiques (achat, réservation, coupon) et détecte si plusieurs
+          répondent avec succès alors qu'une seule devrait l'être.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── 7. Formats ─────────────────────────────────────────────────────── -->
+  <section class="doc-section" id="formats">
+    <h2><span class="section-icon">📋</span> Formats de sortie</h2>
+
+    <div class="format-grid">
+      <div class="format-card">
+        <div class="format-icon">🗄️</div>
+        <div class="format-name">JSON</div>
+        <div class="format-ext">findings.json</div>
+        <div class="format-use">Format canonique — toujours écrit</div>
+      </div>
+      <div class="format-card">
+        <div class="format-icon">🌐</div>
+        <div class="format-name">HTML</div>
+        <div class="format-ext">report.html</div>
+        <div class="format-use">Rapport interactif — défaut</div>
+      </div>
+      <div class="format-card">
+        <div class="format-icon">📝</div>
+        <div class="format-name">Markdown</div>
+        <div class="format-ext">report.md</div>
+        <div class="format-use">Wikis, PRs, Confluence</div>
+      </div>
+      <div class="format-card">
+        <div class="format-icon">⚙️</div>
+        <div class="format-name">JUnit</div>
+        <div class="format-ext">report.xml</div>
+        <div class="format-use">Jenkins, GitLab CI</div>
+      </div>
+      <div class="format-card">
+        <div class="format-icon">🔒</div>
+        <div class="format-name">SARIF</div>
+        <div class="format-ext">report.sarif</div>
+        <div class="format-use">GitHub Advanced Security</div>
+      </div>
+    </div>
+
+    <h3>Structure d'un finding JSON</h3>
+    <div class="code-block">
+      <div class="code-header"><span>findings.json</span><button class="copy-btn" onclick="copyCode(this)">Copier</button></div>
+      <pre><code class="language-json">[
+  {
+    "id": "auth-jwt-alg-none-001",
+    "title": "JWT Algorithm None Accepted",
+    "severity": "Critical",
+    "cwe": "CWE-327",
+    "endpoint": "POST /api/v1/auth/token",
+    "description": "L'endpoint accepte des tokens JWT avec alg:none...",
+    "recommendation": "Rejeter explicitement l'algorithme 'none'. Utiliser RS256 ou ES256."
+  }
+]</code></pre>
+    </div>
+
+    <h3>Rapport HTML — fonctionnalités</h3>
+    <div class="feature-grid">
+      <div class="feature-item">
+        <div class="feature-item-icon">🔍</div>
+        <div class="feature-item-body"><div class="title">Filtre par sévérité</div><div class="desc">Boutons Critical / High / Medium / Low / Info</div></div>
+      </div>
+      <div class="feature-item">
+        <div class="feature-item-icon">🌙</div>
+        <div class="feature-item-body"><div class="title">Thème clair/sombre</div><div class="desc">Toggle persisté en localStorage</div></div>
+      </div>
+      <div class="feature-item">
+        <div class="feature-item-icon">📂</div>
+        <div class="feature-item-body"><div class="title">Accordéon</div><div class="desc">Chaque finding collapsible pour une lecture claire</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── 8. AI ───────────────────────────────────────────────────────────── -->
+  <section class="doc-section" id="ai">
+    <h2><span class="section-icon">🤖</span> Suggestions IA via Claude</h2>
+
+    <p>Nevelio peut générer des <strong>recommandations de remédiation détaillées</strong> pour
+    chaque finding, via l'API Claude d'Anthropic.</p>
+
+    <div class="callout info">
+      <span class="callout-icon">ℹ️</span>
+      <div>Modèle utilisé : <code>claude-haiku-4-5-20251001</code>.
+      Sortie : <code>&lt;out-dir&gt;/ai_suggestions.md</code></div>
+    </div>
+
+    <div class="code-block">
+      <div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)">Copier</button></div>
+      <pre><code class="language-bash">export ANTHROPIC_API_KEY=sk-ant-api03-...
+
+nevelio scan --target https://api.example.com \
+             --ai-suggestions \
+             --out-dir ./results \
+             --accept-legal
+
+# Lire les suggestions générées
+cat ./results/ai_suggestions.md</code></pre>
+    </div>
+
+    <div class="callout warning">
+      <span class="callout-icon">⚠️</span>
+      <div>Si <code>ANTHROPIC_API_KEY</code> est absent, Nevelio affiche un avertissement
+      <strong>avant le scan</strong> et continue normalement sans les suggestions.</div>
+    </div>
+  </section>
+
+  <!-- ── 9. Report ──────────────────────────────────────────────────────── -->
+  <section class="doc-section" id="report">
+    <h2><span class="section-icon">📄</span> Commande <code>report</code> / <code>convert</code></h2>
+
+    <p>Convertit un <code>findings.json</code> existant en un autre format, <strong>sans relancer le scan</strong>.</p>
+
+    <div class="code-block">
+      <div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)">Copier</button></div>
+      <pre><code class="language-bash"># Générer un rapport HTML depuis un JSON existant
+nevelio report --input ./results/findings.json \
+               --format html \
+               --out-dir ./rapports
+
+# Alias "convert" — fonctionnement identique
+nevelio convert --input findings.json --format sarif --out-dir ./security</code></pre>
+    </div>
+
+    <div class="table-wrap">
+    <table>
+      <thead><tr><th>Flag</th><th>Requis</th><th>Défaut</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td><code>--input FILE</code></td><td>Oui</td><td>—</td><td>Chemin vers le <code>findings.json</code> source</td></tr>
+        <tr><td><code>--format FORMAT</code></td><td>Non</td><td>html</td><td>Format cible</td></tr>
+        <tr><td><code>--out-dir PATH</code></td><td>Non</td><td>.</td><td>Répertoire de sortie</td></tr>
+      </tbody>
+    </table>
+    </div>
+  </section>
+
+  <!-- ── 10. Modules cmd ────────────────────────────────────────────────── -->
+  <section class="doc-section" id="modules-cmd">
+    <h2><span class="section-icon">📦</span> Commande <code>modules</code></h2>
+
+    <div class="code-block">
+      <div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)">Copier</button></div>
+      <pre><code class="language-bash"># Lister tous les modules disponibles
+nevelio modules list
+
+# Afficher le détail d'un module
+nevelio modules show auth
+nevelio modules show injection
+nevelio modules show access-control
+nevelio modules show graphql
+nevelio modules show infra
+nevelio modules show business-logic</code></pre>
+    </div>
+  </section>
+
+  <!-- ── 11. CI/CD ─────────────────────────────────────────────────────── -->
+  <section class="doc-section" id="cicd">
+    <h2><span class="section-icon">🔄</span> Intégration CI/CD</h2>
+
+    <div class="callout success">
+      <span class="callout-icon">✅</span>
+      <div>Combinaison recommandée pour tout pipeline CI :
+      <code>--accept-legal --no-tui --no-color --fail-on high</code></div>
+    </div>
+
+    <div class="tabs">
+      <div class="tab-list">
+        <button class="tab-btn active" onclick="switchTab(this, 'tab-gh')">GitHub Actions</button>
+        <button class="tab-btn" onclick="switchTab(this, 'tab-gl')">GitLab CI</button>
+        <button class="tab-btn" onclick="switchTab(this, 'tab-docker')">Docker</button>
+        <button class="tab-btn" onclick="switchTab(this, 'tab-best')">Bonnes pratiques</button>
+      </div>
+
+      <div class="tab-panel active" id="tab-gh">
+        <div class="code-block">
+          <div class="code-header"><span>.github/workflows/security.yml</span><button class="copy-btn" onclick="copyCode(this)">Copier</button></div>
+          <pre><code class="language-yaml">name: API Security Scan
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  nevelio-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Build Nevelio
+        run: cargo build --release --bin nevelio
+
+      - name: Run API Security Scan
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          ./target/release/nevelio scan \
+            --target ${{ vars.API_STAGING_URL }} \
+            --spec openapi.yaml \
+            --output sarif \
+            --out-dir sarif-results \
+            --fail-on high \
+            --accept-legal \
+            --no-tui \
+            --no-color \
+            --ai-suggestions
+
+      - name: Upload SARIF to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: sarif-results/report.sarif
+
+      - name: Upload AI Suggestions
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ai-suggestions
+          path: sarif-results/ai_suggestions.md</code></pre>
+        </div>
+      </div>
+
+      <div class="tab-panel" id="tab-gl">
+        <div class="code-block">
+          <div class="code-header"><span>.gitlab-ci.yml</span><button class="copy-btn" onclick="copyCode(this)">Copier</button></div>
+          <pre><code class="language-yaml">api-security-scan:
+  stage: test
+  image: rust:latest
+  before_script:
+    - cargo build --release --bin nevelio
+  script:
+    - ./target/release/nevelio scan
+        --target "$API_STAGING_URL"
+        --spec openapi.yaml
+        --output junit
+        --out-dir results
+        --fail-on medium
+        --accept-legal
+        --no-tui
+        --no-color
+  artifacts:
+    when: always
+    reports:
+      junit: results/report.xml
+    paths:
+      - results/
+  variables:
+    ANTHROPIC_API_KEY: "$ANTHROPIC_API_KEY"</code></pre>
+        </div>
+      </div>
+
+      <div class="tab-panel" id="tab-docker">
+        <div class="code-block">
+          <div class="code-header"><span>Dockerfile</span><button class="copy-btn" onclick="copyCode(this)">Copier</button></div>
+          <pre><code class="language-dockerfile">FROM rust:1.75 AS builder
+WORKDIR /app
+COPY . .
+RUN cargo build --release --bin nevelio
+
+FROM debian:bookworm-slim
+RUN apt-get update && apt-get install -y ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+COPY --from=builder /app/target/release/nevelio /usr/local/bin/nevelio
+ENTRYPOINT ["nevelio"]</code></pre>
+        </div>
+        <div class="code-block">
+          <div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)">Copier</button></div>
+          <pre><code class="language-bash">docker build -t nevelio .
+docker run --rm nevelio scan \
+  --target https://api.example.com \
+  --accept-legal \
+  --no-tui \
+  --no-color</code></pre>
+        </div>
+      </div>
+
+      <div class="tab-panel" id="tab-best">
+        <div class="table-wrap">
+        <table>
+          <thead><tr><th>Pratique</th><th>Pourquoi</th></tr></thead>
+          <tbody>
+            <tr><td><code>--accept-legal</code></td><td>Évite le blocage sur prompt interactif</td></tr>
+            <tr><td><code>--no-tui</code></td><td>Le TUI nécessite un TTY absent en CI</td></tr>
+            <tr><td><code>--no-color</code></td><td>Les codes ANSI polluent les logs CI</td></tr>
+            <tr><td><code>--fail-on high</code></td><td>Bloque les PRs avec vulnérabilités critiques</td></tr>
+            <tr><td><code>--profile normal</code></td><td>Ne pas saturer l'environnement de staging</td></tr>
+            <tr><td><code>ANTHROPIC_API_KEY</code> en secret</td><td>Ne jamais écrire la clé en clair</td></tr>
+            <tr><td><code>--output sarif</code> sur GitHub</td><td>Intégration native GitHub Security</td></tr>
+            <tr><td><code>--output junit</code> sur GitLab</td><td>Intégration native des rapports de test</td></tr>
+          </tbody>
+        </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── 12. Scénarios ─────────────────────────────────────────────────── -->
+  <section class="doc-section" id="scenarios">
+    <h2><span class="section-icon">🎯</span> Scénarios pratiques</h2>
+
+    <div class="tabs">
+      <div class="tab-list">
+        <button class="tab-btn active" onclick="switchTab(this, 'sc-a')">A — Express</button>
+        <button class="tab-btn" onclick="switchTab(this, 'sc-b')">B — Professionnel</button>
+        <button class="tab-btn" onclick="switchTab(this, 'sc-c')">C — Burp Suite</button>
+        <button class="tab-btn" onclick="switchTab(this, 'sc-d')">D — IA + multi-format</button>
+        <button class="tab-btn" onclick="switchTab(this, 'sc-e')">E — Reprise</button>
+        <button class="tab-btn" onclick="switchTab(this, 'sc-f')">F — GraphQL</button>
+      </div>
+
+      <div class="tab-panel active" id="sc-a">
+        <h3>Audit rapide sans spec OpenAPI</h3>
+        <p>Idéal pour une première prise en main ou une cible sans spec disponible.</p>
+        <div class="code-block"><div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)">Copier</button></div>
+        <pre><code class="language-bash">nevelio init   # crée .nevelio.toml
+# éditer .nevelio.toml selon la cible
+
+nevelio scan --target https://api.example.com \
+             --profile stealth \
+             --accept-legal
+
+open report.html   # macOS
+xdg-open report.html   # Linux</code></pre></div>
+      </div>
+
+      <div class="tab-panel" id="sc-b">
+        <h3>Audit professionnel complet</h3>
+        <div class="code-block"><div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)">Copier</button></div>
+        <pre><code class="language-bash">TOKEN="Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+
+nevelio scan \
+  --target https://staging.api.example.com \
+  --spec ./openapi.yaml \
+  --profile normal \
+  --auth-token "$TOKEN" \
+  --out-dir ./pentest-$(date +%Y%m%d) \
+  --output html \
+  --fail-on high \
+  --accept-legal
+
+open ./pentest-$(date +%Y%m%d)/report.html</code></pre></div>
+      </div>
+
+      <div class="tab-panel" id="sc-c">
+        <h3>Audit avec interception Burp Suite</h3>
+        <div class="code-block"><div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)">Copier</button></div>
+        <pre><code class="language-bash"># Burp Suite en écoute sur 127.0.0.1:8080
+nevelio scan \
+  --target https://api.example.com \
+  --module auth injection \
+  --proxy http://127.0.0.1:8080 \
+  --no-tui \
+  --verbose \
+  --accept-legal
+# Les requêtes apparaissent dans l'historique Burp</code></pre></div>
+      </div>
+
+      <div class="tab-panel" id="sc-d">
+        <h3>Scan avec suggestions IA et multi-format</h3>
+        <div class="code-block"><div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)">Copier</button></div>
+        <pre><code class="language-bash">export ANTHROPIC_API_KEY=sk-ant-api03-...
+
+nevelio scan \
+  --target https://api.example.com \
+  --spec ./openapi.yaml \
+  --ai-suggestions \
+  --out-dir ./results \
+  --accept-legal
+
+# Résultats dans ./results/ :
+# ├── findings.json       (données brutes)
+# ├── report.html         (rapport interactif)
+# └── ai_suggestions.md   (remédiation IA)
+
+# Générer un SARIF en plus
+nevelio convert --input ./results/findings.json \
+                --format sarif \
+                --out-dir ./results</code></pre></div>
+      </div>
+
+      <div class="tab-panel" id="sc-e">
+        <h3>Reprise après interruption</h3>
+        <div class="code-block"><div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)">Copier</button></div>
+        <pre><code class="language-bash"># Scan initial — interrompu par ^C ou crash
+nevelio scan --target https://api.example.com \
+             --spec ./openapi.yaml \
+             --out-dir ./results \
+             --accept-legal
+
+# Reprise — saute les modules déjà complétés
+nevelio scan --target https://api.example.com \
+             --spec ./openapi.yaml \
+             --out-dir ./results \
+             --resume \
+             --accept-legal</code></pre></div>
+      </div>
+
+      <div class="tab-panel" id="sc-f">
+        <h3>Audit d'une API GraphQL</h3>
+        <div class="code-block"><div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)">Copier</button></div>
+        <pre><code class="language-bash">nevelio scan \
+  --target https://api.example.com \
+  --module graphql infra \
+  --auth-token "Bearer $TOKEN" \
+  --verbose \
+  --accept-legal</code></pre></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── 13. Flags ref ──────────────────────────────────────────────────── -->
+  <section class="doc-section" id="flags-ref">
+    <h2><span class="section-icon">📖</span> Référence complète des flags</h2>
+
+    <h3>nevelio scan</h3>
+    <div class="table-wrap">
+    <table>
+      <thead><tr><th>Flag</th><th>Type</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td class="flag">--target URL</td><td>string</td><td>URL de base de l'API</td></tr>
+        <tr><td class="flag">--url URL</td><td>string</td><td>Alias de --target</td></tr>
+        <tr><td class="flag">--spec FILE|URL</td><td>string</td><td>Spec OpenAPI (JSON ou YAML)</td></tr>
+        <tr><td class="flag">--profile PROFIL</td><td>stealth / normal / aggressive</td><td>Profil de scan</td></tr>
+        <tr><td class="flag">--module MOD...</td><td>liste</td><td>Modules à exécuter (espace-séparés)</td></tr>
+        <tr><td class="flag">--concurrency N</td><td>entier</td><td>Requêtes simultanées</td></tr>
+        <tr><td class="flag">--rate-limit N</td><td>entier</td><td>Requêtes par seconde max</td></tr>
+        <tr><td class="flag">--timeout S</td><td>secondes</td><td>Timeout par requête</td></tr>
+        <tr><td class="flag">--auth-token TOKEN</td><td>string</td><td>Header Authorization complet</td></tr>
+        <tr><td class="flag">--proxy URL</td><td>URL</td><td>Proxy HTTP</td></tr>
+        <tr><td class="flag">--output FORMAT</td><td>json / html / markdown / junit / sarif</td><td>Format de sortie (défaut: html)</td></tr>
+        <tr><td class="flag">--out-dir PATH</td><td>chemin</td><td>Répertoire de sortie</td></tr>
+        <tr><td class="flag">--fail-on SEV</td><td>none / low / medium / high / critical</td><td>Seuil d'échec CI</td></tr>
+        <tr><td class="flag">--resume</td><td>booléen</td><td>Reprendre un scan interrompu</td></tr>
+        <tr><td class="flag">--dry-run</td><td>booléen</td><td>Simuler sans requêtes réelles</td></tr>
+        <tr><td class="flag">--no-tui</td><td>booléen</td><td>Désactiver le TUI dashboard</td></tr>
+        <tr><td class="flag">--ai-suggestions</td><td>booléen</td><td>Suggestions IA (ANTHROPIC_API_KEY requis)</td></tr>
+      </tbody>
+    </table>
+    </div>
+
+    <h3>Flags globaux (toutes commandes)</h3>
+    <div class="table-wrap">
+    <table>
+      <thead><tr><th>Flag</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td class="flag">--verbose</td><td>Logs détaillés et requêtes HTTP</td></tr>
+        <tr><td class="flag">--accept-legal</td><td>Accepter le disclaimer sans prompt</td></tr>
+        <tr><td class="flag">--no-color</td><td>Désactiver les couleurs ANSI</td></tr>
+      </tbody>
+    </table>
+    </div>
+
+    <h3>nevelio report / convert</h3>
+    <div class="table-wrap">
+    <table>
+      <thead><tr><th>Flag</th><th>Requis</th><th>Défaut</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td class="flag">--input FILE</td><td>Oui</td><td>—</td><td>Fichier findings.json source</td></tr>
+        <tr><td class="flag">--format FORMAT</td><td>Non</td><td>html</td><td>Format cible</td></tr>
+        <tr><td class="flag">--out-dir PATH</td><td>Non</td><td>.</td><td>Répertoire de sortie</td></tr>
+      </tbody>
+    </table>
+    </div>
+
+    <h3>Variables d'environnement</h3>
+    <div class="table-wrap">
+    <table>
+      <thead><tr><th>Variable</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td class="flag">ANTHROPIC_API_KEY</td><td>Clé API Claude (requis pour --ai-suggestions)</td></tr>
+      </tbody>
+    </table>
+    </div>
+  </section>
+
+</div><!-- .content -->
+
+<footer class="footer">
+  Nevelio v0.1 — API Security Scanner — Usage autorisé uniquement
+</footer>
+</main>
+
+<!-- ── Scripts ─────────────────────────────────────────────────────────── -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>
+  // ── Highlight.js ──────────────────────────────────────────────────────
+  hljs.highlightAll();
+
+  // ── Theme toggle ─────────────────────────────────────────────────────
+  const root = document.documentElement;
+
+  function toggleTheme() {
+    const isDark = root.getAttribute('data-theme') === 'dark';
+    root.setAttribute('data-theme', isDark ? 'light' : 'dark');
+    document.getElementById('hljs-theme').href = isDark
+      ? 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css'
+      : 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css';
+    localStorage.setItem('nevelio-theme', isDark ? 'light' : 'dark');
+  }
+
+  // Restore saved theme
+  const saved = localStorage.getItem('nevelio-theme');
+  if (saved && saved !== 'dark') {
+    root.setAttribute('data-theme', 'light');
+    document.getElementById('hljs-theme').href =
+      'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css';
+  }
+
+  // ── Sidebar toggle (mobile) ───────────────────────────────────────────
+  function toggleSidebar() {
+    document.getElementById('sidebar').classList.toggle('open');
+  }
+
+  // Close sidebar on nav link click (mobile)
+  document.querySelectorAll('.nav-link').forEach(link => {
+    link.addEventListener('click', () => {
+      document.getElementById('sidebar').classList.remove('open');
+    });
+  });
+
+  // ── Accordion ─────────────────────────────────────────────────────────
+  function toggleCheck(header) {
+    const body = header.nextElementSibling;
+    const isOpen = header.classList.contains('open');
+    header.classList.toggle('open', !isOpen);
+    body.classList.toggle('open', !isOpen);
+  }
+
+  // ── Tabs ──────────────────────────────────────────────────────────────
+  function switchTab(btn, panelId) {
+    const tabList = btn.closest('.tab-list');
+    const tabs = btn.closest('.tabs');
+
+    tabList.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    tabs.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+
+    btn.classList.add('active');
+    document.getElementById(panelId).classList.add('active');
+  }
+
+  // ── Copy button ───────────────────────────────────────────────────────
+  function copyCode(btn) {
+    const pre = btn.closest('.code-block').querySelector('pre');
+    navigator.clipboard.writeText(pre.innerText).then(() => {
+      btn.textContent = '✓ Copié';
+      btn.classList.add('copied');
+      setTimeout(() => {
+        btn.textContent = 'Copier';
+        btn.classList.remove('copied');
+      }, 2000);
+    });
+  }
+
+  // ── Active nav link on scroll ─────────────────────────────────────────
+  const sections = document.querySelectorAll('.doc-section, #hero');
+  const navLinks = document.querySelectorAll('.nav-link[href^="#"]');
+
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const id = entry.target.id;
+        navLinks.forEach(link => {
+          link.classList.toggle('active', link.getAttribute('href') === '#' + id);
+        });
+      }
+    });
+  }, { rootMargin: '-10% 0px -80% 0px' });
+
+  sections.forEach(s => observer.observe(s));
+
+  // ── Search ────────────────────────────────────────────────────────────
+  const searchData = [];
+  document.querySelectorAll('.doc-section').forEach(section => {
+    const title = section.querySelector('h2')?.textContent?.trim() || '';
+    const sectionId = section.id;
+    section.querySelectorAll('h3, h4').forEach(h => {
+      searchData.push({ title: h.textContent.trim(), section: title, id: h.id || sectionId, preview: '' });
+    });
+    section.querySelectorAll('p').forEach(p => {
+      const text = p.textContent.trim();
+      if (text.length > 20) {
+        searchData.push({ title: title, section: title, id: sectionId, preview: text.slice(0, 80) + '…' });
+      }
+    });
+  });
+
+  const searchInput = document.getElementById('searchInput');
+  const searchResults = document.getElementById('searchResults');
+
+  searchInput.addEventListener('input', () => {
+    const q = searchInput.value.trim().toLowerCase();
+    if (!q) { searchResults.classList.remove('visible'); return; }
+
+    const hits = searchData.filter(d =>
+      d.title.toLowerCase().includes(q) || d.preview.toLowerCase().includes(q)
+    ).slice(0, 8);
+
+    if (!hits.length) {
+      searchResults.innerHTML = '<div class="search-result-item" style="color:var(--text-muted)">Aucun résultat</div>';
+    } else {
+      searchResults.innerHTML = hits.map(h => `
+        <a class="search-result-item" href="#${h.id}" onclick="searchResults.classList.remove('visible');searchInput.value=''">
+          <div class="search-result-title">${highlight(h.title, q)}</div>
+          <div class="search-result-section">${h.section}</div>
+          ${h.preview ? `<div class="search-result-preview">${highlight(h.preview, q)}</div>` : ''}
+        </a>
+      `).join('');
+    }
+    searchResults.classList.add('visible');
+  });
+
+  function highlight(text, q) {
+    const re = new RegExp(`(${q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+    return text.replace(re, '<mark>$1</mark>');
+  }
+
+  document.addEventListener('click', e => {
+    if (!e.target.closest('#searchResults') && !e.target.closest('.header-search')) {
+      searchResults.classList.remove('visible');
+    }
+  });
+
+  searchInput.addEventListener('keydown', e => {
+    if (e.key === 'Escape') { searchResults.classList.remove('visible'); searchInput.value = ''; }
+  });
+</script>
+</body>
+</html>
