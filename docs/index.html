@@ -901,6 +901,15 @@
       .content { padding: 32px 20px 60px; }
       .footer { margin-left: 0; }
     }
+
+    /* ── Language switcher ───────────────────────────────────────────────── */
+    .lang-switcher { display:flex; gap:2px; align-items:center; margin-right:4px; }
+    .lang-btn { background:none; border:1px solid var(--border); border-radius:4px;
+      color:var(--text-muted); cursor:pointer; font-size:11px; font-weight:600;
+      padding:4px 7px; transition:all var(--transition); letter-spacing:0.3px;
+      font-family:var(--font-sans); }
+    .lang-btn:hover { background:var(--bg-hover); color:var(--text); }
+    .lang-btn.active { background:var(--accent-dim); border-color:var(--accent); color:var(--accent); }
   </style>
 </head>
 <body>
@@ -925,10 +934,16 @@
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
       <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
     </svg>
-    <input type="text" id="searchInput" placeholder="Rechercher..." autocomplete="off" />
+    <input type="text" id="searchInput" placeholder="Rechercher..." autocomplete="off" data-i18n-attr="placeholder:search.placeholder" />
   </div>
 
-  <button class="theme-btn" onclick="toggleTheme()" id="themeBtn" aria-label="Changer de thème">
+  <div class="lang-switcher">
+    <button class="lang-btn active" data-lang="fr" onclick="applyLang('fr')">FR</button>
+    <button class="lang-btn" data-lang="en" onclick="applyLang('en')">EN</button>
+    <button class="lang-btn" data-lang="es" onclick="applyLang('es')">ES</button>
+  </div>
+
+  <button class="theme-btn" onclick="toggleTheme()" id="themeBtn" aria-label="Changer de thème" data-i18n-attr="aria-label:theme.toggle">
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" id="themeIcon">
       <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
       <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
@@ -944,28 +959,28 @@
 <!-- ── Sidebar ──────────────────────────────────────────────────────────── -->
 <nav class="sidebar" id="sidebar">
   <div class="nav-section">
-    <div class="nav-section-label">Démarrage</div>
-    <a class="nav-link" href="#installation"><span class="nav-icon">⚡</span>Installation</a>
-    <a class="nav-link" href="#legal"><span class="nav-icon">⚖️</span>Disclaimer légal</a>
-    <a class="nav-link" href="#config"><span class="nav-icon">⚙️</span>Configuration</a>
+    <div class="nav-section-label" data-i18n="nav.start">Démarrage</div>
+    <a class="nav-link" href="#installation"><span class="nav-icon">⚡</span><span data-i18n="nav.installation">Installation</span></a>
+    <a class="nav-link" href="#legal"><span class="nav-icon">⚖️</span><span data-i18n="nav.legal">Disclaimer légal</span></a>
+    <a class="nav-link" href="#config"><span class="nav-icon">⚙️</span><span data-i18n="nav.config">Configuration</span></a>
   </div>
 
   <div class="nav-section">
-    <div class="nav-section-label">Commandes</div>
+    <div class="nav-section-label" data-i18n="nav.commands">Commandes</div>
     <a class="nav-link" href="#scan"><span class="nav-icon">🔍</span>nevelio scan</a>
-    <a class="nav-link nav-sub" href="#scan-target">↳ Cible & spec</a>
-    <a class="nav-link nav-sub" href="#scan-profiles">↳ Profils</a>
-    <a class="nav-link nav-sub" href="#scan-modules">↳ Modules</a>
-    <a class="nav-link nav-sub" href="#scan-auth">↳ Authentification</a>
-    <a class="nav-link nav-sub" href="#scan-output">↳ Sortie</a>
-    <a class="nav-link nav-sub" href="#scan-modes">↳ Modes spéciaux</a>
+    <a class="nav-link nav-sub" href="#scan-target"><span data-i18n="nav.sub.target">↳ Cible &amp; spec</span></a>
+    <a class="nav-link nav-sub" href="#scan-profiles"><span data-i18n="nav.sub.profiles">↳ Profils</span></a>
+    <a class="nav-link nav-sub" href="#scan-modules"><span data-i18n="nav.sub.modules">↳ Modules</span></a>
+    <a class="nav-link nav-sub" href="#scan-auth"><span data-i18n="nav.sub.auth">↳ Authentification</span></a>
+    <a class="nav-link nav-sub" href="#scan-output"><span data-i18n="nav.sub.output">↳ Sortie</span></a>
+    <a class="nav-link nav-sub" href="#scan-modes"><span data-i18n="nav.sub.modes">↳ Modes spéciaux</span></a>
     <a class="nav-link" href="#report"><span class="nav-icon">📄</span>nevelio report</a>
     <a class="nav-link" href="#modules-cmd"><span class="nav-icon">📦</span>nevelio modules</a>
-    <a class="nav-link" href="#tui"><span class="nav-icon">🖥️</span>TUI Dashboard</a>
+    <a class="nav-link" href="#tui"><span class="nav-icon">🖥️</span><span data-i18n="nav.tui">TUI Dashboard</span></a>
   </div>
 
   <div class="nav-section">
-    <div class="nav-section-label">Modules d'attaque</div>
+    <div class="nav-section-label" data-i18n="nav.attack-modules">Modules d'attaque</div>
     <a class="nav-link" href="#mod-auth"><span class="nav-icon">🔑</span>auth</a>
     <a class="nav-link" href="#mod-injection"><span class="nav-icon">💉</span>injection</a>
     <a class="nav-link" href="#mod-access"><span class="nav-icon">🚪</span>access-control</a>
@@ -975,17 +990,17 @@
   </div>
 
   <div class="nav-section">
-    <div class="nav-section-label">Sorties & intégrations</div>
-    <a class="nav-link" href="#formats"><span class="nav-icon">📋</span>Formats de sortie</a>
-    <a class="nav-link" href="#ai"><span class="nav-icon">🤖</span>Suggestions IA</a>
-    <a class="nav-link" href="#cicd"><span class="nav-icon">🔄</span>CI/CD</a>
-    <a class="nav-link" href="#scenarios"><span class="nav-icon">🎯</span>Scénarios pratiques</a>
+    <div class="nav-section-label" data-i18n="nav.outputs">Sorties &amp; intégrations</div>
+    <a class="nav-link" href="#formats"><span class="nav-icon">📋</span><span data-i18n="nav.formats">Formats de sortie</span></a>
+    <a class="nav-link" href="#ai"><span class="nav-icon">🤖</span><span data-i18n="nav.ai">Suggestions IA</span></a>
+    <a class="nav-link" href="#cicd"><span class="nav-icon">🔄</span><span data-i18n="nav.cicd">CI/CD</span></a>
+    <a class="nav-link" href="#scenarios"><span class="nav-icon">🎯</span><span data-i18n="nav.scenarios">Scénarios pratiques</span></a>
   </div>
 
   <div class="nav-section">
-    <div class="nav-section-label">Référence</div>
-    <a class="nav-link" href="#i18n"><span class="nav-icon">🌐</span>Internationalisation</a>
-    <a class="nav-link" href="#flags-ref"><span class="nav-icon">📖</span>Tous les flags</a>
+    <div class="nav-section-label" data-i18n="nav.reference">Référence</div>
+    <a class="nav-link" href="#i18n"><span class="nav-icon">🌐</span><span data-i18n="nav.i18n">Internationalisation</span></a>
+    <a class="nav-link" href="#flags-ref"><span class="nav-icon">📖</span><span data-i18n="nav.flags">Tous les flags</span></a>
   </div>
 </nav>
 
@@ -1000,79 +1015,73 @@
       API Security Scanner
     </div>
     <h1>Nevelio</h1>
-    <p>Outil de test de pénétration d'API REST et GraphQL, écrit en Rust.<br/>
+    <p data-i18n="hero.tagline">Outil de test de pénétration d'API REST et GraphQL, écrit en Rust.<br/>
     Rapide, précis, et conçu pour s'intégrer dans vos pipelines CI/CD.</p>
     <div class="hero-actions">
-      <a href="#installation" class="btn btn-primary">
-        ⚡ Démarrer
-      </a>
-      <a href="#scan" class="btn btn-secondary">
-        📖 Référence CLI
-      </a>
-      <a href="tutorial.md" class="btn btn-secondary">
-        📝 Version Markdown
-      </a>
+      <a href="#installation" class="btn btn-primary" data-i18n="hero.btn.start">⚡ Démarrer</a>
+      <a href="#scan" class="btn btn-secondary" data-i18n="hero.btn.cli">📖 Référence CLI</a>
+      <a href="tutorial.md" class="btn btn-secondary" data-i18n="hero.btn.md">📝 Version Markdown</a>
     </div>
     <div class="hero-stats">
-      <div class="stat"><div class="stat-value">6</div><div class="stat-label">Modules d'attaque</div></div>
-      <div class="stat"><div class="stat-value">32+</div><div class="stat-label">Vérifications</div></div>
-      <div class="stat"><div class="stat-value">5</div><div class="stat-label">Formats de sortie</div></div>
-      <div class="stat"><div class="stat-value">79</div><div class="stat-label">Tests</div></div>
+      <div class="stat"><div class="stat-value">6</div><div class="stat-label" data-i18n="hero.stat.modules">Modules d'attaque</div></div>
+      <div class="stat"><div class="stat-value">32+</div><div class="stat-label" data-i18n="hero.stat.checks">Vérifications</div></div>
+      <div class="stat"><div class="stat-value">5</div><div class="stat-label" data-i18n="hero.stat.formats">Formats de sortie</div></div>
+      <div class="stat"><div class="stat-value">79</div><div class="stat-label" data-i18n="hero.stat.tests">Tests</div></div>
     </div>
   </section>
 
   <!-- TOC -->
   <div class="toc">
-    <h3>Table des matières</h3>
+    <h3 data-i18n="toc.title">Table des matières</h3>
     <ol>
-      <li><a href="#installation">Installation</a></li>
-      <li><a href="#legal">Disclaimer légal</a></li>
-      <li><a href="#config">Configuration (init)</a></li>
-      <li><a href="#scan">Commande scan</a></li>
-      <li><a href="#tui">TUI Dashboard</a></li>
-      <li><a href="#modules">Modules d'attaque</a></li>
-      <li><a href="#formats">Formats de sortie</a></li>
-      <li><a href="#ai">Suggestions IA</a></li>
-      <li><a href="#report">Commande report</a></li>
-      <li><a href="#modules-cmd">Commande modules</a></li>
-      <li><a href="#cicd">Intégration CI/CD</a></li>
-      <li><a href="#scenarios">Scénarios pratiques</a></li>
-      <li><a href="#flags-ref">Référence des flags</a></li>
+      <li><a href="#installation" data-i18n="toc.1">Installation</a></li>
+      <li><a href="#legal" data-i18n="toc.2">Disclaimer légal</a></li>
+      <li><a href="#config" data-i18n="toc.3">Configuration (init)</a></li>
+      <li><a href="#scan" data-i18n="toc.4">Commande scan</a></li>
+      <li><a href="#tui" data-i18n="toc.5">TUI Dashboard</a></li>
+      <li><a href="#modules" data-i18n="toc.6">Modules d'attaque</a></li>
+      <li><a href="#formats" data-i18n="toc.7">Formats de sortie</a></li>
+      <li><a href="#ai" data-i18n="toc.8">Suggestions IA</a></li>
+      <li><a href="#report" data-i18n="toc.9">Commande report</a></li>
+      <li><a href="#modules-cmd" data-i18n="toc.10">Commande modules</a></li>
+      <li><a href="#cicd" data-i18n="toc.11">Intégration CI/CD</a></li>
+      <li><a href="#scenarios" data-i18n="toc.12">Scénarios pratiques</a></li>
+      <li><a href="#flags-ref" data-i18n="toc.13">Référence des flags</a></li>
     </ol>
   </div>
 
   <!-- ── 1. Installation ─────────────────────────────────────────────── -->
   <section class="doc-section" id="installation">
-    <h2><span class="section-icon">⚡</span> Installation</h2>
+    <h2><span class="section-icon">⚡</span> <span data-i18n="install.title">Installation</span></h2>
 
-    <h3>Prérequis</h3>
+    <h3 data-i18n="install.prereqs">Prérequis</h3>
     <div class="feature-grid">
       <div class="feature-item">
         <div class="feature-item-icon">🦀</div>
         <div class="feature-item-body">
-          <div class="title">Rust stable ≥ 1.75</div>
-          <div class="desc">Installer via <code>rustup update stable</code></div>
+          <div class="title" data-i18n="install.rust.title">Rust stable ≥ 1.75</div>
+          <div class="desc" data-i18n="install.rust.desc">Installer via <code>rustup update stable</code></div>
         </div>
       </div>
       <div class="feature-item">
         <div class="feature-item-icon">🌐</div>
         <div class="feature-item-body">
-          <div class="title">Accès réseau à la cible</div>
-          <div class="desc">HTTPS recommandé, HTTP supporté</div>
+          <div class="title" data-i18n="install.net.title">Accès réseau à la cible</div>
+          <div class="desc" data-i18n="install.net.desc">HTTPS recommandé, HTTP supporté</div>
         </div>
       </div>
       <div class="feature-item">
         <div class="feature-item-icon">📋</div>
         <div class="feature-item-body">
-          <div class="title">Autorisation écrite</div>
-          <div class="desc">Obligation légale dans toutes les juridictions</div>
+          <div class="title" data-i18n="install.auth.title">Autorisation écrite</div>
+          <div class="desc" data-i18n="install.auth.desc">Obligation légale dans toutes les juridictions</div>
         </div>
       </div>
     </div>
 
-    <h3>Compilation</h3>
+    <h3 data-i18n="install.build">Compilation</h3>
     <div class="code-block">
-      <div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)">Copier</button></div>
+      <div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)" data-i18n="copy.btn">Copier</button></div>
       <pre><code class="language-bash">git clone https://github.com/your-org/nevelio.git
 cd nevelio
 cargo build --release
@@ -1081,9 +1090,9 @@ cargo build --release
 ./target/release/nevelio --version</code></pre>
     </div>
 
-    <h3>Installation globale (optionnel)</h3>
+    <h3 data-i18n="install.global">Installation globale (optionnel)</h3>
     <div class="code-block">
-      <div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)">Copier</button></div>
+      <div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)" data-i18n="copy.btn">Copier</button></div>
       <pre><code class="language-bash"># Copier dans $PATH
 cp target/release/nevelio ~/.local/bin/
 
@@ -1098,20 +1107,20 @@ nevelio --help</code></pre>
 
   <!-- ── 2. Legal ─────────────────────────────────────────────────────── -->
   <section class="doc-section" id="legal">
-    <h2><span class="section-icon">⚖️</span> Disclaimer légal</h2>
+    <h2><span class="section-icon">⚖️</span> <span data-i18n="legal.title">Disclaimer légal</span></h2>
 
     <div class="callout warning">
       <span class="callout-icon">⚠️</span>
-      <div>Nevelio est conçu <strong>exclusivement</strong> pour des systèmes que vous possédez
+      <div data-i18n="legal.warning" data-i18n-html="1">Nevelio est conçu <strong>exclusivement</strong> pour des systèmes que vous possédez
       ou sur lesquels vous avez une autorisation écrite explicite. L'utilisation sans
       autorisation est illégale (CFAA, Directive UE, Sénégal Loi n° 2008-11).</div>
     </div>
 
-    <h3>Premier lancement</h3>
-    <p>Au premier scan, Nevelio affiche un avertissement et demande confirmation :</p>
+    <h3 data-i18n="legal.first-run">Premier lancement</h3>
+    <p data-i18n="legal.first-run.desc">Au premier scan, Nevelio affiche un avertissement et demande confirmation :</p>
 
     <div class="code-block">
-      <div class="code-header"><span>terminal</span><button class="copy-btn" onclick="copyCode(this)">Copier</button></div>
+      <div class="code-header"><span>terminal</span><button class="copy-btn" onclick="copyCode(this)" data-i18n="copy.btn">Copier</button></div>
       <pre><code class="language-text">━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
                   AVERTISSEMENT LEGAL
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -1123,12 +1132,12 @@ En continuant, vous confirmez que :
 Acceptez-vous ces conditions ? [o/N] : o</code></pre>
     </div>
 
-    <h3>Persistance automatique</h3>
-    <p>Après acceptation, un marqueur est écrit dans <code>~/.config/nevelio/legal_accepted</code>.
+    <h3 data-i18n="legal.persist">Persistance automatique</h3>
+    <p data-i18n="legal.persist.desc" data-i18n-html="1">Après acceptation, un marqueur est écrit dans <code>~/.config/nevelio/legal_accepted</code>.
     Les lancements suivants ne demandent plus confirmation.</p>
 
     <div class="code-block">
-      <div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)">Copier</button></div>
+      <div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)" data-i18n="copy.btn">Copier</button></div>
       <pre><code class="language-bash">cat ~/.config/nevelio/legal_accepted
 # 2026-05-02T14:23:45Z
 
@@ -1136,9 +1145,9 @@ Acceptez-vous ces conditions ? [o/N] : o</code></pre>
 rm ~/.config/nevelio/legal_accepted</code></pre>
     </div>
 
-    <h3>Mode non interactif (CI/CD)</h3>
+    <h3 data-i18n="legal.noninteractive">Mode non interactif (CI/CD)</h3>
     <div class="code-block">
-      <div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)">Copier</button></div>
+      <div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)" data-i18n="copy.btn">Copier</button></div>
       <pre><code class="language-bash"># --accept-legal accepte et persiste sans prompt
 nevelio scan --target https://api.example.com --accept-legal</code></pre>
     </div>
@@ -1146,39 +1155,39 @@ nevelio scan --target https://api.example.com --accept-legal</code></pre>
 
   <!-- ── 3. Config ─────────────────────────────────────────────────────── -->
   <section class="doc-section" id="config">
-    <h2><span class="section-icon">⚙️</span> Configuration — <code>nevelio init</code></h2>
+    <h2><span class="section-icon">⚙️</span> <span data-i18n="config.title">Configuration — nevelio init</span></h2>
 
-    <p>Génère un fichier <code>.nevelio.toml</code> commenté dans le répertoire courant :</p>
+    <p data-i18n="config.desc" data-i18n-html="1">Génère un fichier <code>.nevelio.toml</code> commenté dans le répertoire courant :</p>
 
     <div class="code-block">
-      <div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)">Copier</button></div>
+      <div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)" data-i18n="copy.btn">Copier</button></div>
       <pre><code class="language-bash">cd mon-projet
 nevelio init
 # Crée .nevelio.toml avec tous les champs documentés</code></pre>
     </div>
 
-    <h3>Référence des champs</h3>
+    <h3 data-i18n="config.fields">Référence des champs</h3>
     <div class="table-wrap">
     <table>
-      <thead><tr><th>Champ</th><th>Type</th><th>Défaut</th><th>Description</th></tr></thead>
+      <thead><tr><th data-i18n="config.col.field">Champ</th><th data-i18n="config.col.type">Type</th><th data-i18n="config.col.default">Défaut</th><th data-i18n="config.col.desc">Description</th></tr></thead>
       <tbody>
-        <tr><td><code>target</code></td><td>string</td><td>—</td><td>URL de base de l'API cible</td></tr>
-        <tr><td><code>spec</code></td><td>string</td><td>—</td><td>Spec OpenAPI (fichier local ou URL)</td></tr>
-        <tr><td><code>profile</code></td><td>stealth / normal / aggressive</td><td>normal</td><td>Profil de scan</td></tr>
-        <tr><td><code>modules</code></td><td>liste</td><td>tous</td><td>Modules à exécuter</td></tr>
-        <tr><td><code>concurrency</code></td><td>entier</td><td>du profil</td><td>Requêtes simultanées</td></tr>
-        <tr><td><code>rate_limit</code></td><td>entier</td><td>du profil</td><td>Req/s maximum</td></tr>
-        <tr><td><code>timeout</code></td><td>secondes</td><td>10</td><td>Timeout par requête</td></tr>
-        <tr><td><code>auth_token</code></td><td>string</td><td>—</td><td>Header Authorization complet</td></tr>
-        <tr><td><code>proxy</code></td><td>URL</td><td>—</td><td>Proxy HTTP (Burp Suite, etc.)</td></tr>
-        <tr><td><code>out_dir</code></td><td>chemin</td><td>.</td><td>Répertoire de sortie</td></tr>
-        <tr><td><code>fail_on</code></td><td>none / low / medium / high / critical</td><td>—</td><td>Seuil d'échec CI</td></tr>
+        <tr><td><code>target</code></td><td>string</td><td>—</td><td data-i18n="config.target.desc">URL de base de l'API cible</td></tr>
+        <tr><td><code>spec</code></td><td>string</td><td>—</td><td data-i18n="config.spec.desc">Spec OpenAPI (fichier local ou URL)</td></tr>
+        <tr><td><code>profile</code></td><td>stealth / normal / aggressive</td><td>normal</td><td data-i18n="config.profile.desc">Profil de scan</td></tr>
+        <tr><td><code>modules</code></td><td>liste</td><td>tous</td><td data-i18n="config.modules.desc">Modules à exécuter</td></tr>
+        <tr><td><code>concurrency</code></td><td>entier</td><td>du profil</td><td data-i18n="config.concurrency.desc">Requêtes simultanées</td></tr>
+        <tr><td><code>rate_limit</code></td><td>entier</td><td>du profil</td><td data-i18n="config.rate.desc">Req/s maximum</td></tr>
+        <tr><td><code>timeout</code></td><td>secondes</td><td>10</td><td data-i18n="config.timeout.desc">Timeout par requête</td></tr>
+        <tr><td><code>auth_token</code></td><td>string</td><td>—</td><td data-i18n="config.auth.desc">Header Authorization complet</td></tr>
+        <tr><td><code>proxy</code></td><td>URL</td><td>—</td><td data-i18n="config.proxy.desc">Proxy HTTP (Burp Suite, etc.)</td></tr>
+        <tr><td><code>out_dir</code></td><td>chemin</td><td>.</td><td data-i18n="config.outdir.desc">Répertoire de sortie</td></tr>
+        <tr><td><code>fail_on</code></td><td>none / low / medium / high / critical</td><td>—</td><td data-i18n="config.failon.desc">Seuil d'échec CI</td></tr>
       </tbody>
     </table>
     </div>
 
     <div class="code-block">
-      <div class="code-header"><span>.nevelio.toml</span><button class="copy-btn" onclick="copyCode(this)">Copier</button></div>
+      <div class="code-header"><span>.nevelio.toml</span><button class="copy-btn" onclick="copyCode(this)" data-i18n="copy.btn">Copier</button></div>
       <pre><code class="language-toml">target = "https://api.example.com"
 # spec  = "./openapi.yaml"
 profile = "normal"
@@ -1194,30 +1203,30 @@ out_dir  = "./results"
 
     <div class="callout info">
       <span class="callout-icon">ℹ️</span>
-      <div><strong>Priorité :</strong> les flags CLI écrasent toujours <code>.nevelio.toml</code>,
+      <div data-i18n="config.priority" data-i18n-html="1"><strong>Priorité :</strong> les flags CLI écrasent toujours <code>.nevelio.toml</code>,
       qui écrase les défauts du profil.</div>
     </div>
   </section>
 
   <!-- ── 4. Scan ───────────────────────────────────────────────────────── -->
   <section class="doc-section" id="scan">
-    <h2><span class="section-icon">🔍</span> Commande <code>scan</code></h2>
+    <h2><span class="section-icon">🔍</span> <span data-i18n="scan.title">Commande scan</span> <code>scan</code></h2>
 
     <!-- 4.1 Cible -->
-    <h3 id="scan-target">Cible et spec</h3>
+    <h3 id="scan-target" data-i18n="scan.target-spec">Cible et spec</h3>
     <div class="table-wrap">
     <table>
-      <thead><tr><th>Flag</th><th>Description</th><th>Exemple</th></tr></thead>
+      <thead><tr><th data-i18n="scan.col.flag">Flag</th><th data-i18n="scan.col.desc">Description</th><th data-i18n="scan.col.example">Exemple</th></tr></thead>
       <tbody>
-        <tr><td><code>--target URL</code></td><td>URL de base de l'API</td><td><code>--target https://api.example.com</code></td></tr>
-        <tr><td><code>--url URL</code></td><td>Alias de --target</td><td><code>--url https://api.example.com</code></td></tr>
-        <tr><td><code>--spec FILE|URL</code></td><td>Spec OpenAPI JSON ou YAML</td><td><code>--spec ./openapi.yaml</code></td></tr>
+        <tr><td><code>--target URL</code></td><td data-i18n="scan.target.desc">URL de base de l'API</td><td><code>--target https://api.example.com</code></td></tr>
+        <tr><td><code>--url URL</code></td><td data-i18n="scan.url.desc">Alias de --target</td><td><code>--url https://api.example.com</code></td></tr>
+        <tr><td><code>--spec FILE|URL</code></td><td data-i18n="scan.spec.desc">Spec OpenAPI JSON ou YAML</td><td><code>--spec ./openapi.yaml</code></td></tr>
       </tbody>
     </table>
     </div>
 
     <div class="code-block">
-      <div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)">Copier</button></div>
+      <div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)" data-i18n="copy.btn">Copier</button></div>
       <pre><code class="language-bash"># Avec spec OpenAPI — couverture maximale
 nevelio scan --target https://api.example.com --spec ./openapi.yaml --accept-legal
 
@@ -1226,40 +1235,40 @@ nevelio scan --target https://api.example.com --accept-legal</code></pre>
     </div>
 
     <!-- 4.2 Profils -->
-    <h3 id="scan-profiles">Profils de scan</h3>
+    <h3 id="scan-profiles" data-i18n="scan.profiles">Profils de scan</h3>
     <div class="profile-grid">
       <div class="profile-card stealth">
         <div class="profile-name">🌿 stealth</div>
-        <div class="profile-meta">1 req simultanée · 2 req/s</div>
-        <span class="profile-tag">Production sensible</span>
-        <p style="margin-top:12px;font-size:12px;color:var(--text-muted)">Évite les alertes IDS/WAF. Scan lent mais discret.</p>
+        <div class="profile-meta" data-i18n="scan.stealth.meta">1 req simultanée · 2 req/s</div>
+        <span class="profile-tag" data-i18n="scan.stealth.tag">Production sensible</span>
+        <p style="margin-top:12px;font-size:12px;color:var(--text-muted)" data-i18n="scan.stealth.desc">Évite les alertes IDS/WAF. Scan lent mais discret.</p>
       </div>
       <div class="profile-card normal">
         <div class="profile-name">⚖️ normal</div>
-        <div class="profile-meta">5 req simultanées · 10 req/s</div>
-        <span class="profile-tag">Défaut recommandé</span>
-        <p style="margin-top:12px;font-size:12px;color:var(--text-muted)">Équilibre vitesse/discrétion. Idéal pour le staging.</p>
+        <div class="profile-meta" data-i18n="scan.normal.meta">5 req simultanées · 10 req/s</div>
+        <span class="profile-tag" data-i18n="scan.normal.tag">Défaut recommandé</span>
+        <p style="margin-top:12px;font-size:12px;color:var(--text-muted)" data-i18n="scan.normal.desc">Équilibre vitesse/discrétion. Idéal pour le staging.</p>
       </div>
       <div class="profile-card aggressive">
         <div class="profile-name">⚡ aggressive</div>
-        <div class="profile-meta">20 req simultanées · 50 req/s</div>
-        <span class="profile-tag">Lab uniquement</span>
-        <p style="margin-top:12px;font-size:12px;color:var(--text-muted)">Scan rapide. Ne pas utiliser en production.</p>
+        <div class="profile-meta" data-i18n="scan.aggressive.meta">20 req simultanées · 50 req/s</div>
+        <span class="profile-tag" data-i18n="scan.aggressive.tag">Lab uniquement</span>
+        <p style="margin-top:12px;font-size:12px;color:var(--text-muted)" data-i18n="scan.aggressive.desc">Scan rapide. Ne pas utiliser en production.</p>
       </div>
     </div>
 
     <div class="code-block">
-      <div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)">Copier</button></div>
+      <div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)" data-i18n="copy.btn">Copier</button></div>
       <pre><code class="language-bash">nevelio scan --target https://api.example.com --profile stealth   --accept-legal
 nevelio scan --target https://api.example.com --profile normal    --accept-legal
 nevelio scan --target https://api.example.com --profile aggressive --accept-legal</code></pre>
     </div>
 
     <!-- 4.3 Modules -->
-    <h3 id="scan-modules">Sélection de modules</h3>
-    <p>Par défaut, tous les modules sont exécutés. Pour restreindre :</p>
+    <h3 id="scan-modules" data-i18n="scan.modules">Sélection de modules</h3>
+    <p data-i18n="scan.modules.desc">Par défaut, tous les modules sont exécutés. Pour restreindre :</p>
     <div class="code-block">
-      <div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)">Copier</button></div>
+      <div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)" data-i18n="copy.btn">Copier</button></div>
       <pre><code class="language-bash"># Un seul module
 nevelio scan --target https://api.example.com --module auth --accept-legal
 
@@ -1270,9 +1279,9 @@ nevelio scan --target https://api.example.com \
     </div>
 
     <!-- 4.4 Auth -->
-    <h3 id="scan-auth">Authentification et proxy</h3>
+    <h3 id="scan-auth" data-i18n="scan.auth">Authentification et proxy</h3>
     <div class="code-block">
-      <div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)">Copier</button></div>
+      <div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)" data-i18n="copy.btn">Copier</button></div>
       <pre><code class="language-bash"># JWT Bearer token
 nevelio scan --target https://api.example.com \
              --auth-token "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." \
@@ -1290,9 +1299,9 @@ nevelio scan --target https://api.example.com \
     </div>
 
     <!-- 4.5 Output -->
-    <h3 id="scan-output">Sortie et rapports</h3>
+    <h3 id="scan-output" data-i18n="scan.output">Sortie et rapports</h3>
     <div class="code-block">
-      <div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)">Copier</button></div>
+      <div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)" data-i18n="copy.btn">Copier</button></div>
       <pre><code class="language-bash"># HTML (défaut) — findings.json + report.html
 nevelio scan --target https://api.example.com --accept-legal
 
@@ -1309,18 +1318,18 @@ nevelio scan --target https://api.example.com \
 echo $?   # 1 si HIGH/CRITICAL trouvé</code></pre>
     </div>
 
-    <h3 id="scan-modes">Modes spéciaux</h3>
+    <h3 id="scan-modes" data-i18n="scan.modes">Modes spéciaux</h3>
     <div class="table-wrap">
     <table>
-      <thead><tr><th>Flag</th><th>Description</th></tr></thead>
+      <thead><tr><th data-i18n="scan.col.flag">Flag</th><th data-i18n="scan.col.desc">Description</th></tr></thead>
       <tbody>
-        <tr><td><code>--resume</code></td><td>Reprendre un scan interrompu depuis <code>--out-dir</code></td></tr>
-        <tr><td><code>--dry-run</code></td><td>Simuler sans envoyer de requêtes réelles</td></tr>
-        <tr><td><code>--no-tui</code></td><td>Désactiver le dashboard TUI (CI/CD, pipes)</td></tr>
-        <tr><td><code>--ai-suggestions</code></td><td>Suggestions IA après le scan (nécessite <code>ANTHROPIC_API_KEY</code>)</td></tr>
-        <tr><td><code>--verbose</code></td><td>Logs détaillés et requêtes HTTP</td></tr>
-        <tr><td><code>--accept-legal</code></td><td>Accepter le disclaimer sans prompt</td></tr>
-        <tr><td><code>--no-color</code></td><td>Désactiver les couleurs ANSI (logs CI)</td></tr>
+        <tr><td><code>--resume</code></td><td data-i18n="mode.resume.desc">Reprendre un scan interrompu depuis <code>--out-dir</code></td></tr>
+        <tr><td><code>--dry-run</code></td><td data-i18n="mode.dryrun.desc">Simuler sans envoyer de requêtes réelles</td></tr>
+        <tr><td><code>--no-tui</code></td><td data-i18n="mode.notui.desc">Désactiver le dashboard TUI (CI/CD, pipes)</td></tr>
+        <tr><td><code>--ai-suggestions</code></td><td data-i18n="mode.ai.desc">Suggestions IA après le scan (nécessite <code>ANTHROPIC_API_KEY</code>)</td></tr>
+        <tr><td><code>--verbose</code></td><td data-i18n="mode.verbose.desc">Logs détaillés et requêtes HTTP</td></tr>
+        <tr><td><code>--accept-legal</code></td><td data-i18n="mode.acceptlegal.desc">Accepter le disclaimer sans prompt</td></tr>
+        <tr><td><code>--no-color</code></td><td data-i18n="mode.nocolor.desc">Désactiver les couleurs ANSI (logs CI)</td></tr>
       </tbody>
     </table>
     </div>
@@ -1328,13 +1337,13 @@ echo $?   # 1 si HIGH/CRITICAL trouvé</code></pre>
 
   <!-- ── 5. TUI ─────────────────────────────────────────────────────────── -->
   <section class="doc-section" id="tui">
-    <h2><span class="section-icon">🖥️</span> TUI Dashboard</h2>
+    <h2><span class="section-icon">🖥️</span> <span data-i18n="tui.title">TUI Dashboard</span></h2>
 
-    <p>Le dashboard ratatui s'active automatiquement quand la sortie est un <strong>terminal interactif</strong>
+    <p data-i18n-html="1" data-i18n="tui.desc">Le dashboard ratatui s'active automatiquement quand la sortie est un <strong>terminal interactif</strong>
     (TTY détecté) et que <code>--no-tui</code> est absent.</p>
 
     <div class="code-block">
-      <div class="code-header"><span>terminal</span><button class="copy-btn" onclick="copyCode(this)">Copier</button></div>
+      <div class="code-header"><span>terminal</span><button class="copy-btn" onclick="copyCode(this)" data-i18n="copy.btn">Copier</button></div>
       <pre><code class="language-text">┌─ Nevelio — API Security Scanner ────────────────────────────────┐
 │ Progression  [████████████░░░░░░░░░░░░░░]  45%   ETA: 1m23s    │
 ├─ Modules ────────────────────────────────┬─ Findings ───────────┤
@@ -1353,28 +1362,28 @@ echo $?   # 1 si HIGH/CRITICAL trouvé</code></pre>
       <div class="feature-item">
         <div class="feature-item-icon">📊</div>
         <div class="feature-item-body">
-          <div class="title">Barre de progression</div>
-          <div class="desc">Avancement global avec ETA estimé en temps réel</div>
+          <div class="title" data-i18n="tui.feat.progress.title">Barre de progression</div>
+          <div class="desc" data-i18n="tui.feat.progress.desc">Avancement global avec ETA estimé en temps réel</div>
         </div>
       </div>
       <div class="feature-item">
         <div class="feature-item-icon">📦</div>
         <div class="feature-item-body">
-          <div class="title">État des modules</div>
-          <div class="desc">En attente, en cours ou terminé pour chaque module</div>
+          <div class="title" data-i18n="tui.feat.modules.title">État des modules</div>
+          <div class="desc" data-i18n="tui.feat.modules.desc">En attente, en cours ou terminé pour chaque module</div>
         </div>
       </div>
       <div class="feature-item">
         <div class="feature-item-icon">🚨</div>
         <div class="feature-item-body">
-          <div class="title">Findings en direct</div>
-          <div class="desc">Vulnérabilités découvertes affichées immédiatement</div>
+          <div class="title" data-i18n="tui.feat.findings.title">Findings en direct</div>
+          <div class="desc" data-i18n="tui.feat.findings.desc">Vulnérabilités découvertes affichées immédiatement</div>
         </div>
       </div>
     </div>
 
     <div class="code-block">
-      <div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)">Copier</button></div>
+      <div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)" data-i18n="copy.btn">Copier</button></div>
       <pre><code class="language-bash"># Désactiver le TUI (CI/CD, pipes, redirection)
 nevelio scan --target https://api.example.com --no-tui --accept-legal</code></pre>
     </div>
@@ -1382,7 +1391,7 @@ nevelio scan --target https://api.example.com --no-tui --accept-legal</code></pr
 
   <!-- ── 6. Modules ────────────────────────────────────────────────────── -->
   <section class="doc-section" id="modules">
-    <h2><span class="section-icon">🧩</span> Modules d'attaque</h2>
+    <h2><span class="section-icon">🧩</span> <span data-i18n="modules.title">Modules d'attaque</span></h2>
 
     <div class="module-grid">
       <div class="module-card">
@@ -1476,7 +1485,7 @@ nevelio scan --target https://api.example.com --no-tui --accept-legal</code></pr
         <div class="check-body">
           <p>Teste chaque endpoint <strong>sans header Authorization</strong>. Un code 200/201 indique une authentification manquante.</p>
           <strong>Exemple de finding :</strong>
-          <div class="code-block"><div class="code-header"><span>json</span><button class="copy-btn" onclick="copyCode(this)">Copier</button></div>
+          <div class="code-block"><div class="code-header"><span>json</span><button class="copy-btn" onclick="copyCode(this)" data-i18n="copy.btn">Copier</button></div>
           <pre><code class="language-json">{
   "title": "Missing Authentication",
   "severity": "High",
@@ -1495,7 +1504,7 @@ nevelio scan --target https://api.example.com --no-tui --accept-legal</code></pr
         </div>
         <div class="check-body">
           <p>Envoie un JWT avec <code>"alg": "none"</code> et signature vide. Si le serveur l'accepte, il ne valide pas la signature.</p>
-          <div class="code-block"><div class="code-header"><span>payload forgé</span><button class="copy-btn" onclick="copyCode(this)">Copier</button></div>
+          <div class="code-block"><div class="code-header"><span>payload forgé</span><button class="copy-btn" onclick="copyCode(this)" data-i18n="copy.btn">Copier</button></div>
           <pre><code class="language-text">eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.eyJzdWIiOiIxMjM0In0.</code></pre></div>
           <p><strong>Remédiation :</strong> Rejeter explicitement l'algorithme "none". Utiliser RS256 ou ES256.</p>
         </div>
@@ -1565,7 +1574,7 @@ nevelio scan --target https://api.example.com --no-tui --accept-legal</code></pr
           <span class="check-arrow">▶</span>
         </div>
         <div class="check-body">
-          <div class="code-block"><div class="code-header"><span>json — opérateurs MongoDB</span><button class="copy-btn" onclick="copyCode(this)">Copier</button></div>
+          <div class="code-block"><div class="code-header"><span>json — opérateurs MongoDB</span><button class="copy-btn" onclick="copyCode(this)" data-i18n="copy.btn">Copier</button></div>
           <pre><code class="language-json">{"username": {"$gt": ""}, "password": {"$gt": ""}}
 {"username": {"$regex": ".*"}}</code></pre></div>
         </div>
@@ -1596,7 +1605,7 @@ nevelio scan --target https://api.example.com --no-tui --accept-legal</code></pr
           <span class="check-arrow">▶</span>
         </div>
         <div class="check-body">
-          <div class="code-block"><div class="code-header"><span>payloads</span><button class="copy-btn" onclick="copyCode(this)">Copier</button></div>
+          <div class="code-block"><div class="code-header"><span>payloads</span><button class="copy-btn" onclick="copyCode(this)" data-i18n="copy.btn">Copier</button></div>
           <pre><code class="language-text">; id
 | whoami
 `id`
@@ -1641,7 +1650,7 @@ $(id)
           <span class="check-arrow">▶</span>
         </div>
         <div class="check-body">
-          <div class="code-block"><div class="code-header"><span>json — champs injectés</span><button class="copy-btn" onclick="copyCode(this)">Copier</button></div>
+          <div class="code-block"><div class="code-header"><span>json — champs injectés</span><button class="copy-btn" onclick="copyCode(this)" data-i18n="copy.btn">Copier</button></div>
           <pre><code class="language-json">{"name": "John", "role": "admin", "is_admin": true, "credits": 999999}</code></pre></div>
         </div>
       </div>
@@ -1657,7 +1666,7 @@ $(id)
           <span class="check-arrow">▶</span>
         </div>
         <div class="check-body">
-          <div class="code-block"><div class="code-header"><span>graphql</span><button class="copy-btn" onclick="copyCode(this)">Copier</button></div>
+          <div class="code-block"><div class="code-header"><span>graphql</span><button class="copy-btn" onclick="copyCode(this)" data-i18n="copy.btn">Copier</button></div>
           <pre><code class="language-graphql">{ __schema { types { name fields { name } } } }</code></pre></div>
           <p>Si le serveur répond avec le schéma complet, la structure interne est exposée à un attaquant.</p>
         </div>
@@ -1670,7 +1679,7 @@ $(id)
           <span class="check-arrow">▶</span>
         </div>
         <div class="check-body">
-          <div class="code-block"><div class="code-header"><span>graphql</span><button class="copy-btn" onclick="copyCode(this)">Copier</button></div>
+          <div class="code-block"><div class="code-header"><span>graphql</span><button class="copy-btn" onclick="copyCode(this)" data-i18n="copy.btn">Copier</button></div>
           <pre><code class="language-graphql">{ user { friends { friends { friends { friends { id name } } } } } }</code></pre></div>
           <p>Sans limite de profondeur, le serveur peut subir une surcharge CPU/mémoire.</p>
         </div>
@@ -1718,7 +1727,7 @@ $(id)
           <span class="check-arrow">▶</span>
         </div>
         <div class="check-body">
-          <div class="code-block"><div class="code-header"><span>headers injectés</span><button class="copy-btn" onclick="copyCode(this)">Copier</button></div>
+          <div class="code-block"><div class="code-header"><span>headers injectés</span><button class="copy-btn" onclick="copyCode(this)" data-i18n="copy.btn">Copier</button></div>
           <pre><code class="language-text">X-Forwarded-For: 127.0.0.1
 X-Real-IP: 127.0.0.1
 CF-Connecting-IP: 192.168.1.1</code></pre></div>
@@ -1741,44 +1750,44 @@ CF-Connecting-IP: 192.168.1.1</code></pre></div>
 
   <!-- ── 7. Formats ─────────────────────────────────────────────────────── -->
   <section class="doc-section" id="formats">
-    <h2><span class="section-icon">📋</span> Formats de sortie</h2>
+    <h2><span class="section-icon">📋</span> <span data-i18n="formats.title">Formats de sortie</span></h2>
 
     <div class="format-grid">
       <div class="format-card">
         <div class="format-icon">🗄️</div>
         <div class="format-name">JSON</div>
         <div class="format-ext">findings.json</div>
-        <div class="format-use">Format canonique — toujours écrit</div>
+        <div class="format-use" data-i18n="formats.json.use">Format canonique — toujours écrit</div>
       </div>
       <div class="format-card">
         <div class="format-icon">🌐</div>
         <div class="format-name">HTML</div>
         <div class="format-ext">report.html</div>
-        <div class="format-use">Rapport interactif — défaut</div>
+        <div class="format-use" data-i18n="formats.html.use">Rapport interactif — défaut</div>
       </div>
       <div class="format-card">
         <div class="format-icon">📝</div>
         <div class="format-name">Markdown</div>
         <div class="format-ext">report.md</div>
-        <div class="format-use">Wikis, PRs, Confluence</div>
+        <div class="format-use" data-i18n="formats.md.use">Wikis, PRs, Confluence</div>
       </div>
       <div class="format-card">
         <div class="format-icon">⚙️</div>
         <div class="format-name">JUnit</div>
         <div class="format-ext">report.xml</div>
-        <div class="format-use">Jenkins, GitLab CI</div>
+        <div class="format-use" data-i18n="formats.junit.use">Jenkins, GitLab CI</div>
       </div>
       <div class="format-card">
         <div class="format-icon">🔒</div>
         <div class="format-name">SARIF</div>
         <div class="format-ext">report.sarif</div>
-        <div class="format-use">GitHub Advanced Security</div>
+        <div class="format-use" data-i18n="formats.sarif.use">GitHub Advanced Security</div>
       </div>
     </div>
 
-    <h3>Structure d'un finding JSON</h3>
+    <h3 data-i18n="formats.json-structure">Structure d'un finding JSON</h3>
     <div class="code-block">
-      <div class="code-header"><span>findings.json</span><button class="copy-btn" onclick="copyCode(this)">Copier</button></div>
+      <div class="code-header"><span>findings.json</span><button class="copy-btn" onclick="copyCode(this)" data-i18n="copy.btn">Copier</button></div>
       <pre><code class="language-json">[
   {
     "id": "auth-jwt-alg-none-001",
@@ -1792,38 +1801,38 @@ CF-Connecting-IP: 192.168.1.1</code></pre></div>
 ]</code></pre>
     </div>
 
-    <h3>Rapport HTML — fonctionnalités</h3>
+    <h3 data-i18n="formats.html-features">Rapport HTML — fonctionnalités</h3>
     <div class="feature-grid">
       <div class="feature-item">
         <div class="feature-item-icon">🔍</div>
-        <div class="feature-item-body"><div class="title">Filtre par sévérité</div><div class="desc">Boutons Critical / High / Medium / Low / Info</div></div>
+        <div class="feature-item-body"><div class="title" data-i18n="formats.feat.filter.title">Filtre par sévérité</div><div class="desc" data-i18n="formats.feat.filter.desc">Boutons Critical / High / Medium / Low / Info</div></div>
       </div>
       <div class="feature-item">
         <div class="feature-item-icon">🌙</div>
-        <div class="feature-item-body"><div class="title">Thème clair/sombre</div><div class="desc">Toggle persisté en localStorage</div></div>
+        <div class="feature-item-body"><div class="title" data-i18n="formats.feat.theme.title">Thème clair/sombre</div><div class="desc" data-i18n="formats.feat.theme.desc">Toggle persisté en localStorage</div></div>
       </div>
       <div class="feature-item">
         <div class="feature-item-icon">📂</div>
-        <div class="feature-item-body"><div class="title">Accordéon</div><div class="desc">Chaque finding collapsible pour une lecture claire</div></div>
+        <div class="feature-item-body"><div class="title" data-i18n="formats.feat.accordion.title">Accordéon</div><div class="desc" data-i18n="formats.feat.accordion.desc">Chaque finding collapsible pour une lecture claire</div></div>
       </div>
     </div>
   </section>
 
   <!-- ── 8. AI ───────────────────────────────────────────────────────────── -->
   <section class="doc-section" id="ai">
-    <h2><span class="section-icon">🤖</span> Suggestions IA via Claude</h2>
+    <h2><span class="section-icon">🤖</span> <span data-i18n="ai.title">Suggestions IA via Claude</span></h2>
 
-    <p>Nevelio peut générer des <strong>recommandations de remédiation détaillées</strong> pour
+    <p data-i18n-html="1" data-i18n="ai.desc">Nevelio peut générer des <strong>recommandations de remédiation détaillées</strong> pour
     chaque finding, via l'API Claude d'Anthropic.</p>
 
     <div class="callout info">
       <span class="callout-icon">ℹ️</span>
-      <div>Modèle utilisé : <code>claude-haiku-4-5-20251001</code>.
+      <div data-i18n-html="1" data-i18n="ai.model-info">Modèle utilisé : <code>claude-haiku-4-5-20251001</code>.
       Sortie : <code>&lt;out-dir&gt;/ai_suggestions.md</code></div>
     </div>
 
     <div class="code-block">
-      <div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)">Copier</button></div>
+      <div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)" data-i18n="copy.btn">Copier</button></div>
       <pre><code class="language-bash">export ANTHROPIC_API_KEY=sk-ant-api03-...
 
 nevelio scan --target https://api.example.com \
@@ -1837,19 +1846,19 @@ cat ./results/ai_suggestions.md</code></pre>
 
     <div class="callout warning">
       <span class="callout-icon">⚠️</span>
-      <div>Si <code>ANTHROPIC_API_KEY</code> est absent, Nevelio affiche un avertissement
+      <div data-i18n-html="1" data-i18n="ai.missing-key">Si <code>ANTHROPIC_API_KEY</code> est absent, Nevelio affiche un avertissement
       <strong>avant le scan</strong> et continue normalement sans les suggestions.</div>
     </div>
   </section>
 
   <!-- ── 9. Report ──────────────────────────────────────────────────────── -->
   <section class="doc-section" id="report">
-    <h2><span class="section-icon">📄</span> Commande <code>report</code> / <code>convert</code></h2>
+    <h2><span class="section-icon">📄</span> <span data-i18n-html="1" data-i18n="report.title">Commande <code>report</code> / <code>convert</code></span></h2>
 
-    <p>Convertit un <code>findings.json</code> existant en un autre format, <strong>sans relancer le scan</strong>.</p>
+    <p data-i18n-html="1" data-i18n="report.desc">Convertit un <code>findings.json</code> existant en un autre format, <strong>sans relancer le scan</strong>.</p>
 
     <div class="code-block">
-      <div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)">Copier</button></div>
+      <div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)" data-i18n="copy.btn">Copier</button></div>
       <pre><code class="language-bash"># Générer un rapport HTML depuis un JSON existant
 nevelio report --input ./results/findings.json \
                --format html \
@@ -1861,11 +1870,11 @@ nevelio convert --input findings.json --format sarif --out-dir ./security</code>
 
     <div class="table-wrap">
     <table>
-      <thead><tr><th>Flag</th><th>Requis</th><th>Défaut</th><th>Description</th></tr></thead>
+      <thead><tr><th data-i18n="scan.col.flag">Flag</th><th data-i18n="report.col.required">Requis</th><th data-i18n="config.col.default">Défaut</th><th data-i18n="scan.col.desc">Description</th></tr></thead>
       <tbody>
-        <tr><td><code>--input FILE</code></td><td>Oui</td><td>—</td><td>Chemin vers le <code>findings.json</code> source</td></tr>
-        <tr><td><code>--format FORMAT</code></td><td>Non</td><td>html</td><td>Format cible</td></tr>
-        <tr><td><code>--out-dir PATH</code></td><td>Non</td><td>.</td><td>Répertoire de sortie</td></tr>
+        <tr><td><code>--input FILE</code></td><td data-i18n="report.yes">Oui</td><td>—</td><td data-i18n="report.input.desc">Chemin vers le <code>findings.json</code> source</td></tr>
+        <tr><td><code>--format FORMAT</code></td><td data-i18n="report.no">Non</td><td>html</td><td data-i18n="report.format.desc">Format cible</td></tr>
+        <tr><td><code>--out-dir PATH</code></td><td data-i18n="report.no">Non</td><td>.</td><td data-i18n="config.outdir.desc">Répertoire de sortie</td></tr>
       </tbody>
     </table>
     </div>
@@ -1873,10 +1882,10 @@ nevelio convert --input findings.json --format sarif --out-dir ./security</code>
 
   <!-- ── 10. Modules cmd ────────────────────────────────────────────────── -->
   <section class="doc-section" id="modules-cmd">
-    <h2><span class="section-icon">📦</span> Commande <code>modules</code></h2>
+    <h2><span class="section-icon">📦</span> <span data-i18n-html="1" data-i18n="modules-cmd.title">Commande <code>modules</code></span></h2>
 
     <div class="code-block">
-      <div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)">Copier</button></div>
+      <div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)" data-i18n="copy.btn">Copier</button></div>
       <pre><code class="language-bash"># Lister tous les modules disponibles
 nevelio modules list
 
@@ -1892,11 +1901,11 @@ nevelio modules show business-logic</code></pre>
 
   <!-- ── 11. CI/CD ─────────────────────────────────────────────────────── -->
   <section class="doc-section" id="cicd">
-    <h2><span class="section-icon">🔄</span> Intégration CI/CD</h2>
+    <h2><span class="section-icon">🔄</span> <span data-i18n="cicd.title">Intégration CI/CD</span></h2>
 
     <div class="callout success">
       <span class="callout-icon">✅</span>
-      <div>Combinaison recommandée pour tout pipeline CI :
+      <div data-i18n-html="1" data-i18n="cicd.tip">Combinaison recommandée pour tout pipeline CI :
       <code>--accept-legal --no-tui --no-color --fail-on high</code></div>
     </div>
 
@@ -1910,7 +1919,7 @@ nevelio modules show business-logic</code></pre>
 
       <div class="tab-panel active" id="tab-gh">
         <div class="code-block">
-          <div class="code-header"><span>.github/workflows/security.yml</span><button class="copy-btn" onclick="copyCode(this)">Copier</button></div>
+          <div class="code-header"><span>.github/workflows/security.yml</span><button class="copy-btn" onclick="copyCode(this)" data-i18n="copy.btn">Copier</button></div>
           <pre><code class="language-yaml">name: API Security Scan
 
 on:
@@ -1962,7 +1971,7 @@ jobs:
 
       <div class="tab-panel" id="tab-gl">
         <div class="code-block">
-          <div class="code-header"><span>.gitlab-ci.yml</span><button class="copy-btn" onclick="copyCode(this)">Copier</button></div>
+          <div class="code-header"><span>.gitlab-ci.yml</span><button class="copy-btn" onclick="copyCode(this)" data-i18n="copy.btn">Copier</button></div>
           <pre><code class="language-yaml">api-security-scan:
   stage: test
   image: rust:latest
@@ -1991,7 +2000,7 @@ jobs:
 
       <div class="tab-panel" id="tab-docker">
         <div class="code-block">
-          <div class="code-header"><span>Dockerfile</span><button class="copy-btn" onclick="copyCode(this)">Copier</button></div>
+          <div class="code-header"><span>Dockerfile</span><button class="copy-btn" onclick="copyCode(this)" data-i18n="copy.btn">Copier</button></div>
           <pre><code class="language-dockerfile">FROM rust:1.75 AS builder
 WORKDIR /app
 COPY . .
@@ -2004,7 +2013,7 @@ COPY --from=builder /app/target/release/nevelio /usr/local/bin/nevelio
 ENTRYPOINT ["nevelio"]</code></pre>
         </div>
         <div class="code-block">
-          <div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)">Copier</button></div>
+          <div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)" data-i18n="copy.btn">Copier</button></div>
           <pre><code class="language-bash">docker build -t nevelio .
 docker run --rm nevelio scan \
   --target https://api.example.com \
@@ -2017,16 +2026,16 @@ docker run --rm nevelio scan \
       <div class="tab-panel" id="tab-best">
         <div class="table-wrap">
         <table>
-          <thead><tr><th>Pratique</th><th>Pourquoi</th></tr></thead>
+          <thead><tr><th data-i18n="cicd.col.practice">Pratique</th><th data-i18n="cicd.col.why">Pourquoi</th></tr></thead>
           <tbody>
-            <tr><td><code>--accept-legal</code></td><td>Évite le blocage sur prompt interactif</td></tr>
-            <tr><td><code>--no-tui</code></td><td>Le TUI nécessite un TTY absent en CI</td></tr>
-            <tr><td><code>--no-color</code></td><td>Les codes ANSI polluent les logs CI</td></tr>
-            <tr><td><code>--fail-on high</code></td><td>Bloque les PRs avec vulnérabilités critiques</td></tr>
-            <tr><td><code>--profile normal</code></td><td>Ne pas saturer l'environnement de staging</td></tr>
-            <tr><td><code>ANTHROPIC_API_KEY</code> en secret</td><td>Ne jamais écrire la clé en clair</td></tr>
-            <tr><td><code>--output sarif</code> sur GitHub</td><td>Intégration native GitHub Security</td></tr>
-            <tr><td><code>--output junit</code> sur GitLab</td><td>Intégration native des rapports de test</td></tr>
+            <tr><td><code>--accept-legal</code></td><td data-i18n="cicd.accept-legal.why">Évite le blocage sur prompt interactif</td></tr>
+            <tr><td><code>--no-tui</code></td><td data-i18n="cicd.no-tui.why">Le TUI nécessite un TTY absent en CI</td></tr>
+            <tr><td><code>--no-color</code></td><td data-i18n="cicd.no-color.why">Les codes ANSI polluent les logs CI</td></tr>
+            <tr><td><code>--fail-on high</code></td><td data-i18n="cicd.fail-on.why">Bloque les PRs avec vulnérabilités critiques</td></tr>
+            <tr><td><code>--profile normal</code></td><td data-i18n="cicd.profile.why">Ne pas saturer l'environnement de staging</td></tr>
+            <tr><td><code>ANTHROPIC_API_KEY</code> en secret</td><td data-i18n="cicd.api-key.why">Ne jamais écrire la clé en clair</td></tr>
+            <tr><td><code>--output sarif</code> sur GitHub</td><td data-i18n="cicd.sarif.why">Intégration native GitHub Security</td></tr>
+            <tr><td><code>--output junit</code> sur GitLab</td><td data-i18n="cicd.junit.why">Intégration native des rapports de test</td></tr>
           </tbody>
         </table>
         </div>
@@ -2036,22 +2045,22 @@ docker run --rm nevelio scan \
 
   <!-- ── 12. Scénarios ─────────────────────────────────────────────────── -->
   <section class="doc-section" id="scenarios">
-    <h2><span class="section-icon">🎯</span> Scénarios pratiques</h2>
+    <h2><span class="section-icon">🎯</span> <span data-i18n="scenarios.title">Scénarios pratiques</span></h2>
 
     <div class="tabs">
       <div class="tab-list">
-        <button class="tab-btn active" onclick="switchTab(this, 'sc-a')">A — Express</button>
-        <button class="tab-btn" onclick="switchTab(this, 'sc-b')">B — Professionnel</button>
-        <button class="tab-btn" onclick="switchTab(this, 'sc-c')">C — Burp Suite</button>
-        <button class="tab-btn" onclick="switchTab(this, 'sc-d')">D — IA + multi-format</button>
-        <button class="tab-btn" onclick="switchTab(this, 'sc-e')">E — Reprise</button>
-        <button class="tab-btn" onclick="switchTab(this, 'sc-f')">F — GraphQL</button>
+        <button class="tab-btn active" onclick="switchTab(this, 'sc-a')" data-i18n="scenarios.tab.a">A — Express</button>
+        <button class="tab-btn" onclick="switchTab(this, 'sc-b')" data-i18n="scenarios.tab.b">B — Professionnel</button>
+        <button class="tab-btn" onclick="switchTab(this, 'sc-c')" data-i18n="scenarios.tab.c">C — Burp Suite</button>
+        <button class="tab-btn" onclick="switchTab(this, 'sc-d')" data-i18n="scenarios.tab.d">D — IA + multi-format</button>
+        <button class="tab-btn" onclick="switchTab(this, 'sc-e')" data-i18n="scenarios.tab.e">E — Reprise</button>
+        <button class="tab-btn" onclick="switchTab(this, 'sc-f')" data-i18n="scenarios.tab.f">F — GraphQL</button>
       </div>
 
       <div class="tab-panel active" id="sc-a">
-        <h3>Audit rapide sans spec OpenAPI</h3>
-        <p>Idéal pour une première prise en main ou une cible sans spec disponible.</p>
-        <div class="code-block"><div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)">Copier</button></div>
+        <h3 data-i18n="scenarios.a.title">Audit rapide sans spec OpenAPI</h3>
+        <p data-i18n="scenarios.a.desc">Idéal pour une première prise en main ou une cible sans spec disponible.</p>
+        <div class="code-block"><div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)" data-i18n="copy.btn">Copier</button></div>
         <pre><code class="language-bash">nevelio init   # crée .nevelio.toml
 # éditer .nevelio.toml selon la cible
 
@@ -2064,8 +2073,8 @@ xdg-open report.html   # Linux</code></pre></div>
       </div>
 
       <div class="tab-panel" id="sc-b">
-        <h3>Audit professionnel complet</h3>
-        <div class="code-block"><div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)">Copier</button></div>
+        <h3 data-i18n="scenarios.b.title">Audit professionnel complet</h3>
+        <div class="code-block"><div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)" data-i18n="copy.btn">Copier</button></div>
         <pre><code class="language-bash">TOKEN="Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
 
 nevelio scan \
@@ -2082,8 +2091,8 @@ open ./pentest-$(date +%Y%m%d)/report.html</code></pre></div>
       </div>
 
       <div class="tab-panel" id="sc-c">
-        <h3>Audit avec interception Burp Suite</h3>
-        <div class="code-block"><div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)">Copier</button></div>
+        <h3 data-i18n="scenarios.c.title">Audit avec interception Burp Suite</h3>
+        <div class="code-block"><div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)" data-i18n="copy.btn">Copier</button></div>
         <pre><code class="language-bash"># Burp Suite en écoute sur 127.0.0.1:8080
 nevelio scan \
   --target https://api.example.com \
@@ -2096,8 +2105,8 @@ nevelio scan \
       </div>
 
       <div class="tab-panel" id="sc-d">
-        <h3>Scan avec suggestions IA et multi-format</h3>
-        <div class="code-block"><div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)">Copier</button></div>
+        <h3 data-i18n="scenarios.d.title">Scan avec suggestions IA et multi-format</h3>
+        <div class="code-block"><div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)" data-i18n="copy.btn">Copier</button></div>
         <pre><code class="language-bash">export ANTHROPIC_API_KEY=sk-ant-api03-...
 
 nevelio scan \
@@ -2119,8 +2128,8 @@ nevelio convert --input ./results/findings.json \
       </div>
 
       <div class="tab-panel" id="sc-e">
-        <h3>Reprise après interruption</h3>
-        <div class="code-block"><div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)">Copier</button></div>
+        <h3 data-i18n="scenarios.e.title">Reprise après interruption</h3>
+        <div class="code-block"><div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)" data-i18n="copy.btn">Copier</button></div>
         <pre><code class="language-bash"># Scan initial — interrompu par ^C ou crash
 nevelio scan --target https://api.example.com \
              --spec ./openapi.yaml \
@@ -2136,8 +2145,8 @@ nevelio scan --target https://api.example.com \
       </div>
 
       <div class="tab-panel" id="sc-f">
-        <h3>Audit d'une API GraphQL</h3>
-        <div class="code-block"><div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)">Copier</button></div>
+        <h3 data-i18n="scenarios.f.title">Audit d'une API GraphQL</h3>
+        <div class="code-block"><div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)" data-i18n="copy.btn">Copier</button></div>
         <pre><code class="language-bash">nevelio scan \
   --target https://api.example.com \
   --module graphql infra \
@@ -2150,26 +2159,26 @@ nevelio scan --target https://api.example.com \
 
   <!-- ── i18n ─────────────────────────────────────────────────────────── -->
   <section class="doc-section" id="i18n">
-    <h2><span class="section-icon">🌐</span> Internationalisation</h2>
-    <p>Nevelio supporte <strong>3 langues</strong> — français (<code>fr</code>), anglais (<code>en</code>), espagnol (<code>es</code>).
+    <h2><span class="section-icon">🌐</span> <span data-i18n="i18n.title">Internationalisation</span></h2>
+    <p data-i18n-html="1" data-i18n="i18n.desc">Nevelio supporte <strong>3 langues</strong> — français (<code>fr</code>), anglais (<code>en</code>), espagnol (<code>es</code>).
     Tous les messages CLI, le TUI, le disclaimer légal, les suggestions IA et le rapport HTML sont traduits automatiquement.</p>
 
-    <h3>Détection automatique</h3>
-    <p>La langue est résolue dans cet ordre de priorité :</p>
+    <h3 data-i18n="i18n.detection">Détection automatique</h3>
+    <p data-i18n="i18n.detection.desc">La langue est résolue dans cet ordre de priorité :</p>
     <div class="table-wrap">
     <table>
-      <thead><tr><th>Priorité</th><th>Source</th><th>Exemple</th></tr></thead>
+      <thead><tr><th data-i18n="i18n.col.priority">Priorité</th><th data-i18n="i18n.col.source">Source</th><th data-i18n="scan.col.example">Exemple</th></tr></thead>
       <tbody>
-        <tr><td>1</td><td>Flag <code>--lang</code></td><td><code>nevelio --lang es scan …</code></td></tr>
-        <tr><td>2</td><td>Variable <code>NEVELIO_LANG</code></td><td><code>NEVELIO_LANG=fr nevelio scan …</code></td></tr>
-        <tr><td>3</td><td>Variable système <code>$LANGUAGE</code> / <code>$LANG</code></td><td><code>LANG=fr_FR.UTF-8</code> → <code>fr</code></td></tr>
-        <tr><td>4</td><td>Défaut</td><td><code>en</code></td></tr>
+        <tr><td>1</td><td data-i18n-html="1" data-i18n="i18n.src.flag">Flag <code>--lang</code></td><td><code>nevelio --lang es scan …</code></td></tr>
+        <tr><td>2</td><td data-i18n-html="1" data-i18n="i18n.src.env">Variable <code>NEVELIO_LANG</code></td><td><code>NEVELIO_LANG=fr nevelio scan …</code></td></tr>
+        <tr><td>3</td><td data-i18n-html="1" data-i18n="i18n.src.sys">Variable système <code>$LANGUAGE</code> / <code>$LANG</code></td><td><code>LANG=fr_FR.UTF-8</code> → <code>fr</code></td></tr>
+        <tr><td>4</td><td data-i18n="i18n.src.default">Défaut</td><td><code>en</code></td></tr>
       </tbody>
     </table>
     </div>
-    <p>La normalisation est automatique : <code>fr_FR.UTF-8</code>, <code>fr-FR</code> et <code>fr</code> donnent tous <code>fr</code>.</p>
+    <p data-i18n-html="1" data-i18n="i18n.normalize">La normalisation est automatique : <code>fr_FR.UTF-8</code>, <code>fr-FR</code> et <code>fr</code> donnent tous <code>fr</code>.</p>
 
-    <h3>Exemples</h3>
+    <h3 data-i18n="i18n.examples">Exemples</h3>
     <div class="tab-group">
       <div class="tab-bar">
         <button class="tab active" onclick="switchTab(this,'i18n-fr')">🇫🇷 Français</button>
@@ -2177,7 +2186,7 @@ nevelio scan --target https://api.example.com \
         <button class="tab" onclick="switchTab(this,'i18n-es')">🇪🇸 Español</button>
       </div>
       <div class="tab-content active" id="i18n-fr">
-        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copier</button><pre><code class="language-bash">LANG=fr_FR.UTF-8 nevelio scan --target https://api.example.com --dry-run
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)" data-i18n="copy.btn">Copier</button><pre><code class="language-bash">LANG=fr_FR.UTF-8 nevelio scan --target https://api.example.com --dry-run
 # Cible       : https://api.example.com
 # Profil      : Normal
 # Sortie      : .
@@ -2185,7 +2194,7 @@ nevelio scan --target https://api.example.com \
 # Résumé  :  0 Critical  0 High  0 Medium  0 Low  0 Informative</code></pre></div>
       </div>
       <div class="tab-content" id="i18n-en">
-        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copier</button><pre><code class="language-bash">nevelio --lang en scan --target https://api.example.com --dry-run
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)" data-i18n="copy.btn">Copier</button><pre><code class="language-bash">nevelio --lang en scan --target https://api.example.com --dry-run
 # Target      : https://api.example.com
 # Profile     : Normal
 # Output      : .
@@ -2193,7 +2202,7 @@ nevelio scan --target https://api.example.com \
 # Summary  :  0 Critical  0 High  0 Medium  0 Low  0 Informative</code></pre></div>
       </div>
       <div class="tab-content" id="i18n-es">
-        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copier</button><pre><code class="language-bash">NEVELIO_LANG=es nevelio scan --target https://api.example.com --dry-run
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)" data-i18n="copy.btn">Copier</button><pre><code class="language-bash">NEVELIO_LANG=es nevelio scan --target https://api.example.com --dry-run
 # Objetivo    : https://api.example.com
 # Perfil      : Normal
 # Salida      : .
@@ -2202,92 +2211,92 @@ nevelio scan --target https://api.example.com \
       </div>
     </div>
 
-    <h3>Disclaimer légal multilingue</h3>
-    <p>Le texte légal affiché au premier lancement est traduit. La réponse positive varie selon la langue :</p>
+    <h3 data-i18n="i18n.legal-multilang">Disclaimer légal multilingue</h3>
+    <p data-i18n="i18n.legal-multilang.desc">Le texte légal affiché au premier lancement est traduit. La réponse positive varie selon la langue :</p>
     <div class="table-wrap">
     <table>
-      <thead><tr><th>Langue</th><th>Réponses acceptées</th></tr></thead>
+      <thead><tr><th data-i18n="i18n.col.lang">Langue</th><th data-i18n="i18n.col.answers">Réponses acceptées</th></tr></thead>
       <tbody>
-        <tr><td>Français</td><td><code>o</code>, <code>oui</code></td></tr>
-        <tr><td>Anglais</td><td><code>y</code>, <code>yes</code></td></tr>
-        <tr><td>Espagnol</td><td><code>s</code>, <code>sí</code>, <code>si</code></td></tr>
+        <tr><td data-i18n="i18n.lang.fr">Français</td><td><code>o</code>, <code>oui</code></td></tr>
+        <tr><td data-i18n="i18n.lang.en">Anglais</td><td><code>y</code>, <code>yes</code></td></tr>
+        <tr><td data-i18n="i18n.lang.es">Espagnol</td><td><code>s</code>, <code>sí</code>, <code>si</code></td></tr>
       </tbody>
     </table>
     </div>
 
-    <h3>Rapport HTML localisé</h3>
-    <p>Le rapport HTML généré (<code>report.html</code>) hérite de la langue du scan.
+    <h3 data-i18n="i18n.html-report">Rapport HTML localisé</h3>
+    <p data-i18n-html="1" data-i18n="i18n.html-report.desc">Le rapport HTML généré (<code>report.html</code>) hérite de la langue du scan.
     Tous ses labels (Cible / Target / Objetivo, Description, Recommandation…) sont traduits automatiquement.</p>
 
-    <h3>Suggestions IA localisées</h3>
-    <p>Avec <code>--ai-suggestions</code>, le prompt envoyé à Claude est rédigé dans la langue sélectionnée — les suggestions reçues sont donc dans la même langue.</p>
-    <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copier</button><pre><code class="language-bash">nevelio --lang es scan --target https://api.example.com \
+    <h3 data-i18n="i18n.ai-localized">Suggestions IA localisées</h3>
+    <p data-i18n-html="1" data-i18n="i18n.ai-localized.desc">Avec <code>--ai-suggestions</code>, le prompt envoyé à Claude est rédigé dans la langue sélectionnée — les suggestions reçues sont donc dans la même langue.</p>
+    <div class="code-block"><button class="copy-btn" onclick="copyCode(this)" data-i18n="copy.btn">Copier</button><pre><code class="language-bash">nevelio --lang es scan --target https://api.example.com \
   --ai-suggestions --accept-legal
 # → Les suggestions IA seront en espagnol</code></pre></div>
   </section>
 
   <!-- ── 13. Flags ref ──────────────────────────────────────────────────── -->
   <section class="doc-section" id="flags-ref">
-    <h2><span class="section-icon">📖</span> Référence complète des flags</h2>
+    <h2><span class="section-icon">📖</span> <span data-i18n="flags.title">Référence complète des flags</span></h2>
 
-    <h3>nevelio scan</h3>
+    <h3 data-i18n="flags.scan-h3">nevelio scan</h3>
     <div class="table-wrap">
     <table>
-      <thead><tr><th>Flag</th><th>Type</th><th>Description</th></tr></thead>
+      <thead><tr><th data-i18n="scan.col.flag">Flag</th><th data-i18n="flags.col.type">Type</th><th data-i18n="scan.col.desc">Description</th></tr></thead>
       <tbody>
-        <tr><td class="flag">--target URL</td><td>string</td><td>URL de base de l'API</td></tr>
-        <tr><td class="flag">--url URL</td><td>string</td><td>Alias de --target</td></tr>
-        <tr><td class="flag">--spec FILE|URL</td><td>string</td><td>Spec OpenAPI (JSON ou YAML)</td></tr>
-        <tr><td class="flag">--profile PROFIL</td><td>stealth / normal / aggressive</td><td>Profil de scan</td></tr>
-        <tr><td class="flag">--module MOD...</td><td>liste</td><td>Modules à exécuter (espace-séparés)</td></tr>
-        <tr><td class="flag">--concurrency N</td><td>entier</td><td>Requêtes simultanées</td></tr>
-        <tr><td class="flag">--rate-limit N</td><td>entier</td><td>Requêtes par seconde max</td></tr>
-        <tr><td class="flag">--timeout S</td><td>secondes</td><td>Timeout par requête</td></tr>
-        <tr><td class="flag">--auth-token TOKEN</td><td>string</td><td>Header Authorization complet</td></tr>
-        <tr><td class="flag">--proxy URL</td><td>URL</td><td>Proxy HTTP</td></tr>
-        <tr><td class="flag">--output FORMAT</td><td>json / html / markdown / junit / sarif</td><td>Format de sortie (défaut: html)</td></tr>
-        <tr><td class="flag">--out-dir PATH</td><td>chemin</td><td>Répertoire de sortie</td></tr>
-        <tr><td class="flag">--fail-on SEV</td><td>none / low / medium / high / critical</td><td>Seuil d'échec CI</td></tr>
-        <tr><td class="flag">--resume</td><td>booléen</td><td>Reprendre un scan interrompu</td></tr>
-        <tr><td class="flag">--dry-run</td><td>booléen</td><td>Simuler sans requêtes réelles</td></tr>
-        <tr><td class="flag">--no-tui</td><td>booléen</td><td>Désactiver le TUI dashboard</td></tr>
-        <tr><td class="flag">--ai-suggestions</td><td>booléen</td><td>Suggestions IA (ANTHROPIC_API_KEY requis)</td></tr>
+        <tr><td class="flag">--target URL</td><td>string</td><td data-i18n="scan.target.desc">URL de base de l'API</td></tr>
+        <tr><td class="flag">--url URL</td><td>string</td><td data-i18n="scan.url.desc">Alias de --target</td></tr>
+        <tr><td class="flag">--spec FILE|URL</td><td>string</td><td data-i18n="flags.spec.desc">Spec OpenAPI (JSON ou YAML)</td></tr>
+        <tr><td class="flag">--profile PROFIL</td><td>stealth / normal / aggressive</td><td data-i18n="config.profile.desc">Profil de scan</td></tr>
+        <tr><td class="flag">--module MOD...</td><td data-i18n="flags.type.list">liste</td><td data-i18n="flags.module.desc">Modules à exécuter (espace-séparés)</td></tr>
+        <tr><td class="flag">--concurrency N</td><td data-i18n="flags.type.int">entier</td><td data-i18n="config.concurrency.desc">Requêtes simultanées</td></tr>
+        <tr><td class="flag">--rate-limit N</td><td data-i18n="flags.type.int">entier</td><td data-i18n="flags.rate.desc">Requêtes par seconde max</td></tr>
+        <tr><td class="flag">--timeout S</td><td data-i18n="flags.type.seconds">secondes</td><td data-i18n="flags.timeout.desc">Timeout par requête</td></tr>
+        <tr><td class="flag">--auth-token TOKEN</td><td>string</td><td data-i18n="config.auth.desc">Header Authorization complet</td></tr>
+        <tr><td class="flag">--proxy URL</td><td>URL</td><td data-i18n="flags.proxy.desc">Proxy HTTP</td></tr>
+        <tr><td class="flag">--output FORMAT</td><td>json / html / markdown / junit / sarif</td><td data-i18n="flags.output.desc">Format de sortie (défaut: html)</td></tr>
+        <tr><td class="flag">--out-dir PATH</td><td data-i18n="flags.type.path">chemin</td><td data-i18n="config.outdir.desc">Répertoire de sortie</td></tr>
+        <tr><td class="flag">--fail-on SEV</td><td>none / low / medium / high / critical</td><td data-i18n="config.failon.desc">Seuil d'échec CI</td></tr>
+        <tr><td class="flag">--resume</td><td data-i18n="flags.type.bool">booléen</td><td data-i18n="mode.resume.desc">Reprendre un scan interrompu</td></tr>
+        <tr><td class="flag">--dry-run</td><td data-i18n="flags.type.bool">booléen</td><td data-i18n="mode.dryrun.desc">Simuler sans requêtes réelles</td></tr>
+        <tr><td class="flag">--no-tui</td><td data-i18n="flags.type.bool">booléen</td><td data-i18n="flags.notui.desc">Désactiver le TUI dashboard</td></tr>
+        <tr><td class="flag">--ai-suggestions</td><td data-i18n="flags.type.bool">booléen</td><td data-i18n="flags.ai.desc">Suggestions IA (ANTHROPIC_API_KEY requis)</td></tr>
       </tbody>
     </table>
     </div>
 
-    <h3>Flags globaux (toutes commandes)</h3>
+    <h3 data-i18n="flags.global-h3">Flags globaux (toutes commandes)</h3>
     <div class="table-wrap">
     <table>
-      <thead><tr><th>Flag</th><th>Description</th></tr></thead>
+      <thead><tr><th data-i18n="scan.col.flag">Flag</th><th data-i18n="scan.col.desc">Description</th></tr></thead>
       <tbody>
-        <tr><td class="flag">--verbose</td><td>Logs détaillés et requêtes HTTP</td></tr>
-        <tr><td class="flag">--accept-legal</td><td>Accepter le disclaimer sans prompt</td></tr>
-        <tr><td class="flag">--no-color</td><td>Désactiver les couleurs ANSI</td></tr>
-        <tr><td class="flag">--lang LANG</td><td>Langue : <code>fr</code> | <code>en</code> | <code>es</code> (détection auto via <code>$LANG</code> si absent)</td></tr>
+        <tr><td class="flag">--verbose</td><td data-i18n="mode.verbose.desc">Logs détaillés et requêtes HTTP</td></tr>
+        <tr><td class="flag">--accept-legal</td><td data-i18n="mode.acceptlegal.desc">Accepter le disclaimer sans prompt</td></tr>
+        <tr><td class="flag">--no-color</td><td data-i18n="mode.nocolor.desc">Désactiver les couleurs ANSI</td></tr>
+        <tr><td class="flag">--lang LANG</td><td data-i18n-html="1" data-i18n="flags.lang.desc">Langue : <code>fr</code> | <code>en</code> | <code>es</code> (détection auto via <code>$LANG</code> si absent)</td></tr>
       </tbody>
     </table>
     </div>
 
-    <h3>nevelio report / convert</h3>
+    <h3 data-i18n="flags.report-h3">nevelio report / convert</h3>
     <div class="table-wrap">
     <table>
-      <thead><tr><th>Flag</th><th>Requis</th><th>Défaut</th><th>Description</th></tr></thead>
+      <thead><tr><th data-i18n="scan.col.flag">Flag</th><th data-i18n="report.col.required">Requis</th><th data-i18n="config.col.default">Défaut</th><th data-i18n="scan.col.desc">Description</th></tr></thead>
       <tbody>
-        <tr><td class="flag">--input FILE</td><td>Oui</td><td>—</td><td>Fichier findings.json source</td></tr>
-        <tr><td class="flag">--format FORMAT</td><td>Non</td><td>html</td><td>Format cible</td></tr>
-        <tr><td class="flag">--out-dir PATH</td><td>Non</td><td>.</td><td>Répertoire de sortie</td></tr>
+        <tr><td class="flag">--input FILE</td><td data-i18n="report.yes">Oui</td><td>—</td><td data-i18n="flags.input.desc">Fichier findings.json source</td></tr>
+        <tr><td class="flag">--format FORMAT</td><td data-i18n="report.no">Non</td><td>html</td><td data-i18n="report.format.desc">Format cible</td></tr>
+        <tr><td class="flag">--out-dir PATH</td><td data-i18n="report.no">Non</td><td>.</td><td data-i18n="config.outdir.desc">Répertoire de sortie</td></tr>
       </tbody>
     </table>
     </div>
 
-    <h3>Variables d'environnement</h3>
+    <h3 data-i18n="flags.env-h3">Variables d'environnement</h3>
     <div class="table-wrap">
     <table>
-      <thead><tr><th>Variable</th><th>Description</th></tr></thead>
+      <thead><tr><th data-i18n="flags.col.variable">Variable</th><th data-i18n="scan.col.desc">Description</th></tr></thead>
       <tbody>
-        <tr><td class="flag">ANTHROPIC_API_KEY</td><td>Clé API Claude (requis pour --ai-suggestions)</td></tr>
-        <tr><td class="flag">NEVELIO_LANG</td><td>Forcer la langue sans flag (<code>fr</code> / <code>en</code> / <code>es</code>). Prioritaire sur <code>$LANG</code>.</td></tr>
+        <tr><td class="flag">ANTHROPIC_API_KEY</td><td data-i18n="flags.anthropic-key.desc">Clé API Claude (requis pour --ai-suggestions)</td></tr>
+        <tr><td class="flag">NEVELIO_LANG</td><td data-i18n-html="1" data-i18n="flags.nevelio-lang.desc">Forcer la langue sans flag (<code>fr</code> / <code>en</code> / <code>es</code>). Prioritaire sur <code>$LANG</code>.</td></tr>
       </tbody>
     </table>
     </div>
@@ -2296,13 +2305,795 @@ nevelio scan --target https://api.example.com \
 </div><!-- .content -->
 
 <footer class="footer">
-  Nevelio v0.1 — API Security Scanner — Usage autorisé uniquement
+  <span data-i18n="footer.text">Nevelio v0.1 — API Security Scanner — Usage autorisé uniquement</span>
 </footer>
 </main>
 
 <!-- ── Scripts ─────────────────────────────────────────────────────────── -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
 <script>
+  // ── i18n ──────────────────────────────────────────────────────────────
+  const TRANSLATIONS = {
+    fr: {
+      'search.placeholder': 'Rechercher…',
+      'theme.toggle': 'Changer de thème',
+      'copy.btn': 'Copier',
+      'copy.done': '✓ Copié',
+      'search.no-results': 'Aucun résultat',
+      // Nav
+      'nav.start': 'Démarrage',
+      'nav.installation': 'Installation',
+      'nav.legal': 'Disclaimer légal',
+      'nav.config': 'Configuration',
+      'nav.commands': 'Commandes',
+      'nav.sub.target': '↳ Cible & spec',
+      'nav.sub.profiles': '↳ Profils',
+      'nav.sub.modules': '↳ Modules',
+      'nav.sub.auth': '↳ Authentification',
+      'nav.sub.output': '↳ Sortie',
+      'nav.sub.modes': '↳ Modes spéciaux',
+      'nav.tui': 'TUI Dashboard',
+      'nav.attack-modules': "Modules d'attaque",
+      'nav.outputs': 'Sorties & intégrations',
+      'nav.formats': 'Formats de sortie',
+      'nav.ai': 'Suggestions IA',
+      'nav.cicd': 'CI/CD',
+      'nav.scenarios': 'Scénarios pratiques',
+      'nav.reference': 'Référence',
+      'nav.i18n': 'Internationalisation',
+      'nav.flags': 'Tous les flags',
+      // Hero
+      'hero.tagline': "Outil de test de pénétration d'API REST et GraphQL, écrit en Rust.",
+      'hero.btn.start': '⚡ Démarrer',
+      'hero.btn.cli': '📖 Référence CLI',
+      'hero.btn.md': '📝 Version Markdown',
+      'hero.stat.modules': "Modules d'attaque",
+      'hero.stat.checks': 'Vérifications',
+      'hero.stat.formats': 'Formats de sortie',
+      'hero.stat.tests': 'Tests',
+      // TOC
+      'toc.title': 'Table des matières',
+      'toc.1': 'Installation',
+      'toc.2': 'Disclaimer légal',
+      'toc.3': 'Configuration (init)',
+      'toc.4': 'Commande scan',
+      'toc.5': 'TUI Dashboard',
+      'toc.6': "Modules d'attaque",
+      'toc.7': 'Formats de sortie',
+      'toc.8': 'Suggestions IA',
+      'toc.9': 'Commande report',
+      'toc.10': 'Commande modules',
+      'toc.11': 'Intégration CI/CD',
+      'toc.12': 'Scénarios pratiques',
+      'toc.13': 'Référence des flags',
+      // Install
+      'install.title': 'Installation',
+      'install.prereqs': 'Prérequis',
+      'install.rust.title': 'Rust stable ≥ 1.75',
+      'install.rust.desc': 'Installer via <code>rustup update stable</code>',
+      'install.net.title': 'Accès réseau à la cible',
+      'install.net.desc': 'HTTPS recommandé, HTTP supporté',
+      'install.auth.title': 'Autorisation écrite',
+      'install.auth.desc': 'Obligation légale dans toutes les juridictions',
+      'install.build': 'Compilation',
+      'install.global': 'Installation globale (optionnel)',
+      // Legal
+      'legal.title': 'Disclaimer légal',
+      'legal.warning': "Nevelio est conçu <strong>exclusivement</strong> pour des systèmes que vous possédez ou pour lesquels vous disposez d'une <strong>autorisation écrite explicite</strong>.",
+      'legal.first-run': 'Premier lancement',
+      'legal.first-run.desc': 'Au premier scan, Nevelio affiche un avertissement et demande confirmation :',
+      'legal.persist': 'Persistance automatique',
+      'legal.persist.desc': 'Après acceptation, un marqueur est écrit dans <code>~/.config/nevelio/legal_accepted</code>.',
+      'legal.noninteractive': 'Mode non interactif (CI/CD)',
+      // Config
+      'config.title': 'Configuration — nevelio init',
+      'config.desc': 'Génère un fichier <code>.nevelio.toml</code> commenté dans le répertoire courant :',
+      'config.fields': 'Référence des champs',
+      'config.col.field': 'Champ',
+      'config.col.type': 'Type',
+      'config.col.default': 'Défaut',
+      'config.col.desc': 'Description',
+      'config.target.desc': "URL de base de l'API cible",
+      'config.spec.desc': 'Spec OpenAPI (fichier local ou URL)',
+      'config.profile.desc': 'Profil de scan',
+      'config.modules.desc': 'Modules à exécuter',
+      'config.concurrency.desc': 'Requêtes simultanées',
+      'config.rate.desc': 'Req/s maximum',
+      'config.timeout.desc': 'Timeout par requête',
+      'config.auth.desc': 'Header Authorization complet',
+      'config.proxy.desc': 'Proxy HTTP (Burp Suite, etc.)',
+      'config.outdir.desc': 'Répertoire de sortie',
+      'config.failon.desc': "Seuil d'échec CI",
+      'config.priority': "<strong>Priorité :</strong> les flags CLI écrasent toujours <code>.nevelio.toml</code>, qui écrase les valeurs par défaut.",
+      // Scan
+      'scan.title': 'Commande scan',
+      'scan.target-spec': 'Cible et spec',
+      'scan.col.flag': 'Flag',
+      'scan.col.desc': 'Description',
+      'scan.col.example': 'Exemple',
+      'scan.target.desc': "URL de base de l'API",
+      'scan.url.desc': 'Alias de --target',
+      'scan.spec.desc': 'Spec OpenAPI JSON ou YAML',
+      'scan.profiles': 'Profils de scan',
+      'scan.stealth.meta': '1 req simultanée · 2 req/s',
+      'scan.stealth.tag': 'Production sensible',
+      'scan.stealth.desc': 'Évite les alertes IDS/WAF. Scan lent mais discret.',
+      'scan.normal.meta': '5 req simultanées · 10 req/s',
+      'scan.normal.tag': 'Défaut recommandé',
+      'scan.normal.desc': 'Équilibre vitesse/discrétion. Idéal pour le staging.',
+      'scan.aggressive.meta': '20 req simultanées · 50 req/s',
+      'scan.aggressive.tag': 'Lab uniquement',
+      'scan.aggressive.desc': 'Scan rapide. Ne pas utiliser en production.',
+      'scan.modules': 'Sélection de modules',
+      'scan.modules.desc': 'Par défaut, tous les modules sont exécutés. Pour restreindre :',
+      'scan.auth': 'Authentification et proxy',
+      'scan.output': 'Sortie et rapports',
+      'scan.modes': 'Modes spéciaux',
+      // Modes
+      'mode.resume.desc': 'Reprendre un scan interrompu depuis <code>--out-dir</code>',
+      'mode.dryrun.desc': 'Simuler sans envoyer de requêtes réelles',
+      'mode.notui.desc': 'Désactiver le dashboard TUI (CI/CD, pipes)',
+      'mode.ai.desc': 'Suggestions IA après le scan (nécessite <code>ANTHROPIC_API_KEY</code>)',
+      'mode.verbose.desc': 'Logs détaillés et requêtes HTTP',
+      'mode.acceptlegal.desc': 'Accepter le disclaimer sans prompt',
+      'mode.nocolor.desc': 'Désactiver les couleurs ANSI (logs CI)',
+      // TUI
+      'tui.title': 'TUI Dashboard',
+      'tui.desc': "Le dashboard ratatui s'active automatiquement quand la sortie est un <strong>terminal interactif</strong> (TTY détecté) et que <code>--no-tui</code> est absent.",
+      'tui.feat.progress.title': 'Barre de progression',
+      'tui.feat.progress.desc': 'Avancement global avec ETA estimé en temps réel',
+      'tui.feat.modules.title': 'État des modules',
+      'tui.feat.modules.desc': 'En attente, en cours ou terminé pour chaque module',
+      'tui.feat.findings.title': 'Findings en direct',
+      'tui.feat.findings.desc': 'Vulnérabilités découvertes affichées immédiatement',
+      // Modules
+      'modules.title': "Modules d'attaque",
+      // Formats
+      'formats.title': 'Formats de sortie',
+      'formats.json.use': 'Format canonique — toujours écrit',
+      'formats.html.use': 'Rapport interactif — défaut',
+      'formats.md.use': 'Wikis, PRs, Confluence',
+      'formats.junit.use': 'Jenkins, GitLab CI',
+      'formats.sarif.use': 'GitHub Advanced Security',
+      'formats.json-structure': "Structure d'un finding JSON",
+      'formats.html-features': 'Rapport HTML — fonctionnalités',
+      'formats.feat.filter.title': 'Filtre par sévérité',
+      'formats.feat.filter.desc': 'Boutons Critical / High / Medium / Low / Info',
+      'formats.feat.theme.title': 'Thème clair/sombre',
+      'formats.feat.theme.desc': 'Toggle persisté en localStorage',
+      'formats.feat.accordion.title': 'Accordéon',
+      'formats.feat.accordion.desc': 'Chaque finding collapsible pour une lecture claire',
+      // AI
+      'ai.title': 'Suggestions IA via Claude',
+      'ai.desc': "Nevelio peut générer des <strong>recommandations de remédiation détaillées</strong> pour chaque finding, via l'API Claude d'Anthropic.",
+      'ai.model-info': "Modèle utilisé : <code>claude-haiku-4-5-20251001</code>. Sortie : <code>&lt;out-dir&gt;/ai_suggestions.md</code>",
+      'ai.missing-key': "Si <code>ANTHROPIC_API_KEY</code> est absent, Nevelio affiche un avertissement <strong>avant le scan</strong> et continue normalement sans les suggestions.",
+      // Report
+      'report.title': 'Commande <code>report</code> / <code>convert</code>',
+      'report.desc': 'Convertit un <code>findings.json</code> existant en un autre format, <strong>sans relancer le scan</strong>.',
+      'report.col.required': 'Requis',
+      'report.yes': 'Oui',
+      'report.no': 'Non',
+      'report.input.desc': 'Chemin vers le <code>findings.json</code> source',
+      'report.format.desc': 'Format cible',
+      // Modules-cmd
+      'modules-cmd.title': 'Commande <code>modules</code>',
+      // CI/CD
+      'cicd.title': 'Intégration CI/CD',
+      'cicd.tip': 'Combinaison recommandée pour tout pipeline CI : <code>--accept-legal --no-tui --no-color --fail-on high</code>',
+      'cicd.col.practice': 'Pratique',
+      'cicd.col.why': 'Pourquoi',
+      'cicd.accept-legal.why': 'Évite le blocage sur prompt interactif',
+      'cicd.no-tui.why': 'Le TUI nécessite un TTY absent en CI',
+      'cicd.no-color.why': 'Les codes ANSI polluent les logs CI',
+      'cicd.fail-on.why': 'Bloque les PRs avec vulnérabilités critiques',
+      'cicd.profile.why': "Ne pas saturer l'environnement de staging",
+      'cicd.api-key.why': 'Ne jamais écrire la clé en clair',
+      'cicd.sarif.why': 'Intégration native GitHub Security',
+      'cicd.junit.why': 'Intégration native des rapports de test',
+      // Scenarios
+      'scenarios.title': 'Scénarios pratiques',
+      'scenarios.tab.a': 'A — Express',
+      'scenarios.tab.b': 'B — Professionnel',
+      'scenarios.tab.c': 'C — Burp Suite',
+      'scenarios.tab.d': 'D — IA + multi-format',
+      'scenarios.tab.e': 'E — Reprise',
+      'scenarios.tab.f': 'F — GraphQL',
+      'scenarios.a.title': 'Audit rapide sans spec OpenAPI',
+      'scenarios.a.desc': 'Idéal pour une première prise en main ou une cible sans spec disponible.',
+      'scenarios.b.title': 'Audit professionnel complet',
+      'scenarios.c.title': 'Audit avec interception Burp Suite',
+      'scenarios.d.title': 'Scan avec suggestions IA et multi-format',
+      'scenarios.e.title': 'Reprise après interruption',
+      'scenarios.f.title': "Audit d'une API GraphQL",
+      // i18n section
+      'i18n.title': 'Internationalisation',
+      'i18n.desc': "Nevelio supporte <strong>3 langues</strong> — français (<code>fr</code>), anglais (<code>en</code>), espagnol (<code>es</code>). Tous les messages CLI, le TUI, le disclaimer légal, les suggestions IA et le rapport HTML sont traduits automatiquement.",
+      'i18n.detection': 'Détection automatique',
+      'i18n.detection.desc': "La langue est résolue dans cet ordre de priorité :",
+      'i18n.col.priority': 'Priorité',
+      'i18n.col.source': 'Source',
+      'i18n.src.flag': 'Flag <code>--lang</code>',
+      'i18n.src.env': 'Variable <code>NEVELIO_LANG</code>',
+      'i18n.src.sys': 'Variable système <code>$LANGUAGE</code> / <code>$LANG</code>',
+      'i18n.src.default': 'Défaut',
+      'i18n.normalize': 'La normalisation est automatique : <code>fr_FR.UTF-8</code>, <code>fr-FR</code> et <code>fr</code> donnent tous <code>fr</code>.',
+      'i18n.examples': 'Exemples',
+      'i18n.legal-multilang': 'Disclaimer légal multilingue',
+      'i18n.legal-multilang.desc': 'Le texte légal affiché au premier lancement est traduit. La réponse positive varie selon la langue :',
+      'i18n.col.lang': 'Langue',
+      'i18n.col.answers': 'Réponses acceptées',
+      'i18n.lang.fr': 'Français',
+      'i18n.lang.en': 'Anglais',
+      'i18n.lang.es': 'Espagnol',
+      'i18n.html-report': 'Rapport HTML localisé',
+      'i18n.html-report.desc': 'Le rapport HTML généré (<code>report.html</code>) hérite de la langue du scan. Tous ses labels (Cible / Target / Objetivo, Description, Recommandation…) sont traduits automatiquement.',
+      'i18n.ai-localized': 'Suggestions IA localisées',
+      'i18n.ai-localized.desc': "Avec <code>--ai-suggestions</code>, le prompt envoyé à Claude est rédigé dans la langue sélectionnée — les suggestions reçues sont donc dans la même langue.",
+      // Flags ref
+      'flags.title': 'Référence complète des flags',
+      'flags.scan-h3': 'nevelio scan',
+      'flags.col.type': 'Type',
+      'flags.spec.desc': 'Spec OpenAPI (JSON ou YAML)',
+      'flags.type.list': 'liste',
+      'flags.module.desc': 'Modules à exécuter (espace-séparés)',
+      'flags.type.int': 'entier',
+      'flags.rate.desc': 'Requêtes par seconde max',
+      'flags.type.seconds': 'secondes',
+      'flags.timeout.desc': 'Timeout par requête',
+      'flags.proxy.desc': 'Proxy HTTP',
+      'flags.output.desc': 'Format de sortie (défaut: html)',
+      'flags.type.path': 'chemin',
+      'flags.type.bool': 'booléen',
+      'flags.notui.desc': 'Désactiver le TUI dashboard',
+      'flags.ai.desc': 'Suggestions IA (ANTHROPIC_API_KEY requis)',
+      'flags.global-h3': 'Flags globaux (toutes commandes)',
+      'flags.lang.desc': 'Langue : <code>fr</code> | <code>en</code> | <code>es</code> (détection auto via <code>$LANG</code> si absent)',
+      'flags.report-h3': 'nevelio report / convert',
+      'flags.input.desc': 'Fichier findings.json source',
+      'flags.env-h3': "Variables d'environnement",
+      'flags.col.variable': 'Variable',
+      'flags.anthropic-key.desc': 'Clé API Claude (requis pour --ai-suggestions)',
+      'flags.nevelio-lang.desc': 'Forcer la langue sans flag (<code>fr</code> / <code>en</code> / <code>es</code>). Prioritaire sur <code>$LANG</code>.',
+      // Footer
+      'footer.text': 'Nevelio v0.1 — API Security Scanner — Usage autorisé uniquement',
+    },
+
+    en: {
+      'search.placeholder': 'Search…',
+      'theme.toggle': 'Toggle theme',
+      'copy.btn': 'Copy',
+      'copy.done': '✓ Copied',
+      'search.no-results': 'No results',
+      // Nav
+      'nav.start': 'Getting started',
+      'nav.installation': 'Installation',
+      'nav.legal': 'Legal disclaimer',
+      'nav.config': 'Configuration',
+      'nav.commands': 'Commands',
+      'nav.sub.target': '↳ Target & spec',
+      'nav.sub.profiles': '↳ Profiles',
+      'nav.sub.modules': '↳ Modules',
+      'nav.sub.auth': '↳ Authentication',
+      'nav.sub.output': '↳ Output',
+      'nav.sub.modes': '↳ Special modes',
+      'nav.tui': 'TUI Dashboard',
+      'nav.attack-modules': 'Attack modules',
+      'nav.outputs': 'Outputs & integrations',
+      'nav.formats': 'Output formats',
+      'nav.ai': 'AI suggestions',
+      'nav.cicd': 'CI/CD',
+      'nav.scenarios': 'Practical scenarios',
+      'nav.reference': 'Reference',
+      'nav.i18n': 'Internationalisation',
+      'nav.flags': 'All flags',
+      // Hero
+      'hero.tagline': 'REST and GraphQL API penetration testing tool, written in Rust.',
+      'hero.btn.start': '⚡ Get started',
+      'hero.btn.cli': '📖 CLI Reference',
+      'hero.btn.md': '📝 Markdown version',
+      'hero.stat.modules': 'Attack modules',
+      'hero.stat.checks': 'Checks',
+      'hero.stat.formats': 'Output formats',
+      'hero.stat.tests': 'Tests',
+      // TOC
+      'toc.title': 'Table of contents',
+      'toc.1': 'Installation',
+      'toc.2': 'Legal disclaimer',
+      'toc.3': 'Configuration (init)',
+      'toc.4': 'scan command',
+      'toc.5': 'TUI Dashboard',
+      'toc.6': 'Attack modules',
+      'toc.7': 'Output formats',
+      'toc.8': 'AI suggestions',
+      'toc.9': 'report command',
+      'toc.10': 'modules command',
+      'toc.11': 'CI/CD integration',
+      'toc.12': 'Practical scenarios',
+      'toc.13': 'Flags reference',
+      // Install
+      'install.title': 'Installation',
+      'install.prereqs': 'Prerequisites',
+      'install.rust.title': 'Rust stable ≥ 1.75',
+      'install.rust.desc': 'Install via <code>rustup update stable</code>',
+      'install.net.title': 'Network access to target',
+      'install.net.desc': 'HTTPS recommended, HTTP supported',
+      'install.auth.title': 'Written authorisation',
+      'install.auth.desc': 'Legal requirement in all jurisdictions',
+      'install.build': 'Build',
+      'install.global': 'Global install (optional)',
+      // Legal
+      'legal.title': 'Legal disclaimer',
+      'legal.warning': 'Nevelio is designed <strong>exclusively</strong> for systems you own or for which you have <strong>explicit written authorisation</strong>.',
+      'legal.first-run': 'First run',
+      'legal.first-run.desc': 'On the first scan, Nevelio displays a warning and asks for confirmation:',
+      'legal.persist': 'Automatic persistence',
+      'legal.persist.desc': 'After acceptance, a marker is written to <code>~/.config/nevelio/legal_accepted</code>.',
+      'legal.noninteractive': 'Non-interactive mode (CI/CD)',
+      // Config
+      'config.title': 'Configuration — nevelio init',
+      'config.desc': 'Generates a commented <code>.nevelio.toml</code> file in the current directory:',
+      'config.fields': 'Field reference',
+      'config.col.field': 'Field',
+      'config.col.type': 'Type',
+      'config.col.default': 'Default',
+      'config.col.desc': 'Description',
+      'config.target.desc': 'Base URL of the target API',
+      'config.spec.desc': 'OpenAPI spec (local file or URL)',
+      'config.profile.desc': 'Scan profile',
+      'config.modules.desc': 'Modules to run',
+      'config.concurrency.desc': 'Concurrent requests',
+      'config.rate.desc': 'Max req/s',
+      'config.timeout.desc': 'Per-request timeout',
+      'config.auth.desc': 'Full Authorization header',
+      'config.proxy.desc': 'HTTP proxy (Burp Suite, etc.)',
+      'config.outdir.desc': 'Output directory',
+      'config.failon.desc': 'CI failure threshold',
+      'config.priority': '<strong>Priority:</strong> CLI flags always override <code>.nevelio.toml</code>, which overrides defaults.',
+      // Scan
+      'scan.title': 'scan command',
+      'scan.target-spec': 'Target & spec',
+      'scan.col.flag': 'Flag',
+      'scan.col.desc': 'Description',
+      'scan.col.example': 'Example',
+      'scan.target.desc': 'Base URL of the API',
+      'scan.url.desc': 'Alias for --target',
+      'scan.spec.desc': 'OpenAPI spec JSON or YAML',
+      'scan.profiles': 'Scan profiles',
+      'scan.stealth.meta': '1 concurrent req · 2 req/s',
+      'scan.stealth.tag': 'Sensitive production',
+      'scan.stealth.desc': 'Avoids IDS/WAF alerts. Slow but stealthy scan.',
+      'scan.normal.meta': '5 concurrent reqs · 10 req/s',
+      'scan.normal.tag': 'Recommended default',
+      'scan.normal.desc': 'Balances speed and stealth. Ideal for staging.',
+      'scan.aggressive.meta': '20 concurrent reqs · 50 req/s',
+      'scan.aggressive.tag': 'Lab only',
+      'scan.aggressive.desc': 'Fast scan. Do not use in production.',
+      'scan.modules': 'Module selection',
+      'scan.modules.desc': 'By default, all modules are run. To restrict:',
+      'scan.auth': 'Authentication & proxy',
+      'scan.output': 'Output & reports',
+      'scan.modes': 'Special modes',
+      // Modes
+      'mode.resume.desc': 'Resume an interrupted scan from <code>--out-dir</code>',
+      'mode.dryrun.desc': 'Simulate without sending real requests',
+      'mode.notui.desc': 'Disable the TUI dashboard (CI/CD, pipes)',
+      'mode.ai.desc': 'AI suggestions after scan (requires <code>ANTHROPIC_API_KEY</code>)',
+      'mode.verbose.desc': 'Detailed logs and HTTP requests',
+      'mode.acceptlegal.desc': 'Accept disclaimer without prompt',
+      'mode.nocolor.desc': 'Disable ANSI colours (CI logs)',
+      // TUI
+      'tui.title': 'TUI Dashboard',
+      'tui.desc': 'The ratatui dashboard activates automatically when output is an <strong>interactive terminal</strong> (TTY detected) and <code>--no-tui</code> is absent.',
+      'tui.feat.progress.title': 'Progress bar',
+      'tui.feat.progress.desc': 'Overall progress with real-time ETA estimate',
+      'tui.feat.modules.title': 'Module status',
+      'tui.feat.modules.desc': 'Waiting, running or done for each module',
+      'tui.feat.findings.title': 'Live findings',
+      'tui.feat.findings.desc': 'Vulnerabilities displayed as discovered',
+      // Modules
+      'modules.title': 'Attack modules',
+      // Formats
+      'formats.title': 'Output formats',
+      'formats.json.use': 'Canonical format — always written',
+      'formats.html.use': 'Interactive report — default',
+      'formats.md.use': 'Wikis, PRs, Confluence',
+      'formats.junit.use': 'Jenkins, GitLab CI',
+      'formats.sarif.use': 'GitHub Advanced Security',
+      'formats.json-structure': 'JSON finding structure',
+      'formats.html-features': 'HTML report — features',
+      'formats.feat.filter.title': 'Severity filter',
+      'formats.feat.filter.desc': 'Critical / High / Medium / Low / Info buttons',
+      'formats.feat.theme.title': 'Light/dark theme',
+      'formats.feat.theme.desc': 'Toggle persisted in localStorage',
+      'formats.feat.accordion.title': 'Accordion',
+      'formats.feat.accordion.desc': 'Each finding collapsible for easy reading',
+      // AI
+      'ai.title': 'AI suggestions via Claude',
+      'ai.desc': 'Nevelio can generate <strong>detailed remediation recommendations</strong> for each finding, via the Anthropic Claude API.',
+      'ai.model-info': 'Model used: <code>claude-haiku-4-5-20251001</code>. Output: <code>&lt;out-dir&gt;/ai_suggestions.md</code>',
+      'ai.missing-key': 'If <code>ANTHROPIC_API_KEY</code> is absent, Nevelio displays a warning <strong>before the scan</strong> and continues normally without suggestions.',
+      // Report
+      'report.title': '<code>report</code> / <code>convert</code> command',
+      'report.desc': 'Converts an existing <code>findings.json</code> to another format, <strong>without re-running the scan</strong>.',
+      'report.col.required': 'Required',
+      'report.yes': 'Yes',
+      'report.no': 'No',
+      'report.input.desc': 'Path to the source <code>findings.json</code>',
+      'report.format.desc': 'Target format',
+      // Modules-cmd
+      'modules-cmd.title': '<code>modules</code> command',
+      // CI/CD
+      'cicd.title': 'CI/CD integration',
+      'cicd.tip': 'Recommended combination for any CI pipeline: <code>--accept-legal --no-tui --no-color --fail-on high</code>',
+      'cicd.col.practice': 'Practice',
+      'cicd.col.why': 'Why',
+      'cicd.accept-legal.why': 'Prevents blocking on interactive prompt',
+      'cicd.no-tui.why': 'TUI requires a TTY unavailable in CI',
+      'cicd.no-color.why': 'ANSI codes pollute CI logs',
+      'cicd.fail-on.why': 'Blocks PRs with critical vulnerabilities',
+      'cicd.profile.why': 'Avoid saturating the staging environment',
+      'cicd.api-key.why': 'Never write the key in plaintext',
+      'cicd.sarif.why': 'Native GitHub Security integration',
+      'cicd.junit.why': 'Native test report integration',
+      // Scenarios
+      'scenarios.title': 'Practical scenarios',
+      'scenarios.tab.a': 'A — Express',
+      'scenarios.tab.b': 'B — Professional',
+      'scenarios.tab.c': 'C — Burp Suite',
+      'scenarios.tab.d': 'D — AI + multi-format',
+      'scenarios.tab.e': 'E — Resume',
+      'scenarios.tab.f': 'F — GraphQL',
+      'scenarios.a.title': 'Quick audit without OpenAPI spec',
+      'scenarios.a.desc': 'Ideal for a first run or a target without an available spec.',
+      'scenarios.b.title': 'Full professional audit',
+      'scenarios.c.title': 'Audit with Burp Suite interception',
+      'scenarios.d.title': 'Scan with AI suggestions and multi-format',
+      'scenarios.e.title': 'Resume after interruption',
+      'scenarios.f.title': 'GraphQL API audit',
+      // i18n section
+      'i18n.title': 'Internationalisation',
+      'i18n.desc': 'Nevelio supports <strong>3 languages</strong> — French (<code>fr</code>), English (<code>en</code>), Spanish (<code>es</code>). All CLI messages, the TUI, legal disclaimer, AI suggestions and the HTML report are translated automatically.',
+      'i18n.detection': 'Automatic detection',
+      'i18n.detection.desc': 'The language is resolved in this priority order:',
+      'i18n.col.priority': 'Priority',
+      'i18n.col.source': 'Source',
+      'i18n.src.flag': '<code>--lang</code> flag',
+      'i18n.src.env': '<code>NEVELIO_LANG</code> variable',
+      'i18n.src.sys': 'System variable <code>$LANGUAGE</code> / <code>$LANG</code>',
+      'i18n.src.default': 'Default',
+      'i18n.normalize': 'Normalisation is automatic: <code>fr_FR.UTF-8</code>, <code>fr-FR</code> and <code>fr</code> all resolve to <code>fr</code>.',
+      'i18n.examples': 'Examples',
+      'i18n.legal-multilang': 'Multilingual legal disclaimer',
+      'i18n.legal-multilang.desc': 'The legal text displayed on first run is translated. The positive response varies by language:',
+      'i18n.col.lang': 'Language',
+      'i18n.col.answers': 'Accepted answers',
+      'i18n.lang.fr': 'French',
+      'i18n.lang.en': 'English',
+      'i18n.lang.es': 'Spanish',
+      'i18n.html-report': 'Localised HTML report',
+      'i18n.html-report.desc': 'The generated HTML report (<code>report.html</code>) inherits the scan language. All labels (Target / Cible / Objetivo, Description, Recommendation…) are translated automatically.',
+      'i18n.ai-localized': 'Localised AI suggestions',
+      'i18n.ai-localized.desc': 'With <code>--ai-suggestions</code>, the prompt sent to Claude is written in the selected language — suggestions received are therefore in that language.',
+      // Flags ref
+      'flags.title': 'Complete flags reference',
+      'flags.scan-h3': 'nevelio scan',
+      'flags.col.type': 'Type',
+      'flags.spec.desc': 'OpenAPI spec (JSON or YAML)',
+      'flags.type.list': 'list',
+      'flags.module.desc': 'Modules to run (space-separated)',
+      'flags.type.int': 'integer',
+      'flags.rate.desc': 'Max requests per second',
+      'flags.type.seconds': 'seconds',
+      'flags.timeout.desc': 'Per-request timeout',
+      'flags.proxy.desc': 'HTTP proxy',
+      'flags.output.desc': 'Output format (default: html)',
+      'flags.type.path': 'path',
+      'flags.type.bool': 'boolean',
+      'flags.notui.desc': 'Disable TUI dashboard',
+      'flags.ai.desc': 'AI suggestions (ANTHROPIC_API_KEY required)',
+      'flags.global-h3': 'Global flags (all commands)',
+      'flags.lang.desc': 'Language: <code>fr</code> | <code>en</code> | <code>es</code> (auto-detected via <code>$LANG</code> if absent)',
+      'flags.report-h3': 'nevelio report / convert',
+      'flags.input.desc': 'Source findings.json file',
+      'flags.env-h3': 'Environment variables',
+      'flags.col.variable': 'Variable',
+      'flags.anthropic-key.desc': 'Claude API key (required for --ai-suggestions)',
+      'flags.nevelio-lang.desc': 'Force language without flag (<code>fr</code> / <code>en</code> / <code>es</code>). Takes priority over <code>$LANG</code>.',
+      // Footer
+      'footer.text': 'Nevelio v0.1 — API Security Scanner — Authorised use only',
+    },
+
+    es: {
+      'search.placeholder': 'Buscar…',
+      'theme.toggle': 'Cambiar tema',
+      'copy.btn': 'Copiar',
+      'copy.done': '✓ Copiado',
+      'search.no-results': 'Sin resultados',
+      // Nav
+      'nav.start': 'Inicio',
+      'nav.installation': 'Instalación',
+      'nav.legal': 'Aviso legal',
+      'nav.config': 'Configuración',
+      'nav.commands': 'Comandos',
+      'nav.sub.target': '↳ Objetivo & spec',
+      'nav.sub.profiles': '↳ Perfiles',
+      'nav.sub.modules': '↳ Módulos',
+      'nav.sub.auth': '↳ Autenticación',
+      'nav.sub.output': '↳ Salida',
+      'nav.sub.modes': '↳ Modos especiales',
+      'nav.tui': 'Panel TUI',
+      'nav.attack-modules': 'Módulos de ataque',
+      'nav.outputs': 'Salidas & integraciones',
+      'nav.formats': 'Formatos de salida',
+      'nav.ai': 'Sugerencias IA',
+      'nav.cicd': 'CI/CD',
+      'nav.scenarios': 'Escenarios prácticos',
+      'nav.reference': 'Referencia',
+      'nav.i18n': 'Internacionalización',
+      'nav.flags': 'Todos los flags',
+      // Hero
+      'hero.tagline': 'Herramienta de pruebas de penetración para APIs REST y GraphQL, escrita en Rust.',
+      'hero.btn.start': '⚡ Empezar',
+      'hero.btn.cli': '📖 Referencia CLI',
+      'hero.btn.md': '📝 Versión Markdown',
+      'hero.stat.modules': 'Módulos de ataque',
+      'hero.stat.checks': 'Verificaciones',
+      'hero.stat.formats': 'Formatos de salida',
+      'hero.stat.tests': 'Tests',
+      // TOC
+      'toc.title': 'Tabla de contenidos',
+      'toc.1': 'Instalación',
+      'toc.2': 'Aviso legal',
+      'toc.3': 'Configuración (init)',
+      'toc.4': 'Comando scan',
+      'toc.5': 'Panel TUI',
+      'toc.6': 'Módulos de ataque',
+      'toc.7': 'Formatos de salida',
+      'toc.8': 'Sugerencias IA',
+      'toc.9': 'Comando report',
+      'toc.10': 'Comando modules',
+      'toc.11': 'Integración CI/CD',
+      'toc.12': 'Escenarios prácticos',
+      'toc.13': 'Referencia de flags',
+      // Install
+      'install.title': 'Instalación',
+      'install.prereqs': 'Requisitos previos',
+      'install.rust.title': 'Rust estable ≥ 1.75',
+      'install.rust.desc': 'Instalar via <code>rustup update stable</code>',
+      'install.net.title': 'Acceso de red al objetivo',
+      'install.net.desc': 'HTTPS recomendado, HTTP compatible',
+      'install.auth.title': 'Autorización por escrito',
+      'install.auth.desc': 'Obligación legal en todas las jurisdicciones',
+      'install.build': 'Compilación',
+      'install.global': 'Instalación global (opcional)',
+      // Legal
+      'legal.title': 'Aviso legal',
+      'legal.warning': 'Nevelio está diseñado <strong>exclusivamente</strong> para sistemas que usted posee o para los que tiene <strong>autorización escrita explícita</strong>.',
+      'legal.first-run': 'Primera ejecución',
+      'legal.first-run.desc': 'En el primer escaneo, Nevelio muestra una advertencia y solicita confirmación:',
+      'legal.persist': 'Persistencia automática',
+      'legal.persist.desc': 'Tras la aceptación, se escribe un marcador en <code>~/.config/nevelio/legal_accepted</code>.',
+      'legal.noninteractive': 'Modo no interactivo (CI/CD)',
+      // Config
+      'config.title': 'Configuración — nevelio init',
+      'config.desc': 'Genera un archivo <code>.nevelio.toml</code> comentado en el directorio actual:',
+      'config.fields': 'Referencia de campos',
+      'config.col.field': 'Campo',
+      'config.col.type': 'Tipo',
+      'config.col.default': 'Defecto',
+      'config.col.desc': 'Descripción',
+      'config.target.desc': 'URL base de la API objetivo',
+      'config.spec.desc': 'Spec OpenAPI (archivo local o URL)',
+      'config.profile.desc': 'Perfil de escaneo',
+      'config.modules.desc': 'Módulos a ejecutar',
+      'config.concurrency.desc': 'Solicitudes simultáneas',
+      'config.rate.desc': 'Máx solicitudes/s',
+      'config.timeout.desc': 'Tiempo de espera por solicitud',
+      'config.auth.desc': 'Cabecera Authorization completa',
+      'config.proxy.desc': 'Proxy HTTP (Burp Suite, etc.)',
+      'config.outdir.desc': 'Directorio de salida',
+      'config.failon.desc': 'Umbral de fallo CI',
+      'config.priority': '<strong>Prioridad:</strong> los flags CLI siempre anulan <code>.nevelio.toml</code>, que anula los valores por defecto.',
+      // Scan
+      'scan.title': 'Comando scan',
+      'scan.target-spec': 'Objetivo y spec',
+      'scan.col.flag': 'Flag',
+      'scan.col.desc': 'Descripción',
+      'scan.col.example': 'Ejemplo',
+      'scan.target.desc': 'URL base de la API',
+      'scan.url.desc': 'Alias de --target',
+      'scan.spec.desc': 'Spec OpenAPI JSON o YAML',
+      'scan.profiles': 'Perfiles de escaneo',
+      'scan.stealth.meta': '1 solicitud simultánea · 2 sol/s',
+      'scan.stealth.tag': 'Producción sensible',
+      'scan.stealth.desc': 'Evita alertas IDS/WAF. Escaneo lento pero discreto.',
+      'scan.normal.meta': '5 solicitudes simultáneas · 10 sol/s',
+      'scan.normal.tag': 'Defecto recomendado',
+      'scan.normal.desc': 'Equilibrio velocidad/discreción. Ideal para staging.',
+      'scan.aggressive.meta': '20 solicitudes simultáneas · 50 sol/s',
+      'scan.aggressive.tag': 'Solo en laboratorio',
+      'scan.aggressive.desc': 'Escaneo rápido. No usar en producción.',
+      'scan.modules': 'Selección de módulos',
+      'scan.modules.desc': 'Por defecto se ejecutan todos los módulos. Para restringir:',
+      'scan.auth': 'Autenticación y proxy',
+      'scan.output': 'Salida e informes',
+      'scan.modes': 'Modos especiales',
+      // Modes
+      'mode.resume.desc': 'Reanudar un escaneo interrumpido desde <code>--out-dir</code>',
+      'mode.dryrun.desc': 'Simular sin enviar solicitudes reales',
+      'mode.notui.desc': 'Deshabilitar el panel TUI (CI/CD, pipes)',
+      'mode.ai.desc': 'Sugerencias IA tras el escaneo (requiere <code>ANTHROPIC_API_KEY</code>)',
+      'mode.verbose.desc': 'Registros detallados y solicitudes HTTP',
+      'mode.acceptlegal.desc': 'Aceptar el aviso legal sin solicitud',
+      'mode.nocolor.desc': 'Deshabilitar colores ANSI (logs CI)',
+      // TUI
+      'tui.title': 'Panel TUI',
+      'tui.desc': 'El panel ratatui se activa automáticamente cuando la salida es un <strong>terminal interactivo</strong> (TTY detectado) y <code>--no-tui</code> está ausente.',
+      'tui.feat.progress.title': 'Barra de progreso',
+      'tui.feat.progress.desc': 'Progreso global con estimación ETA en tiempo real',
+      'tui.feat.modules.title': 'Estado de módulos',
+      'tui.feat.modules.desc': 'En espera, en curso o terminado para cada módulo',
+      'tui.feat.findings.title': 'Hallazgos en directo',
+      'tui.feat.findings.desc': 'Vulnerabilidades mostradas a medida que se descubren',
+      // Modules
+      'modules.title': 'Módulos de ataque',
+      // Formats
+      'formats.title': 'Formatos de salida',
+      'formats.json.use': 'Formato canónico — siempre escrito',
+      'formats.html.use': 'Informe interactivo — defecto',
+      'formats.md.use': 'Wikis, PRs, Confluence',
+      'formats.junit.use': 'Jenkins, GitLab CI',
+      'formats.sarif.use': 'GitHub Advanced Security',
+      'formats.json-structure': 'Estructura de un hallazgo JSON',
+      'formats.html-features': 'Informe HTML — características',
+      'formats.feat.filter.title': 'Filtro por severidad',
+      'formats.feat.filter.desc': 'Botones Critical / High / Medium / Low / Info',
+      'formats.feat.theme.title': 'Tema claro/oscuro',
+      'formats.feat.theme.desc': 'Toggle persistido en localStorage',
+      'formats.feat.accordion.title': 'Acordeón',
+      'formats.feat.accordion.desc': 'Cada hallazgo plegable para facilitar la lectura',
+      // AI
+      'ai.title': 'Sugerencias IA via Claude',
+      'ai.desc': 'Nevelio puede generar <strong>recomendaciones de remediación detalladas</strong> para cada hallazgo, via la API Claude de Anthropic.',
+      'ai.model-info': 'Modelo usado: <code>claude-haiku-4-5-20251001</code>. Salida: <code>&lt;out-dir&gt;/ai_suggestions.md</code>',
+      'ai.missing-key': 'Si <code>ANTHROPIC_API_KEY</code> está ausente, Nevelio muestra una advertencia <strong>antes del escaneo</strong> y continúa normalmente sin sugerencias.',
+      // Report
+      'report.title': 'Comando <code>report</code> / <code>convert</code>',
+      'report.desc': 'Convierte un <code>findings.json</code> existente a otro formato, <strong>sin relanzar el escaneo</strong>.',
+      'report.col.required': 'Requerido',
+      'report.yes': 'Sí',
+      'report.no': 'No',
+      'report.input.desc': 'Ruta al <code>findings.json</code> fuente',
+      'report.format.desc': 'Formato objetivo',
+      // Modules-cmd
+      'modules-cmd.title': 'Comando <code>modules</code>',
+      // CI/CD
+      'cicd.title': 'Integración CI/CD',
+      'cicd.tip': 'Combinación recomendada para cualquier pipeline CI: <code>--accept-legal --no-tui --no-color --fail-on high</code>',
+      'cicd.col.practice': 'Práctica',
+      'cicd.col.why': 'Por qué',
+      'cicd.accept-legal.why': 'Evita el bloqueo en el prompt interactivo',
+      'cicd.no-tui.why': 'El TUI necesita un TTY ausente en CI',
+      'cicd.no-color.why': 'Los códigos ANSI ensucian los logs CI',
+      'cicd.fail-on.why': 'Bloquea PRs con vulnerabilidades críticas',
+      'cicd.profile.why': 'No saturar el entorno de staging',
+      'cicd.api-key.why': 'Nunca escribir la clave en texto plano',
+      'cicd.sarif.why': 'Integración nativa de GitHub Security',
+      'cicd.junit.why': 'Integración nativa de informes de prueba',
+      // Scenarios
+      'scenarios.title': 'Escenarios prácticos',
+      'scenarios.tab.a': 'A — Exprés',
+      'scenarios.tab.b': 'B — Profesional',
+      'scenarios.tab.c': 'C — Burp Suite',
+      'scenarios.tab.d': 'D — IA + multi-formato',
+      'scenarios.tab.e': 'E — Reanudación',
+      'scenarios.tab.f': 'F — GraphQL',
+      'scenarios.a.title': 'Auditoría rápida sin spec OpenAPI',
+      'scenarios.a.desc': 'Ideal para una primera prueba o un objetivo sin spec disponible.',
+      'scenarios.b.title': 'Auditoría profesional completa',
+      'scenarios.c.title': 'Auditoría con intercepción Burp Suite',
+      'scenarios.d.title': 'Escaneo con sugerencias IA y multi-formato',
+      'scenarios.e.title': 'Reanudación tras interrupción',
+      'scenarios.f.title': 'Auditoría de una API GraphQL',
+      // i18n section
+      'i18n.title': 'Internacionalización',
+      'i18n.desc': 'Nevelio admite <strong>3 idiomas</strong> — francés (<code>fr</code>), inglés (<code>en</code>), español (<code>es</code>). Todos los mensajes CLI, el TUI, el aviso legal, las sugerencias IA y el informe HTML se traducen automáticamente.',
+      'i18n.detection': 'Detección automática',
+      'i18n.detection.desc': 'El idioma se resuelve en este orden de prioridad:',
+      'i18n.col.priority': 'Prioridad',
+      'i18n.col.source': 'Fuente',
+      'i18n.src.flag': 'Flag <code>--lang</code>',
+      'i18n.src.env': 'Variable <code>NEVELIO_LANG</code>',
+      'i18n.src.sys': 'Variable del sistema <code>$LANGUAGE</code> / <code>$LANG</code>',
+      'i18n.src.default': 'Defecto',
+      'i18n.normalize': 'La normalización es automática: <code>fr_FR.UTF-8</code>, <code>fr-FR</code> y <code>fr</code> dan todos <code>fr</code>.',
+      'i18n.examples': 'Ejemplos',
+      'i18n.legal-multilang': 'Aviso legal multilingüe',
+      'i18n.legal-multilang.desc': 'El texto legal mostrado en la primera ejecución está traducido. La respuesta positiva varía según el idioma:',
+      'i18n.col.lang': 'Idioma',
+      'i18n.col.answers': 'Respuestas aceptadas',
+      'i18n.lang.fr': 'Francés',
+      'i18n.lang.en': 'Inglés',
+      'i18n.lang.es': 'Español',
+      'i18n.html-report': 'Informe HTML localizado',
+      'i18n.html-report.desc': 'El informe HTML generado (<code>report.html</code>) hereda el idioma del escaneo. Todas sus etiquetas (Objetivo / Target / Cible, Descripción, Recomendación…) se traducen automáticamente.',
+      'i18n.ai-localized': 'Sugerencias IA localizadas',
+      'i18n.ai-localized.desc': 'Con <code>--ai-suggestions</code>, el prompt enviado a Claude está redactado en el idioma seleccionado — las sugerencias recibidas están por lo tanto en el mismo idioma.',
+      // Flags ref
+      'flags.title': 'Referencia completa de flags',
+      'flags.scan-h3': 'nevelio scan',
+      'flags.col.type': 'Tipo',
+      'flags.spec.desc': 'Spec OpenAPI (JSON o YAML)',
+      'flags.type.list': 'lista',
+      'flags.module.desc': 'Módulos a ejecutar (separados por espacio)',
+      'flags.type.int': 'entero',
+      'flags.rate.desc': 'Máx solicitudes por segundo',
+      'flags.type.seconds': 'segundos',
+      'flags.timeout.desc': 'Tiempo de espera por solicitud',
+      'flags.proxy.desc': 'Proxy HTTP',
+      'flags.output.desc': 'Formato de salida (defecto: html)',
+      'flags.type.path': 'ruta',
+      'flags.type.bool': 'booleano',
+      'flags.notui.desc': 'Deshabilitar el panel TUI',
+      'flags.ai.desc': 'Sugerencias IA (requiere ANTHROPIC_API_KEY)',
+      'flags.global-h3': 'Flags globales (todos los comandos)',
+      'flags.lang.desc': 'Idioma: <code>fr</code> | <code>en</code> | <code>es</code> (detección auto via <code>$LANG</code> si ausente)',
+      'flags.report-h3': 'nevelio report / convert',
+      'flags.input.desc': 'Archivo findings.json fuente',
+      'flags.env-h3': 'Variables de entorno',
+      'flags.col.variable': 'Variable',
+      'flags.anthropic-key.desc': 'Clave API Claude (requerida para --ai-suggestions)',
+      'flags.nevelio-lang.desc': 'Forzar idioma sin flag (<code>fr</code> / <code>en</code> / <code>es</code>). Prioritario sobre <code>$LANG</code>.',
+      // Footer
+      'footer.text': 'Nevelio v0.1 — API Security Scanner — Solo uso autorizado',
+    },
+  };
+
+  let currentLang = 'fr';
+
+  function rebuildSearchIndex() {
+    searchData.length = 0;
+    document.querySelectorAll('.doc-section').forEach(section => {
+      const title = section.querySelector('h2')?.textContent?.trim() || '';
+      const sectionId = section.id;
+      section.querySelectorAll('h3, h4').forEach(h => {
+        searchData.push({ title: h.textContent.trim(), section: title, id: h.id || sectionId, preview: '' });
+      });
+      section.querySelectorAll('p').forEach(p => {
+        const text = p.textContent.trim();
+        if (text.length > 20) {
+          searchData.push({ title, section: title, id: sectionId, preview: text.slice(0, 80) + '…' });
+        }
+      });
+    });
+  }
+
+  function applyLang(locale) {
+    if (!TRANSLATIONS[locale]) locale = 'fr';
+    currentLang = locale;
+    document.documentElement.lang = locale;
+    localStorage.setItem('nevelio-lang', locale);
+    document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('active', b.dataset.lang === locale));
+    const t = TRANSLATIONS[locale];
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+      const key = el.dataset.i18n;
+      if (!t[key]) return;
+      if (el.dataset.i18nHtml) {
+        el.innerHTML = t[key];
+      } else {
+        el.textContent = t[key];
+      }
+    });
+    document.querySelectorAll('[data-i18n-attr]').forEach(el => {
+      el.dataset.i18nAttr.split(' ').forEach(pair => {
+        const [attr, key] = pair.split(':');
+        if (t[key]) el.setAttribute(attr, t[key]);
+      });
+    });
+    rebuildSearchIndex();
+  }
+
   // ── Highlight.js ──────────────────────────────────────────────────────
   hljs.highlightAll();
 
@@ -2319,8 +3110,8 @@ nevelio scan --target https://api.example.com \
   }
 
   // Restore saved theme
-  const saved = localStorage.getItem('nevelio-theme');
-  if (saved && saved !== 'dark') {
+  const savedTheme = localStorage.getItem('nevelio-theme');
+  if (savedTheme && savedTheme !== 'dark') {
     root.setAttribute('data-theme', 'light');
     document.getElementById('hljs-theme').href =
       'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css';
@@ -2348,11 +3139,11 @@ nevelio scan --target https://api.example.com \
 
   // ── Tabs ──────────────────────────────────────────────────────────────
   function switchTab(btn, panelId) {
-    const tabList = btn.closest('.tab-list');
-    const tabs = btn.closest('.tabs');
+    const tabList = btn.closest('.tab-list, .tab-bar');
+    const tabs = btn.closest('.tabs, .tab-group');
 
-    tabList.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    tabs.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    tabList.querySelectorAll('.tab-btn, .tab').forEach(b => b.classList.remove('active'));
+    tabs.querySelectorAll('.tab-panel, .tab-content').forEach(p => p.classList.remove('active'));
 
     btn.classList.add('active');
     document.getElementById(panelId).classList.add('active');
@@ -2362,10 +3153,11 @@ nevelio scan --target https://api.example.com \
   function copyCode(btn) {
     const pre = btn.closest('.code-block').querySelector('pre');
     navigator.clipboard.writeText(pre.innerText).then(() => {
-      btn.textContent = '✓ Copié';
+      const t = TRANSLATIONS[currentLang] || TRANSLATIONS.fr;
+      btn.textContent = t['copy.done'] || '✓ Copié';
       btn.classList.add('copied');
       setTimeout(() => {
-        btn.textContent = 'Copier';
+        btn.textContent = t['copy.btn'] || 'Copier';
         btn.classList.remove('copied');
       }, 2000);
     });
@@ -2390,22 +3182,10 @@ nevelio scan --target https://api.example.com \
 
   // ── Search ────────────────────────────────────────────────────────────
   const searchData = [];
-  document.querySelectorAll('.doc-section').forEach(section => {
-    const title = section.querySelector('h2')?.textContent?.trim() || '';
-    const sectionId = section.id;
-    section.querySelectorAll('h3, h4').forEach(h => {
-      searchData.push({ title: h.textContent.trim(), section: title, id: h.id || sectionId, preview: '' });
-    });
-    section.querySelectorAll('p').forEach(p => {
-      const text = p.textContent.trim();
-      if (text.length > 20) {
-        searchData.push({ title: title, section: title, id: sectionId, preview: text.slice(0, 80) + '…' });
-      }
-    });
-  });
-
   const searchInput = document.getElementById('searchInput');
   const searchResults = document.getElementById('searchResults');
+
+  rebuildSearchIndex();
 
   searchInput.addEventListener('input', () => {
     const q = searchInput.value.trim().toLowerCase();
@@ -2415,8 +3195,9 @@ nevelio scan --target https://api.example.com \
       d.title.toLowerCase().includes(q) || d.preview.toLowerCase().includes(q)
     ).slice(0, 8);
 
+    const t = TRANSLATIONS[currentLang] || TRANSLATIONS.fr;
     if (!hits.length) {
-      searchResults.innerHTML = '<div class="search-result-item" style="color:var(--text-muted)">Aucun résultat</div>';
+      searchResults.innerHTML = `<div class="search-result-item" style="color:var(--text-muted)">${t['search.no-results'] || 'Aucun résultat'}</div>`;
     } else {
       searchResults.innerHTML = hits.map(h => `
         <a class="search-result-item" href="#${h.id}" onclick="searchResults.classList.remove('visible');searchInput.value=''">
@@ -2443,6 +3224,15 @@ nevelio scan --target https://api.example.com \
   searchInput.addEventListener('keydown', e => {
     if (e.key === 'Escape') { searchResults.classList.remove('visible'); searchInput.value = ''; }
   });
+
+  // ── Language init ─────────────────────────────────────────────────────
+  currentLang = (function () {
+    const saved = localStorage.getItem('nevelio-lang');
+    if (saved && TRANSLATIONS[saved]) return saved;
+    const bl = (navigator.language || 'fr').slice(0, 2).toLowerCase();
+    return TRANSLATIONS[bl] ? bl : 'fr';
+  })();
+  applyLang(currentLang);
 </script>
 </body>
 </html>
