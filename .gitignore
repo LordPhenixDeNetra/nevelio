@@ -29,3 +29,11 @@ Desktop.ini
 
 cahier-des-charges-nevelio.md
 
+findings.json
+scan_progress.json
+report.html
+report.md
+security-report.xml
+security-report.sarif
+nevelio-results/
+

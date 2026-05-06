@@ -145,7 +145,7 @@ async fn handle_scan(args: crate::args::ScanArgs, verbose: bool) -> Result<()> {
     let out_dir: PathBuf = args
         .out_dir
         .or(cfg_out_dir)
-        .unwrap_or_else(|| PathBuf::from("."));
+        .unwrap_or_else(|| PathBuf::from("./nevelio-results"));
 
     let timeout: u64 = args.timeout.or(cfg_timeout).unwrap_or(5);
 
