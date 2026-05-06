@@ -1,0 +1,34 @@
+# Environnements de test vulnérables (cahier des charges §9.2)
+# Usage : docker compose up -d
+#
+# Cibles disponibles après démarrage :
+#   OWASP Juice Shop  → http://localhost:3000
+#   VAmPI             → http://localhost:5000
+#   DVWA              → http://localhost:8080
+#   crAPI             → http://localhost:8888  (API)  / http://localhost:8025 (mailhog)
+
+services:
+
+  juice-shop:
+    image: bkimminich/juice-shop:latest
+    container_name: nevelio-juice-shop
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
+
+  vampi:
+    image: erev0s/vampi:latest
+    container_name: nevelio-vampi
+    ports:
+      - "5000:5000"
+    restart: unless-stopped
+
+  dvwa:
+    image: vulnerables/web-dvwa:latest
+    container_name: nevelio-dvwa
+    ports:
+      - "8080:80"
+    restart: unless-stopped
+
+  # crAPI requires its own compose — run separately from:
+  # https://github.com/OWASP/crAPI

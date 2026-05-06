@@ -1,0 +1,84 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# Nevelio — GitLab CI template
+#
+# Variables à définir dans Settings → CI/CD → Variables :
+#   API_STAGING_URL  — URL de base de l'API de staging
+#   API_TOKEN        — Bearer token pour les scans authentifiés (optionnel)
+# ──────────────────────────────────────────────────────────────────────────────
+
+stages:
+  - build
+  - security
+
+# ── CI interne Nevelio (build + tests) ────────────────────────────────────────
+build:
+  stage: build
+  image: rust:1.83-slim-bookworm
+  variables:
+    CARGO_HOME: $CI_PROJECT_DIR/.cargo
+  cache:
+    key: cargo-$CI_COMMIT_REF_SLUG
+    paths:
+      - .cargo/
+      - target/
+  before_script:
+    - apt-get update -qq && apt-get install -y -qq pkg-config libssl-dev
+  script:
+    - cargo build --workspace
+    - cargo clippy --workspace -- -D warnings
+    - cargo test --workspace
+  only:
+    - merge_requests
+    - main
+
+# ── Scan de sécurité API ──────────────────────────────────────────────────────
+nevelio-scan:
+  stage: security
+  image: docker:24
+  services:
+    - docker:24-dind
+  variables:
+    DOCKER_TLS_CERTDIR: "/certs"
+    DOCKER_HOST: tcp://docker:2376
+    DOCKER_TLS_VERIFY: 1
+    DOCKER_CERT_PATH: /certs/client
+  before_script:
+    - docker info
+  script:
+    # Scan avec spec OpenAPI si présente, sinon URL seule
+    - |
+      if [ -f openapi.yaml ] || [ -f openapi.json ]; then
+        SPEC=$(test -f openapi.yaml && echo openapi.yaml || echo openapi.json)
+        docker run --rm \
+          -v "$CI_PROJECT_DIR:/workspace" \
+          nevelio/nevelio:latest \
+          --accept-legal scan \
+          --spec "/workspace/$SPEC" \
+          --target "$API_STAGING_URL" \
+          --auth-token "$API_TOKEN" \
+          --profile normal \
+          --output junit \
+          --out-dir /workspace || true
+      else
+        docker run --rm \
+          -v "$CI_PROJECT_DIR:/workspace" \
+          nevelio/nevelio:latest \
+          --accept-legal scan \
+          --url "$API_STAGING_URL" \
+          --auth-token "$API_TOKEN" \
+          --profile normal \
+          --output junit \
+          --out-dir /workspace || true
+      fi
+  artifacts:
+    when: always
+    reports:
+      junit: security-report.xml
+    paths:
+      - findings.json
+      - security-report.xml
+    expire_in: 30 days
+  only:
+    - merge_requests
+    - main
+    - schedules

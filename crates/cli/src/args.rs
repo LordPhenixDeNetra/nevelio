@@ -6,6 +6,25 @@ use std::path::PathBuf;
     name = "nevelio",
     version = env!("CARGO_PKG_VERSION"),
     about = "Nevelio — API Penetration Testing Tool",
+    after_help = "\
+EXEMPLES :
+  Scanner avec un spec OpenAPI :
+    nevelio scan --target https://api.example.com --spec openapi.yaml
+
+  Scanner sans spec (découverte automatique) :
+    nevelio scan --target https://api.example.com
+
+  Scanner et générer un rapport HTML :
+    nevelio scan --target https://api.example.com --output html --out-dir ./results
+
+  Générer des suggestions IA après un scan :
+    ANTHROPIC_API_KEY=sk-... nevelio scan --target https://api.example.com --ai-suggestions
+
+  Convertir un JSON existant en rapport HTML :
+    nevelio report --input findings.json --format html
+
+  Lister les modules disponibles :
+    nevelio modules list"
 )]
 pub struct Cli {
     #[command(subcommand)]
@@ -22,19 +41,29 @@ pub struct Cli {
     /// Disable coloured output
     #[arg(long, global = true)]
     pub no_color: bool,
+
+    /// Interface language: fr | en | es (auto-detected from $LANG if absent)
+    #[arg(long, value_name = "LANG", global = true)]
+    pub lang: Option<String>,
 }
 
 #[derive(Debug, Subcommand)]
 pub enum Commands {
     /// Scan an API for vulnerabilities
     Scan(ScanArgs),
-    /// Generate a report from a previous scan's JSON results
+    /// Générer un rapport depuis les résultats JSON d'un scan précédent
+    #[command(alias = "convert")]
     Report(ReportArgs),
     /// List or inspect available attack modules
     Modules(ModulesArgs),
+    /// Créer un fichier .nevelio.toml commenté dans le répertoire courant
+    Init,
 }
 
 #[derive(Debug, clap::Args)]
+#[command(after_help = "\
+VARIABLES D'ENVIRONNEMENT :
+  ANTHROPIC_API_KEY    Clé API Claude (requis pour --ai-suggestions)")]
 pub struct ScanArgs {
     /// Path or URL to an OpenAPI/Swagger spec (JSON or YAML)
     #[arg(long, value_name = "SPEC")]
@@ -49,8 +78,8 @@ pub struct ScanArgs {
     pub url: Option<String>,
 
     /// Scan profile controlling concurrency and rate limits
-    #[arg(long, value_name = "PROFILE", default_value = "normal")]
-    pub profile: ProfileArg,
+    #[arg(long, value_name = "PROFILE")]
+    pub profile: Option<ProfileArg>,
 
     /// Attack modules to run (default: all)
     #[arg(long = "module", value_name = "MODULE", num_args = 1..)]
@@ -65,8 +94,8 @@ pub struct ScanArgs {
     pub rate_limit: Option<u64>,
 
     /// Request timeout in seconds
-    #[arg(long, value_name = "SECONDS", default_value = "5")]
-    pub timeout: u64,
+    #[arg(long, value_name = "SECONDS")]
+    pub timeout: Option<u64>,
 
     /// Authentication token (e.g. "Bearer eyJ..." or "Basic dXNlcjpwYXNz")
     #[arg(long, value_name = "TOKEN")]
@@ -77,16 +106,32 @@ pub struct ScanArgs {
     pub proxy: Option<String>,
 
     /// Output format for findings
-    #[arg(long, value_name = "FORMAT", default_value = "json")]
-    pub output: OutputFormat,
+    #[arg(long, value_name = "FORMAT")]
+    pub output: Option<OutputFormat>,
 
     /// Directory to write output files
-    #[arg(long, value_name = "PATH", default_value = ".")]
-    pub out_dir: PathBuf,
+    #[arg(long, value_name = "PATH")]
+    pub out_dir: Option<PathBuf>,
+
+    /// Exit with code 1 when any finding meets or exceeds this severity
+    #[arg(long, value_name = "SEVERITY")]
+    pub fail_on: Option<FailOnArg>,
+
+    /// Resume a previous scan: load findings + skip completed modules from <out-dir>
+    #[arg(long)]
+    pub resume: bool,
 
     /// Simulate the scan without sending real HTTP requests
     #[arg(long)]
     pub dry_run: bool,
+
+    /// Disable the ratatui TUI dashboard (use plain stdout)
+    #[arg(long)]
+    pub no_tui: bool,
+
+    /// Generate AI-powered remediation suggestions via Claude API (requires ANTHROPIC_API_KEY)
+    #[arg(long)]
+    pub ai_suggestions: bool,
 }
 
 #[derive(Debug, clap::Args)]
@@ -146,6 +191,7 @@ pub enum OutputFormat {
     Html,
     Markdown,
     Junit,
+    Sarif,
 }
 
 impl From<OutputFormat> for nevelio_reporting::ReportFormat {
@@ -155,6 +201,19 @@ impl From<OutputFormat> for nevelio_reporting::ReportFormat {
             OutputFormat::Html => Self::Html,
             OutputFormat::Markdown => Self::Markdown,
             OutputFormat::Junit => Self::Junit,
+            OutputFormat::Sarif => Self::Sarif,
         }
     }
+}
+
+/// Severity threshold for CI/CD exit code 1.
+#[derive(Debug, Clone, ValueEnum)]
+#[value(rename_all = "lowercase")]
+pub enum FailOnArg {
+    /// Never exit with failure based on severity
+    None,
+    Low,
+    Medium,
+    High,
+    Critical,
 }

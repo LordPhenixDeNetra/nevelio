@@ -100,3 +100,106 @@ fn oas_location_to_core(loc: oas3::spec::ParameterIn) -> ParameterLocation {
         oas3::spec::ParameterIn::Cookie => ParameterLocation::Cookie,
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use nevelio_core::types::ParameterLocation;
+
+    #[test]
+    fn load_spec_parses_minimal_yaml() {
+        let yaml = r#"
+openapi: "3.1.0"
+info:
+  title: Test API
+  version: "1.0"
+paths:
+  /users:
+    get:
+      summary: List users
+      responses:
+        "200":
+          description: OK
+  /users/{id}:
+    delete:
+      summary: Delete user
+      responses:
+        "204":
+          description: No Content
+"#;
+        let spec = load_spec(yaml).expect("should parse valid YAML spec");
+        let ops: Vec<_> = spec.operations().collect();
+        assert_eq!(ops.len(), 2, "expected 2 operations");
+        let methods: Vec<String> = ops.iter().map(|(_, m, _)| format!("{}", m).to_uppercase()).collect();
+        assert!(methods.contains(&"GET".to_string()));
+        assert!(methods.contains(&"DELETE".to_string()));
+    }
+
+    #[test]
+    fn load_spec_parses_minimal_json() {
+        let json = r#"{
+            "openapi": "3.1.0",
+            "info": {"title": "T", "version": "1"},
+            "paths": {
+                "/ping": {
+                    "get": {"summary": "Ping", "responses": {"200": {"description": "OK"}}}
+                }
+            }
+        }"#;
+        let spec = load_spec(json).expect("should parse valid JSON spec");
+        let ops: Vec<_> = spec.operations().collect();
+        assert_eq!(ops.len(), 1);
+    }
+
+    #[test]
+    fn effective_base_url_uses_override_when_provided() {
+        let yaml = r#"
+openapi: "3.1.0"
+info:
+  title: T
+  version: "1"
+servers:
+  - url: https://prod.example.com
+paths: {}
+"#;
+        let spec = load_spec(yaml).unwrap();
+        let base = effective_base_url(&spec, "https://staging.example.com");
+        assert_eq!(base, "https://staging.example.com");
+    }
+
+    #[test]
+    fn effective_base_url_falls_back_to_spec_server() {
+        let yaml = r#"
+openapi: "3.1.0"
+info:
+  title: T
+  version: "1"
+servers:
+  - url: https://api.example.com
+paths: {}
+"#;
+        let spec = load_spec(yaml).unwrap();
+        let base = effective_base_url(&spec, "");
+        assert_eq!(base, "https://api.example.com");
+    }
+
+    #[test]
+    fn oas_location_mapping_is_exhaustive() {
+        assert!(matches!(
+            oas_location_to_core(oas3::spec::ParameterIn::Query),
+            ParameterLocation::Query
+        ));
+        assert!(matches!(
+            oas_location_to_core(oas3::spec::ParameterIn::Path),
+            ParameterLocation::Path
+        ));
+        assert!(matches!(
+            oas_location_to_core(oas3::spec::ParameterIn::Header),
+            ParameterLocation::Header
+        ));
+        assert!(matches!(
+            oas_location_to_core(oas3::spec::ParameterIn::Cookie),
+            ParameterLocation::Cookie
+        ));
+    }
+}

@@ -1,0 +1,1411 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Nevelio — Documentation</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css" id="hljs-theme" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<!-- ── Header ──────────────────────────────────────────────────────────── -->
+<header class="header">
+  <button class="menu-btn" onclick="toggleSidebar()" aria-label="Menu">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+    </svg>
+  </button>
+
+  <a class="header-logo" href="#hero">
+    <div class="logo-icon">🔐</div>
+    Nevelio
+  </a>
+  <span class="header-version">v0.1</span>
+
+  <div class="header-spacer"></div>
+
+  <div class="header-search">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+    </svg>
+    <input type="text" id="searchInput" placeholder="Rechercher..." autocomplete="off" data-i18n-attr="placeholder:search.placeholder" />
+  </div>
+
+  <div class="lang-switcher">
+    <button class="lang-btn active" data-lang="fr" onclick="applyLang('fr')">FR</button>
+    <button class="lang-btn" data-lang="en" onclick="applyLang('en')">EN</button>
+    <button class="lang-btn" data-lang="es" onclick="applyLang('es')">ES</button>
+  </div>
+
+  <button class="theme-btn" onclick="toggleTheme()" id="themeBtn" aria-label="Changer de thème" data-i18n-attr="aria-label:theme.toggle">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" id="themeIcon">
+      <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+      <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+    </svg>
+  </button>
+</header>
+
+<!-- ── Search results ───────────────────────────────────────────────────── -->
+<div class="search-results" id="searchResults"></div>
+
+<!-- ── Sidebar ──────────────────────────────────────────────────────────── -->
+<nav class="sidebar" id="sidebar">
+  <div class="nav-section">
+    <div class="nav-section-label" data-i18n="nav.start">Démarrage</div>
+    <a class="nav-link" href="#installation"><span class="nav-icon">⚡</span><span data-i18n="nav.installation">Installation</span></a>
+    <a class="nav-link" href="#legal"><span class="nav-icon">⚖️</span><span data-i18n="nav.legal">Disclaimer légal</span></a>
+    <a class="nav-link" href="#config"><span class="nav-icon">⚙️</span><span data-i18n="nav.config">Configuration</span></a>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-section-label" data-i18n="nav.commands">Commandes</div>
+    <a class="nav-link" href="#scan"><span class="nav-icon">🔍</span>nevelio scan</a>
+    <a class="nav-link nav-sub" href="#scan-target"><span data-i18n="nav.sub.target">↳ Cible &amp; spec</span></a>
+    <a class="nav-link nav-sub" href="#scan-profiles"><span data-i18n="nav.sub.profiles">↳ Profils</span></a>
+    <a class="nav-link nav-sub" href="#scan-modules"><span data-i18n="nav.sub.modules">↳ Modules</span></a>
+    <a class="nav-link nav-sub" href="#scan-auth"><span data-i18n="nav.sub.auth">↳ Authentification</span></a>
+    <a class="nav-link nav-sub" href="#scan-output"><span data-i18n="nav.sub.output">↳ Sortie</span></a>
+    <a class="nav-link nav-sub" href="#scan-modes"><span data-i18n="nav.sub.modes">↳ Modes spéciaux</span></a>
+    <a class="nav-link" href="#report"><span class="nav-icon">📄</span>nevelio report</a>
+    <a class="nav-link" href="#modules-cmd"><span class="nav-icon">📦</span>nevelio modules</a>
+    <a class="nav-link" href="#tui"><span class="nav-icon">🖥️</span><span data-i18n="nav.tui">TUI Dashboard</span></a>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-section-label" data-i18n="nav.attack-modules">Modules d'attaque</div>
+    <a class="nav-link" href="#mod-auth"><span class="nav-icon">🔑</span>auth</a>
+    <a class="nav-link" href="#mod-injection"><span class="nav-icon">💉</span>injection</a>
+    <a class="nav-link" href="#mod-access"><span class="nav-icon">🚪</span>access-control</a>
+    <a class="nav-link" href="#mod-graphql"><span class="nav-icon">◈</span>graphql</a>
+    <a class="nav-link" href="#mod-infra"><span class="nav-icon">🏗️</span>infra</a>
+    <a class="nav-link" href="#mod-business"><span class="nav-icon">💼</span>business-logic</a>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-section-label" data-i18n="nav.outputs">Sorties &amp; intégrations</div>
+    <a class="nav-link" href="#formats"><span class="nav-icon">📋</span><span data-i18n="nav.formats">Formats de sortie</span></a>
+    <a class="nav-link" href="#ai"><span class="nav-icon">🤖</span><span data-i18n="nav.ai">Suggestions IA</span></a>
+    <a class="nav-link" href="#cicd"><span class="nav-icon">🔄</span><span data-i18n="nav.cicd">CI/CD</span></a>
+    <a class="nav-link" href="#scenarios"><span class="nav-icon">🎯</span><span data-i18n="nav.scenarios">Scénarios pratiques</span></a>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-section-label" data-i18n="nav.reference">Référence</div>
+    <a class="nav-link" href="#i18n"><span class="nav-icon">🌐</span><span data-i18n="nav.i18n">Internationalisation</span></a>
+    <a class="nav-link" href="#flags-ref"><span class="nav-icon">📖</span><span data-i18n="nav.flags">Tous les flags</span></a>
+  </div>
+</nav>
+
+<!-- ── Main ─────────────────────────────────────────────────────────────── -->
+<main class="main">
+<div class="content">
+
+  <!-- Hero -->
+  <section class="hero" id="hero">
+    <div class="hero-badge">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+      API Security Scanner
+    </div>
+    <h1>Nevelio</h1>
+    <p data-i18n="hero.tagline">Outil de test de pénétration d'API REST et GraphQL, écrit en Rust.<br/>
+    Rapide, précis, et conçu pour s'intégrer dans vos pipelines CI/CD.</p>
+    <div class="hero-actions">
+      <a href="#installation" class="btn btn-primary" data-i18n="hero.btn.start">⚡ Démarrer</a>
+      <a href="#scan" class="btn btn-secondary" data-i18n="hero.btn.cli">📖 Référence CLI</a>
+      <a href="tutorial.md" class="btn btn-secondary" data-i18n="hero.btn.md">📝 Version Markdown</a>
+    </div>
+    <div class="hero-stats">
+      <div class="stat"><div class="stat-value">6</div><div class="stat-label" data-i18n="hero.stat.modules">Modules d'attaque</div></div>
+      <div class="stat"><div class="stat-value">32+</div><div class="stat-label" data-i18n="hero.stat.checks">Vérifications</div></div>
+      <div class="stat"><div class="stat-value">5</div><div class="stat-label" data-i18n="hero.stat.formats">Formats de sortie</div></div>
+      <div class="stat"><div class="stat-value">79</div><div class="stat-label" data-i18n="hero.stat.tests">Tests</div></div>
+    </div>
+  </section>
+
+  <!-- TOC -->
+  <div class="toc">
+    <h3 data-i18n="toc.title">Table des matières</h3>
+    <ol>
+      <li><a href="#installation" data-i18n="toc.1">Installation</a></li>
+      <li><a href="#legal" data-i18n="toc.2">Disclaimer légal</a></li>
+      <li><a href="#config" data-i18n="toc.3">Configuration (init)</a></li>
+      <li><a href="#scan" data-i18n="toc.4">Commande scan</a></li>
+      <li><a href="#tui" data-i18n="toc.5">TUI Dashboard</a></li>
+      <li><a href="#modules" data-i18n="toc.6">Modules d'attaque</a></li>
+      <li><a href="#formats" data-i18n="toc.7">Formats de sortie</a></li>
+      <li><a href="#ai" data-i18n="toc.8">Suggestions IA</a></li>
+      <li><a href="#report" data-i18n="toc.9">Commande report</a></li>
+      <li><a href="#modules-cmd" data-i18n="toc.10">Commande modules</a></li>
+      <li><a href="#cicd" data-i18n="toc.11">Intégration CI/CD</a></li>
+      <li><a href="#scenarios" data-i18n="toc.12">Scénarios pratiques</a></li>
+      <li><a href="#flags-ref" data-i18n="toc.13">Référence des flags</a></li>
+    </ol>
+  </div>
+
+  <!-- ── 1. Installation ─────────────────────────────────────────────── -->
+  <section class="doc-section" id="installation">
+    <h2><span class="section-icon">⚡</span> <span data-i18n="install.title">Installation</span></h2>
+
+    <h3 data-i18n="install.prereqs">Prérequis</h3>
+    <div class="feature-grid">
+      <div class="feature-item">
+        <div class="feature-item-icon">🦀</div>
+        <div class="feature-item-body">
+          <div class="title" data-i18n="install.rust.title">Rust stable ≥ 1.75</div>
+          <div class="desc" data-i18n="install.rust.desc">Installer via <code>rustup update stable</code></div>
+        </div>
+      </div>
+      <div class="feature-item">
+        <div class="feature-item-icon">🌐</div>
+        <div class="feature-item-body">
+          <div class="title" data-i18n="install.net.title">Accès réseau à la cible</div>
+          <div class="desc" data-i18n="install.net.desc">HTTPS recommandé, HTTP supporté</div>
+        </div>
+      </div>
+      <div class="feature-item">
+        <div class="feature-item-icon">📋</div>
+        <div class="feature-item-body">
+          <div class="title" data-i18n="install.auth.title">Autorisation écrite</div>
+          <div class="desc" data-i18n="install.auth.desc">Obligation légale dans toutes les juridictions</div>
+        </div>
+      </div>
+    </div>
+
+    <h3 data-i18n="install.build">Compilation</h3>
+    <div class="code-block">
+      <div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)" data-i18n="copy.btn">Copier</button></div>
+      <pre><code class="language-bash">git clone https://github.com/your-org/nevelio.git
+cd nevelio
+cargo build --release
+
+# Le binaire est dans target/release/nevelio
+./target/release/nevelio --version</code></pre>
+    </div>
+
+    <h3 data-i18n="install.global">Installation globale (optionnel)</h3>
+    <div class="code-block">
+      <div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)" data-i18n="copy.btn">Copier</button></div>
+      <pre><code class="language-bash"># Copier dans $PATH
+cp target/release/nevelio ~/.local/bin/
+
+# ou via cargo
+cargo install --path crates/cli
+
+# Vérification
+nevelio --version   # nevelio 0.1.0
+nevelio --help</code></pre>
+    </div>
+  </section>
+
+  <!-- ── 2. Legal ─────────────────────────────────────────────────────── -->
+  <section class="doc-section" id="legal">
+    <h2><span class="section-icon">⚖️</span> <span data-i18n="legal.title">Disclaimer légal</span></h2>
+
+    <div class="callout warning">
+      <span class="callout-icon">⚠️</span>
+      <div data-i18n="legal.warning" data-i18n-html="1">Nevelio est conçu <strong>exclusivement</strong> pour des systèmes que vous possédez
+      ou sur lesquels vous avez une autorisation écrite explicite. L'utilisation sans
+      autorisation est illégale (CFAA, Directive UE, Sénégal Loi n° 2008-11).</div>
+    </div>
+
+    <h3 data-i18n="legal.first-run">Premier lancement</h3>
+    <p data-i18n="legal.first-run.desc">Au premier scan, Nevelio affiche un avertissement et demande confirmation :</p>
+
+    <div class="code-block">
+      <div class="code-header"><span>terminal</span><button class="copy-btn" onclick="copyCode(this)" data-i18n="copy.btn">Copier</button></div>
+      <pre><code class="language-text">━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+                  AVERTISSEMENT LEGAL
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+En continuant, vous confirmez que :
+  1. Vous avez une autorisation explicite pour tester la cible.
+  2. Vous acceptez l'entière responsabilité légale de vos actes.
+  3. Vous traiterez toutes les découvertes comme confidentielles.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Acceptez-vous ces conditions ? [o/N] : o</code></pre>
+    </div>
+
+    <h3 data-i18n="legal.persist">Persistance automatique</h3>
+    <p data-i18n="legal.persist.desc" data-i18n-html="1">Après acceptation, un marqueur est écrit dans <code>~/.config/nevelio/legal_accepted</code>.
+    Les lancements suivants ne demandent plus confirmation.</p>
+
+    <div class="code-block">
+      <div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)" data-i18n="copy.btn">Copier</button></div>
+      <pre><code class="language-bash">cat ~/.config/nevelio/legal_accepted
+# 2026-05-02T14:23:45Z
+
+# Réinitialiser l'acceptation
+rm ~/.config/nevelio/legal_accepted</code></pre>
+    </div>
+
+    <h3 data-i18n="legal.noninteractive">Mode non interactif (CI/CD)</h3>
+    <div class="code-block">
+      <div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)" data-i18n="copy.btn">Copier</button></div>
+      <pre><code class="language-bash"># --accept-legal accepte et persiste sans prompt
+nevelio scan --target https://api.example.com --accept-legal</code></pre>
+    </div>
+  </section>
+
+  <!-- ── 3. Config ─────────────────────────────────────────────────────── -->
+  <section class="doc-section" id="config">
+    <h2><span class="section-icon">⚙️</span> <span data-i18n="config.title">Configuration — nevelio init</span></h2>
+
+    <p data-i18n="config.desc" data-i18n-html="1">Génère un fichier <code>.nevelio.toml</code> commenté dans le répertoire courant :</p>
+
+    <div class="code-block">
+      <div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)" data-i18n="copy.btn">Copier</button></div>
+      <pre><code class="language-bash">cd mon-projet
+nevelio init
+# Crée .nevelio.toml avec tous les champs documentés</code></pre>
+    </div>
+
+    <h3 data-i18n="config.fields">Référence des champs</h3>
+    <div class="table-wrap">
+    <table>
+      <thead><tr><th data-i18n="config.col.field">Champ</th><th data-i18n="config.col.type">Type</th><th data-i18n="config.col.default">Défaut</th><th data-i18n="config.col.desc">Description</th></tr></thead>
+      <tbody>
+        <tr><td><code>target</code></td><td>string</td><td>—</td><td data-i18n="config.target.desc">URL de base de l'API cible</td></tr>
+        <tr><td><code>spec</code></td><td>string</td><td>—</td><td data-i18n="config.spec.desc">Spec OpenAPI (fichier local ou URL)</td></tr>
+        <tr><td><code>profile</code></td><td>stealth / normal / aggressive</td><td>normal</td><td data-i18n="config.profile.desc">Profil de scan</td></tr>
+        <tr><td><code>modules</code></td><td>liste</td><td>tous</td><td data-i18n="config.modules.desc">Modules à exécuter</td></tr>
+        <tr><td><code>concurrency</code></td><td>entier</td><td>du profil</td><td data-i18n="config.concurrency.desc">Requêtes simultanées</td></tr>
+        <tr><td><code>rate_limit</code></td><td>entier</td><td>du profil</td><td data-i18n="config.rate.desc">Req/s maximum</td></tr>
+        <tr><td><code>timeout</code></td><td>secondes</td><td>10</td><td data-i18n="config.timeout.desc">Timeout par requête</td></tr>
+        <tr><td><code>auth_token</code></td><td>string</td><td>—</td><td data-i18n="config.auth.desc">Header Authorization complet</td></tr>
+        <tr><td><code>proxy</code></td><td>URL</td><td>—</td><td data-i18n="config.proxy.desc">Proxy HTTP (Burp Suite, etc.)</td></tr>
+        <tr><td><code>out_dir</code></td><td>chemin</td><td>.</td><td data-i18n="config.outdir.desc">Répertoire de sortie</td></tr>
+        <tr><td><code>fail_on</code></td><td>none / low / medium / high / critical</td><td>—</td><td data-i18n="config.failon.desc">Seuil d'échec CI</td></tr>
+      </tbody>
+    </table>
+    </div>
+
+    <div class="code-block">
+      <div class="code-header"><span>.nevelio.toml</span><button class="copy-btn" onclick="copyCode(this)" data-i18n="copy.btn">Copier</button></div>
+      <pre><code class="language-toml">target = "https://api.example.com"
+# spec  = "./openapi.yaml"
+profile = "normal"
+# modules = ["auth", "injection", "access-control"]
+# concurrency = 5
+# rate_limit  = 10
+# timeout     = 10
+# auth_token  = "Bearer eyJhbGciOiJIUzI1NiJ9..."
+# proxy       = "http://127.0.0.1:8080"
+out_dir  = "./results"
+# fail_on = "high"</code></pre>
+    </div>
+
+    <div class="callout info">
+      <span class="callout-icon">ℹ️</span>
+      <div data-i18n="config.priority" data-i18n-html="1"><strong>Priorité :</strong> les flags CLI écrasent toujours <code>.nevelio.toml</code>,
+      qui écrase les défauts du profil.</div>
+    </div>
+  </section>
+
+  <!-- ── 4. Scan ───────────────────────────────────────────────────────── -->
+  <section class="doc-section" id="scan">
+    <h2><span class="section-icon">🔍</span> <span data-i18n="scan.title">Commande scan</span> <code>scan</code></h2>
+
+    <!-- 4.1 Cible -->
+    <h3 id="scan-target" data-i18n="scan.target-spec">Cible et spec</h3>
+    <div class="table-wrap">
+    <table>
+      <thead><tr><th data-i18n="scan.col.flag">Flag</th><th data-i18n="scan.col.desc">Description</th><th data-i18n="scan.col.example">Exemple</th></tr></thead>
+      <tbody>
+        <tr><td><code>--target URL</code></td><td data-i18n="scan.target.desc">URL de base de l'API</td><td><code>--target https://api.example.com</code></td></tr>
+        <tr><td><code>--url URL</code></td><td data-i18n="scan.url.desc">Alias de --target</td><td><code>--url https://api.example.com</code></td></tr>
+        <tr><td><code>--spec FILE|URL</code></td><td data-i18n="scan.spec.desc">Spec OpenAPI JSON ou YAML</td><td><code>--spec ./openapi.yaml</code></td></tr>
+      </tbody>
+    </table>
+    </div>
+
+    <div class="code-block">
+      <div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)" data-i18n="copy.btn">Copier</button></div>
+      <pre><code class="language-bash"># Avec spec OpenAPI — couverture maximale
+nevelio scan --target https://api.example.com --spec ./openapi.yaml --accept-legal
+
+# Sans spec — découverte automatique des endpoints
+nevelio scan --target https://api.example.com --accept-legal</code></pre>
+    </div>
+
+    <!-- 4.2 Profils -->
+    <h3 id="scan-profiles" data-i18n="scan.profiles">Profils de scan</h3>
+    <div class="profile-grid">
+      <div class="profile-card stealth">
+        <div class="profile-name">🌿 stealth</div>
+        <div class="profile-meta" data-i18n="scan.stealth.meta">1 req simultanée · 2 req/s</div>
+        <span class="profile-tag" data-i18n="scan.stealth.tag">Production sensible</span>
+        <p style="margin-top:12px;font-size:12px;color:var(--text-muted)" data-i18n="scan.stealth.desc">Évite les alertes IDS/WAF. Scan lent mais discret.</p>
+      </div>
+      <div class="profile-card normal">
+        <div class="profile-name">⚖️ normal</div>
+        <div class="profile-meta" data-i18n="scan.normal.meta">5 req simultanées · 10 req/s</div>
+        <span class="profile-tag" data-i18n="scan.normal.tag">Défaut recommandé</span>
+        <p style="margin-top:12px;font-size:12px;color:var(--text-muted)" data-i18n="scan.normal.desc">Équilibre vitesse/discrétion. Idéal pour le staging.</p>
+      </div>
+      <div class="profile-card aggressive">
+        <div class="profile-name">⚡ aggressive</div>
+        <div class="profile-meta" data-i18n="scan.aggressive.meta">20 req simultanées · 50 req/s</div>
+        <span class="profile-tag" data-i18n="scan.aggressive.tag">Lab uniquement</span>
+        <p style="margin-top:12px;font-size:12px;color:var(--text-muted)" data-i18n="scan.aggressive.desc">Scan rapide. Ne pas utiliser en production.</p>
+      </div>
+    </div>
+
+    <div class="code-block">
+      <div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)" data-i18n="copy.btn">Copier</button></div>
+      <pre><code class="language-bash">nevelio scan --target https://api.example.com --profile stealth   --accept-legal
+nevelio scan --target https://api.example.com --profile normal    --accept-legal
+nevelio scan --target https://api.example.com --profile aggressive --accept-legal</code></pre>
+    </div>
+
+    <!-- 4.3 Modules -->
+    <h3 id="scan-modules" data-i18n="scan.modules">Sélection de modules</h3>
+    <p data-i18n="scan.modules.desc">Par défaut, tous les modules sont exécutés. Pour restreindre :</p>
+    <div class="code-block">
+      <div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)" data-i18n="copy.btn">Copier</button></div>
+      <pre><code class="language-bash"># Un seul module
+nevelio scan --target https://api.example.com --module auth --accept-legal
+
+# Plusieurs modules (espace-séparés)
+nevelio scan --target https://api.example.com \
+             --module auth injection access-control \
+             --accept-legal</code></pre>
+    </div>
+
+    <!-- 4.4 Auth -->
+    <h3 id="scan-auth" data-i18n="scan.auth">Authentification et proxy</h3>
+    <div class="code-block">
+      <div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)" data-i18n="copy.btn">Copier</button></div>
+      <pre><code class="language-bash"># JWT Bearer token
+nevelio scan --target https://api.example.com \
+             --auth-token "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." \
+             --accept-legal
+
+# Basic auth (user:password encodé en base64)
+nevelio scan --target https://api.example.com \
+             --auth-token "Basic dXNlcjpwYXNz" \
+             --accept-legal
+
+# Via proxy Burp Suite
+nevelio scan --target https://api.example.com \
+             --proxy http://127.0.0.1:8080 \
+             --accept-legal</code></pre>
+    </div>
+
+    <!-- 4.5 Output -->
+    <h3 id="scan-output" data-i18n="scan.output">Sortie et rapports</h3>
+    <div class="code-block">
+      <div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)" data-i18n="copy.btn">Copier</button></div>
+      <pre><code class="language-bash"># HTML (défaut) — findings.json + report.html
+nevelio scan --target https://api.example.com --accept-legal
+
+# SARIF pour GitHub Security
+nevelio scan --target https://api.example.com \
+             --output sarif \
+             --out-dir ./sarif-results \
+             --accept-legal
+
+# Bloquer CI sur findings HIGH ou CRITICAL
+nevelio scan --target https://api.example.com \
+             --fail-on high \
+             --accept-legal
+echo $?   # 1 si HIGH/CRITICAL trouvé</code></pre>
+    </div>
+
+    <h3 id="scan-modes" data-i18n="scan.modes">Modes spéciaux</h3>
+    <div class="table-wrap">
+    <table>
+      <thead><tr><th data-i18n="scan.col.flag">Flag</th><th data-i18n="scan.col.desc">Description</th></tr></thead>
+      <tbody>
+        <tr><td><code>--resume</code></td><td data-i18n="mode.resume.desc">Reprendre un scan interrompu depuis <code>--out-dir</code></td></tr>
+        <tr><td><code>--dry-run</code></td><td data-i18n="mode.dryrun.desc">Simuler sans envoyer de requêtes réelles</td></tr>
+        <tr><td><code>--no-tui</code></td><td data-i18n="mode.notui.desc">Désactiver le dashboard TUI (CI/CD, pipes)</td></tr>
+        <tr><td><code>--ai-suggestions</code></td><td data-i18n="mode.ai.desc">Suggestions IA après le scan (nécessite <code>ANTHROPIC_API_KEY</code>)</td></tr>
+        <tr><td><code>--verbose</code></td><td data-i18n="mode.verbose.desc">Logs détaillés et requêtes HTTP</td></tr>
+        <tr><td><code>--accept-legal</code></td><td data-i18n="mode.acceptlegal.desc">Accepter le disclaimer sans prompt</td></tr>
+        <tr><td><code>--no-color</code></td><td data-i18n="mode.nocolor.desc">Désactiver les couleurs ANSI (logs CI)</td></tr>
+      </tbody>
+    </table>
+    </div>
+  </section>
+
+  <!-- ── 5. TUI ─────────────────────────────────────────────────────────── -->
+  <section class="doc-section" id="tui">
+    <h2><span class="section-icon">🖥️</span> <span data-i18n="tui.title">TUI Dashboard</span></h2>
+
+    <p data-i18n-html="1" data-i18n="tui.desc">Le dashboard ratatui s'active automatiquement quand la sortie est un <strong>terminal interactif</strong>
+    (TTY détecté) et que <code>--no-tui</code> est absent.</p>
+
+    <div class="code-block">
+      <div class="code-header"><span>terminal</span><button class="copy-btn" onclick="copyCode(this)" data-i18n="copy.btn">Copier</button></div>
+      <pre><code class="language-text">┌─ Nevelio — API Security Scanner ────────────────────────────────┐
+│ Progression  [████████████░░░░░░░░░░░░░░]  45%   ETA: 1m23s    │
+├─ Modules ────────────────────────────────┬─ Findings ───────────┤
+│  ✓ auth          (5 checks)  2 findings  │ CRITICAL  JWT alg:none│
+│  ✓ injection     (4 checks)  1 finding   │ HIGH      SQLi détecté│
+│  ▶ access-control en cours...            │ MEDIUM    CORS ouvert │
+│  ○ graphql       en attente              │ LOW       HSTS absent │
+│  ○ infra         en attente              │                       │
+│  ○ business-logic en attente             │                       │
+├──────────────────────────────────────────┴───────────────────────┤
+│  Target: https://api.example.com    Profil: normal    Req: 47/s  │
+└──────────────────────────────────────────────────────────────────┘</code></pre>
+    </div>
+
+    <div class="feature-grid">
+      <div class="feature-item">
+        <div class="feature-item-icon">📊</div>
+        <div class="feature-item-body">
+          <div class="title" data-i18n="tui.feat.progress.title">Barre de progression</div>
+          <div class="desc" data-i18n="tui.feat.progress.desc">Avancement global avec ETA estimé en temps réel</div>
+        </div>
+      </div>
+      <div class="feature-item">
+        <div class="feature-item-icon">📦</div>
+        <div class="feature-item-body">
+          <div class="title" data-i18n="tui.feat.modules.title">État des modules</div>
+          <div class="desc" data-i18n="tui.feat.modules.desc">En attente, en cours ou terminé pour chaque module</div>
+        </div>
+      </div>
+      <div class="feature-item">
+        <div class="feature-item-icon">🚨</div>
+        <div class="feature-item-body">
+          <div class="title" data-i18n="tui.feat.findings.title">Findings en direct</div>
+          <div class="desc" data-i18n="tui.feat.findings.desc">Vulnérabilités découvertes affichées immédiatement</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="code-block">
+      <div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)" data-i18n="copy.btn">Copier</button></div>
+      <pre><code class="language-bash"># Désactiver le TUI (CI/CD, pipes, redirection)
+nevelio scan --target https://api.example.com --no-tui --accept-legal</code></pre>
+    </div>
+  </section>
+
+  <!-- ── 6. Modules ────────────────────────────────────────────────────── -->
+  <section class="doc-section" id="modules">
+    <h2><span class="section-icon">🧩</span> <span data-i18n="modules.title">Modules d'attaque</span></h2>
+
+    <div class="module-grid">
+      <div class="module-card">
+        <div class="module-header">
+          <div class="module-icon">🔑</div>
+          <div><div class="module-name">auth</div><div class="module-cmd">--module auth</div></div>
+        </div>
+        <ul class="module-checks">
+          <li>Missing Authentication (CWE-306)</li>
+          <li>JWT alg:none (CWE-327)</li>
+          <li>JWT weak secret (CWE-330)</li>
+          <li>JWT claims manipulation (CWE-269)</li>
+          <li>Basic auth brute force (CWE-521)</li>
+        </ul>
+      </div>
+      <div class="module-card">
+        <div class="module-header">
+          <div class="module-icon">💉</div>
+          <div><div class="module-name">injection</div><div class="module-cmd">--module injection</div></div>
+        </div>
+        <ul class="module-checks">
+          <li>SQL Injection (CWE-89)</li>
+          <li>NoSQL Injection (CWE-943)</li>
+          <li>SSTI (CWE-94)</li>
+          <li>Command Injection (CWE-77)</li>
+        </ul>
+      </div>
+      <div class="module-card">
+        <div class="module-header">
+          <div class="module-icon">🚪</div>
+          <div><div class="module-name">access-control</div><div class="module-cmd">--module access-control</div></div>
+        </div>
+        <ul class="module-checks">
+          <li data-i18n="mod.ac.idor">IDOR numérique (CWE-639)</li>
+          <li>IDOR UUID (CWE-639)</li>
+          <li>BFLA (CWE-285)</li>
+          <li data-i18n="mod.ac.priv">Élévation de privilèges (CWE-269)</li>
+          <li>Mass Assignment (CWE-915)</li>
+        </ul>
+      </div>
+      <div class="module-card">
+        <div class="module-header">
+          <div class="module-icon">◈</div>
+          <div><div class="module-name">graphql</div><div class="module-cmd">--module graphql</div></div>
+        </div>
+        <ul class="module-checks">
+          <li data-i18n="mod.gql.introspection">Introspection exposée (CWE-200)</li>
+          <li>Field suggestions (CWE-209)</li>
+          <li>Depth DoS (CWE-400)</li>
+        </ul>
+      </div>
+      <div class="module-card">
+        <div class="module-header">
+          <div class="module-icon">🏗️</div>
+          <div><div class="module-name">infra</div><div class="module-cmd">--module infra</div></div>
+        </div>
+        <ul class="module-checks">
+          <li>CORS misconfiguration</li>
+          <li>HSTS / Security headers</li>
+          <li>Server version disclosure</li>
+          <li>20 debug endpoints</li>
+          <li>Cookie flags, TLS, CSP</li>
+          <li>Secrets & stack traces</li>
+        </ul>
+      </div>
+      <div class="module-card">
+        <div class="module-header">
+          <div class="module-icon">💼</div>
+          <div><div class="module-name">business-logic</div><div class="module-cmd">--module business-logic</div></div>
+        </div>
+        <ul class="module-checks">
+          <li data-i18n="mod.bl.rate">Rate limiting absent</li>
+          <li>X-Forwarded-For bypass</li>
+          <li>User-Agent bypass</li>
+          <li>Race condition</li>
+          <li data-i18n="mod.bl.negative">Valeurs négatives / prix</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Module details -->
+    <h3 id="mod-auth" data-i18n="mod.auth.detail">Module auth — Détail</h3>
+    <div class="check-list">
+      <div class="check-item">
+        <div class="check-header" onclick="toggleCheck(this)">
+          <span class="badge badge-high">HIGH</span>
+          <span class="check-title">Missing Authentication</span>
+          <span class="check-cwe">CWE-306</span>
+          <span class="check-arrow">▶</span>
+        </div>
+        <div class="check-body">
+          <p data-i18n-html="1" data-i18n="check.auth.missing.desc">Teste chaque endpoint <strong>sans header Authorization</strong>. Un code 200/201 indique une authentification manquante.</p>
+          <strong data-i18n="check.example-finding">Exemple de finding :</strong>
+          <div class="code-block"><div class="code-header"><span>json</span><button class="copy-btn" onclick="copyCode(this)" data-i18n="copy.btn">Copier</button></div>
+          <pre><code class="language-json">{
+  "title": "Missing Authentication",
+  "severity": "High",
+  "cwe": "CWE-306",
+  "endpoint": "GET /api/v1/users",
+  "recommendation": "Implémenter un middleware d'authentification obligatoire."
+}</code></pre></div>
+        </div>
+      </div>
+      <div class="check-item">
+        <div class="check-header" onclick="toggleCheck(this)">
+          <span class="badge badge-critical">CRITICAL</span>
+          <span class="check-title">JWT Algorithm None</span>
+          <span class="check-cwe">CWE-327</span>
+          <span class="check-arrow">▶</span>
+        </div>
+        <div class="check-body">
+          <p data-i18n-html="1" data-i18n="check.jwt.none.desc">Envoie un JWT avec <code>"alg": "none"</code> et signature vide. Si le serveur l'accepte, il ne valide pas la signature.</p>
+          <div class="code-block"><div class="code-header"><span>payload forgé</span><button class="copy-btn" onclick="copyCode(this)" data-i18n="copy.btn">Copier</button></div>
+          <pre><code class="language-text">eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.eyJzdWIiOiIxMjM0In0.</code></pre></div>
+          <p data-i18n-html="1" data-i18n="check.jwt.none.fix"><strong>Remédiation :</strong> Rejeter explicitement l'algorithme "none". Utiliser RS256 ou ES256.</p>
+        </div>
+      </div>
+      <div class="check-item">
+        <div class="check-header" onclick="toggleCheck(this)">
+          <span class="badge badge-high">HIGH</span>
+          <span class="check-title">JWT Weak Secret</span>
+          <span class="check-cwe">CWE-330</span>
+          <span class="check-arrow">▶</span>
+        </div>
+        <div class="check-body">
+          <p data-i18n-html="1" data-i18n="check.jwt.weak.desc">Tente de valider la signature HMAC-SHA256 avec des secrets faibles communs : <code>secret</code>, <code>password</code>, <code>123456</code>, <code>changeme</code>…</p>
+        </div>
+      </div>
+      <div class="check-item">
+        <div class="check-header" onclick="toggleCheck(this)">
+          <span class="badge badge-high">HIGH</span>
+          <span class="check-title">JWT Claims Manipulation</span>
+          <span class="check-cwe">CWE-269</span>
+          <span class="check-arrow">▶</span>
+        </div>
+        <div class="check-body">
+          <p data-i18n-html="1" data-i18n="check.jwt.claims.desc">Modifie les claims <code>role</code> → admin, <code>is_admin</code> → true, et re-signe avec le secret faible découvert.</p>
+        </div>
+      </div>
+      <div class="check-item">
+        <div class="check-header" onclick="toggleCheck(this)">
+          <span class="badge badge-medium">MEDIUM</span>
+          <span class="check-title">Basic Auth Brute Force</span>
+          <span class="check-cwe">CWE-521</span>
+          <span class="check-arrow">▶</span>
+        </div>
+        <div class="check-body">
+          <p data-i18n-html="1" data-i18n="check.basic.brute.desc">Sur les endpoints avec <code>WWW-Authenticate: Basic</code>, teste un dictionnaire de couples user:password communs.</p>
+        </div>
+      </div>
+    </div>
+
+    <h3 id="mod-injection" data-i18n="mod.injection.detail">Module injection — Détail</h3>
+    <div class="check-list">
+      <div class="check-item">
+        <div class="check-header" onclick="toggleCheck(this)">
+          <span class="badge badge-critical">CRITICAL</span>
+          <span class="check-title">SQL Injection</span>
+          <span class="check-cwe">CWE-89</span>
+          <span class="check-arrow">▶</span>
+        </div>
+        <div class="check-body">
+          <p data-i18n="check.sqli.intro">4 techniques sur chaque paramètre :</p>
+          <div class="table-wrap"><table>
+            <thead><tr><th data-i18n="check.col.technique">Technique</th><th>Payload</th><th data-i18n="check.col.detection">Détection</th></tr></thead>
+            <tbody>
+              <tr><td>Time-based</td><td><code>' OR SLEEP(5)--</code></td><td data-i18n="check.sqli.timebased.det">Délai ≥ 4s</td></tr>
+              <tr><td>Error-based</td><td><code>' OR 1=1--</code></td><td data-i18n="check.sqli.errorbased.det">Message SQL dans réponse</td></tr>
+              <tr><td>Union-based</td><td><code>' UNION SELECT NULL--</code></td><td data-i18n="check.sqli.unionbased.det">Données injectées</td></tr>
+              <tr><td>Boolean-based</td><td><code>' AND 1=1--</code> vs <code>' AND 1=2--</code></td><td data-i18n="check.sqli.booleanbased.det">Contenu différent</td></tr>
+            </tbody>
+          </table></div>
+        </div>
+      </div>
+      <div class="check-item">
+        <div class="check-header" onclick="toggleCheck(this)">
+          <span class="badge badge-high">HIGH</span>
+          <span class="check-title">NoSQL Injection</span>
+          <span class="check-cwe">CWE-943</span>
+          <span class="check-arrow">▶</span>
+        </div>
+        <div class="check-body">
+          <div class="code-block"><div class="code-header"><span>json — opérateurs MongoDB</span><button class="copy-btn" onclick="copyCode(this)" data-i18n="copy.btn">Copier</button></div>
+          <pre><code class="language-json">{"username": {"$gt": ""}, "password": {"$gt": ""}}
+{"username": {"$regex": ".*"}}</code></pre></div>
+        </div>
+      </div>
+      <div class="check-item">
+        <div class="check-header" onclick="toggleCheck(this)">
+          <span class="badge badge-high">HIGH</span>
+          <span class="check-title">Server-Side Template Injection (SSTI)</span>
+          <span class="check-cwe">CWE-94</span>
+          <span class="check-arrow">▶</span>
+        </div>
+        <div class="check-body">
+          <div class="table-wrap"><table>
+            <thead><tr><th data-i18n="check.col.engine">Moteur</th><th>Payload</th><th data-i18n="check.col.result">Résultat</th></tr></thead>
+            <tbody>
+              <tr><td>Jinja2 / Twig</td><td><code>{{7*7}}</code></td><td><code>49</code></td></tr>
+              <tr><td>FreeMarker</td><td><code>${7*7}</code></td><td><code>49</code></td></tr>
+              <tr><td>Pebble</td><td><code>{{7*'7'}}</code></td><td><code>7777777</code></td></tr>
+            </tbody>
+          </table></div>
+        </div>
+      </div>
+      <div class="check-item">
+        <div class="check-header" onclick="toggleCheck(this)">
+          <span class="badge badge-critical">CRITICAL</span>
+          <span class="check-title">Command Injection</span>
+          <span class="check-cwe">CWE-77</span>
+          <span class="check-arrow">▶</span>
+        </div>
+        <div class="check-body">
+          <div class="code-block"><div class="code-header"><span>payloads</span><button class="copy-btn" onclick="copyCode(this)" data-i18n="copy.btn">Copier</button></div>
+          <pre><code class="language-text">; id
+| whoami
+`id`
+$(id)
+& ping -c 1 127.0.0.1</code></pre></div>
+          <p data-i18n-html="1" data-i18n="check.cmdi.detection">Détection : délai (sleep) ou présence de <code>uid=</code> dans la réponse.</p>
+        </div>
+      </div>
+    </div>
+
+    <h3 id="mod-access" data-i18n="mod.access.detail">Module access-control — Détail</h3>
+    <div class="check-list">
+      <div class="check-item">
+        <div class="check-header" onclick="toggleCheck(this)">
+          <span class="badge badge-high">HIGH</span>
+          <span class="check-title">IDOR numérique / UUID</span>
+          <span class="check-cwe">CWE-639</span>
+          <span class="check-arrow">▶</span>
+        </div>
+        <div class="check-body">
+          <p data-i18n-html="1" data-i18n="check.idor.desc">Substitue les IDs dans l'URL par des valeurs voisines (<code>/users/42</code> → <code>/users/41</code>) ou des UUIDs aléatoires.
+          Compare les réponses pour détecter un accès à des ressources d'autres utilisateurs.</p>
+        </div>
+      </div>
+      <div class="check-item">
+        <div class="check-header" onclick="toggleCheck(this)">
+          <span class="badge badge-high">HIGH</span>
+          <span class="check-title">BFLA — Broken Function Level Authorization</span>
+          <span class="check-cwe">CWE-285</span>
+          <span class="check-arrow">▶</span>
+        </div>
+        <div class="check-body">
+          <p data-i18n-html="1" data-i18n="check.bfla.desc">Teste les endpoints <code>/admin/*</code>, <code>/management/*</code>, <code>/internal/*</code> avec le token utilisateur standard.
+          Un code 200 indique une autorisation mal configurée par rôle.</p>
+        </div>
+      </div>
+      <div class="check-item">
+        <div class="check-header" onclick="toggleCheck(this)">
+          <span class="badge badge-high">HIGH</span>
+          <span class="check-title">Mass Assignment</span>
+          <span class="check-cwe">CWE-915</span>
+          <span class="check-arrow">▶</span>
+        </div>
+        <div class="check-body">
+          <div class="code-block"><div class="code-header"><span>json — champs injectés</span><button class="copy-btn" onclick="copyCode(this)" data-i18n="copy.btn">Copier</button></div>
+          <pre><code class="language-json">{"name": "John", "role": "admin", "is_admin": true, "credits": 999999}</code></pre></div>
+        </div>
+      </div>
+    </div>
+
+    <h3 id="mod-graphql" data-i18n="mod.graphql.detail">Module graphql — Détail</h3>
+    <div class="check-list">
+      <div class="check-item">
+        <div class="check-header" onclick="toggleCheck(this)">
+          <span class="badge badge-medium">MEDIUM</span>
+          <span class="check-title">Introspection exposée</span>
+          <span class="check-cwe">CWE-200</span>
+          <span class="check-arrow">▶</span>
+        </div>
+        <div class="check-body">
+          <div class="code-block"><div class="code-header"><span>graphql</span><button class="copy-btn" onclick="copyCode(this)" data-i18n="copy.btn">Copier</button></div>
+          <pre><code class="language-graphql">{ __schema { types { name fields { name } } } }</code></pre></div>
+          <p data-i18n="check.introspection.desc">Si le serveur répond avec le schéma complet, la structure interne est exposée à un attaquant.</p>
+        </div>
+      </div>
+      <div class="check-item">
+        <div class="check-header" onclick="toggleCheck(this)">
+          <span class="badge badge-medium">MEDIUM</span>
+          <span class="check-title">Depth DoS</span>
+          <span class="check-cwe">CWE-400</span>
+          <span class="check-arrow">▶</span>
+        </div>
+        <div class="check-body">
+          <div class="code-block"><div class="code-header"><span>graphql</span><button class="copy-btn" onclick="copyCode(this)" data-i18n="copy.btn">Copier</button></div>
+          <pre><code class="language-graphql">{ user { friends { friends { friends { friends { id name } } } } } }</code></pre></div>
+          <p data-i18n="check.depthdos.desc">Sans limite de profondeur, le serveur peut subir une surcharge CPU/mémoire.</p>
+        </div>
+      </div>
+    </div>
+
+    <h3 id="mod-infra" data-i18n="mod.infra.checks">Module infra — Vérifications</h3>
+    <div class="table-wrap">
+    <table>
+      <thead><tr><th data-i18n="infra.col.check">Vérification</th><th data-i18n="infra.col.severity">Sévérité</th><th data-i18n="infra.col.desc">Description</th></tr></thead>
+      <tbody>
+        <tr><td>CORS misconfiguration</td><td><span class="badge badge-high">HIGH</span></td><td data-i18n-html="1" data-i18n="infra.cors.desc"><code>Origin: evil.com</code> reflété dans la réponse</td></tr>
+        <tr><td data-i18n="infra.hsts.name">HSTS absent</td><td><span class="badge badge-medium">MEDIUM</span></td><td data-i18n-html="1" data-i18n="infra.hsts.desc">Pas de <code>Strict-Transport-Security</code> sur HTTPS</td></tr>
+        <tr><td data-i18n="infra.secheaders.name">Security headers</td><td><span class="badge badge-medium">MEDIUM</span></td><td data-i18n="infra.secheaders.desc">X-Content-Type-Options, X-Frame-Options, X-XSS-Protection</td></tr>
+        <tr><td data-i18n="infra.server.name">Server disclosure</td><td><span class="badge badge-low">LOW</span></td><td data-i18n-html="1" data-i18n="infra.server.desc">Header <code>Server:</code> exposant la version exacte</td></tr>
+        <tr><td>Debug endpoints</td><td><span class="badge badge-high">HIGH</span></td><td>/actuator, /debug, /metrics, /swagger-ui, /.env…</td></tr>
+        <tr><td>Content-Security-Policy</td><td><span class="badge badge-medium">MEDIUM</span></td><td data-i18n="infra.csp.desc">Absent ou permissif (unsafe-inline, *)</td></tr>
+        <tr><td>Cookie flags</td><td><span class="badge badge-medium">MEDIUM</span></td><td data-i18n="infra.cookie.desc">Secure, HttpOnly, SameSite manquants</td></tr>
+        <tr><td data-i18n="infra.tls.name">TLS obsolète</td><td><span class="badge badge-high">HIGH</span></td><td data-i18n="infra.tls.desc">TLS 1.0 / 1.1 accepté (RFC 8996)</td></tr>
+        <tr><td data-i18n="infra.secrets.name">Secrets dans réponses</td><td><span class="badge badge-critical">CRITICAL</span></td><td data-i18n="infra.secrets.desc">Clés AWS, tokens GitHub, clés PEM…</td></tr>
+        <tr><td>Stack traces</td><td><span class="badge badge-medium">MEDIUM</span></td><td data-i18n="infra.stacktrace.desc">NullPointerException, Traceback… dans les erreurs</td></tr>
+      </tbody>
+    </table>
+    </div>
+
+    <h3 id="mod-business" data-i18n="mod.business.checks">Module business-logic — Vérifications</h3>
+    <div class="check-list">
+      <div class="check-item">
+        <div class="check-header" onclick="toggleCheck(this)">
+          <span class="badge badge-high">HIGH</span>
+          <span class="check-title">Rate Limiting absent</span>
+          <span class="check-cwe">CWE-770</span>
+          <span class="check-arrow">▶</span>
+        </div>
+        <div class="check-body">
+          <p data-i18n-html="1" data-i18n="check.rate.desc">Envoie 20 requêtes rapides et vérifie l'absence de réponse <code>429 Too Many Requests</code>.
+          Sans rate limiting, login/OTP/reset sont vulnérables au brute force.</p>
+        </div>
+      </div>
+      <div class="check-item">
+        <div class="check-header" onclick="toggleCheck(this)">
+          <span class="badge badge-medium">MEDIUM</span>
+          <span class="check-title">X-Forwarded-For bypass</span>
+          <span class="check-cwe">CWE-290</span>
+          <span class="check-arrow">▶</span>
+        </div>
+        <div class="check-body">
+          <div class="code-block"><div class="code-header"><span>headers injectés</span><button class="copy-btn" onclick="copyCode(this)" data-i18n="copy.btn">Copier</button></div>
+          <pre><code class="language-text">X-Forwarded-For: 127.0.0.1
+X-Real-IP: 127.0.0.1
+CF-Connecting-IP: 192.168.1.1</code></pre></div>
+        </div>
+      </div>
+      <div class="check-item">
+        <div class="check-header" onclick="toggleCheck(this)">
+          <span class="badge badge-high">HIGH</span>
+          <span class="check-title">Race Condition</span>
+          <span class="check-cwe">CWE-362</span>
+          <span class="check-arrow">▶</span>
+        </div>
+        <div class="check-body">
+          <p data-i18n-html="1" data-i18n="check.race.desc">Envoie simultanément 10 requêtes identiques (achat, réservation, coupon) et détecte si plusieurs
+          répondent avec succès alors qu'une seule devrait l'être.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── 7. Formats ─────────────────────────────────────────────────────── -->
+  <section class="doc-section" id="formats">
+    <h2><span class="section-icon">📋</span> <span data-i18n="formats.title">Formats de sortie</span></h2>
+
+    <div class="format-grid">
+      <div class="format-card">
+        <div class="format-icon">🗄️</div>
+        <div class="format-name">JSON</div>
+        <div class="format-ext">findings.json</div>
+        <div class="format-use" data-i18n="formats.json.use">Format canonique — toujours écrit</div>
+      </div>
+      <div class="format-card">
+        <div class="format-icon">🌐</div>
+        <div class="format-name">HTML</div>
+        <div class="format-ext">report.html</div>
+        <div class="format-use" data-i18n="formats.html.use">Rapport interactif — défaut</div>
+      </div>
+      <div class="format-card">
+        <div class="format-icon">📝</div>
+        <div class="format-name">Markdown</div>
+        <div class="format-ext">report.md</div>
+        <div class="format-use" data-i18n="formats.md.use">Wikis, PRs, Confluence</div>
+      </div>
+      <div class="format-card">
+        <div class="format-icon">⚙️</div>
+        <div class="format-name">JUnit</div>
+        <div class="format-ext">report.xml</div>
+        <div class="format-use" data-i18n="formats.junit.use">Jenkins, GitLab CI</div>
+      </div>
+      <div class="format-card">
+        <div class="format-icon">🔒</div>
+        <div class="format-name">SARIF</div>
+        <div class="format-ext">report.sarif</div>
+        <div class="format-use" data-i18n="formats.sarif.use">GitHub Advanced Security</div>
+      </div>
+    </div>
+
+    <h3 data-i18n="formats.json-structure">Structure d'un finding JSON</h3>
+    <div class="code-block">
+      <div class="code-header"><span>findings.json</span><button class="copy-btn" onclick="copyCode(this)" data-i18n="copy.btn">Copier</button></div>
+      <pre><code class="language-json">[
+  {
+    "id": "auth-jwt-alg-none-001",
+    "title": "JWT Algorithm None Accepted",
+    "severity": "Critical",
+    "cwe": "CWE-327",
+    "endpoint": "POST /api/v1/auth/token",
+    "description": "L'endpoint accepte des tokens JWT avec alg:none...",
+    "recommendation": "Rejeter explicitement l'algorithme 'none'. Utiliser RS256 ou ES256."
+  }
+]</code></pre>
+    </div>
+
+    <h3 data-i18n="formats.html-features">Rapport HTML — fonctionnalités</h3>
+    <div class="feature-grid">
+      <div class="feature-item">
+        <div class="feature-item-icon">🔍</div>
+        <div class="feature-item-body"><div class="title" data-i18n="formats.feat.filter.title">Filtre par sévérité</div><div class="desc" data-i18n="formats.feat.filter.desc">Boutons Critical / High / Medium / Low / Info</div></div>
+      </div>
+      <div class="feature-item">
+        <div class="feature-item-icon">🌙</div>
+        <div class="feature-item-body"><div class="title" data-i18n="formats.feat.theme.title">Thème clair/sombre</div><div class="desc" data-i18n="formats.feat.theme.desc">Toggle persisté en localStorage</div></div>
+      </div>
+      <div class="feature-item">
+        <div class="feature-item-icon">📂</div>
+        <div class="feature-item-body"><div class="title" data-i18n="formats.feat.accordion.title">Accordéon</div><div class="desc" data-i18n="formats.feat.accordion.desc">Chaque finding collapsible pour une lecture claire</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── 8. AI ───────────────────────────────────────────────────────────── -->
+  <section class="doc-section" id="ai">
+    <h2><span class="section-icon">🤖</span> <span data-i18n="ai.title">Suggestions IA via Claude</span></h2>
+
+    <p data-i18n-html="1" data-i18n="ai.desc">Nevelio peut générer des <strong>recommandations de remédiation détaillées</strong> pour
+    chaque finding, via l'API Claude d'Anthropic.</p>
+
+    <div class="callout info">
+      <span class="callout-icon">ℹ️</span>
+      <div data-i18n-html="1" data-i18n="ai.model-info">Modèle utilisé : <code>claude-haiku-4-5-20251001</code>.
+      Sortie : <code>&lt;out-dir&gt;/ai_suggestions.md</code></div>
+    </div>
+
+    <div class="code-block">
+      <div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)" data-i18n="copy.btn">Copier</button></div>
+      <pre><code class="language-bash">export ANTHROPIC_API_KEY=sk-ant-api03-...
+
+nevelio scan --target https://api.example.com \
+             --ai-suggestions \
+             --out-dir ./results \
+             --accept-legal
+
+# Lire les suggestions générées
+cat ./results/ai_suggestions.md</code></pre>
+    </div>
+
+    <div class="callout warning">
+      <span class="callout-icon">⚠️</span>
+      <div data-i18n-html="1" data-i18n="ai.missing-key">Si <code>ANTHROPIC_API_KEY</code> est absent, Nevelio affiche un avertissement
+      <strong>avant le scan</strong> et continue normalement sans les suggestions.</div>
+    </div>
+  </section>
+
+  <!-- ── 9. Report ──────────────────────────────────────────────────────── -->
+  <section class="doc-section" id="report">
+    <h2><span class="section-icon">📄</span> <span data-i18n-html="1" data-i18n="report.title">Commande <code>report</code> / <code>convert</code></span></h2>
+
+    <p data-i18n-html="1" data-i18n="report.desc">Convertit un <code>findings.json</code> existant en un autre format, <strong>sans relancer le scan</strong>.</p>
+
+    <div class="code-block">
+      <div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)" data-i18n="copy.btn">Copier</button></div>
+      <pre><code class="language-bash"># Générer un rapport HTML depuis un JSON existant
+nevelio report --input ./results/findings.json \
+               --format html \
+               --out-dir ./rapports
+
+# Alias "convert" — fonctionnement identique
+nevelio convert --input findings.json --format sarif --out-dir ./security</code></pre>
+    </div>
+
+    <div class="table-wrap">
+    <table>
+      <thead><tr><th data-i18n="scan.col.flag">Flag</th><th data-i18n="report.col.required">Requis</th><th data-i18n="config.col.default">Défaut</th><th data-i18n="scan.col.desc">Description</th></tr></thead>
+      <tbody>
+        <tr><td><code>--input FILE</code></td><td data-i18n="report.yes">Oui</td><td>—</td><td data-i18n="report.input.desc">Chemin vers le <code>findings.json</code> source</td></tr>
+        <tr><td><code>--format FORMAT</code></td><td data-i18n="report.no">Non</td><td>html</td><td data-i18n="report.format.desc">Format cible</td></tr>
+        <tr><td><code>--out-dir PATH</code></td><td data-i18n="report.no">Non</td><td>.</td><td data-i18n="config.outdir.desc">Répertoire de sortie</td></tr>
+      </tbody>
+    </table>
+    </div>
+  </section>
+
+  <!-- ── 10. Modules cmd ────────────────────────────────────────────────── -->
+  <section class="doc-section" id="modules-cmd">
+    <h2><span class="section-icon">📦</span> <span data-i18n-html="1" data-i18n="modules-cmd.title">Commande <code>modules</code></span></h2>
+
+    <div class="code-block">
+      <div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)" data-i18n="copy.btn">Copier</button></div>
+      <pre><code class="language-bash"># Lister tous les modules disponibles
+nevelio modules list
+
+# Afficher le détail d'un module
+nevelio modules show auth
+nevelio modules show injection
+nevelio modules show access-control
+nevelio modules show graphql
+nevelio modules show infra
+nevelio modules show business-logic</code></pre>
+    </div>
+  </section>
+
+  <!-- ── 11. CI/CD ─────────────────────────────────────────────────────── -->
+  <section class="doc-section" id="cicd">
+    <h2><span class="section-icon">🔄</span> <span data-i18n="cicd.title">Intégration CI/CD</span></h2>
+
+    <div class="callout success">
+      <span class="callout-icon">✅</span>
+      <div data-i18n-html="1" data-i18n="cicd.tip">Combinaison recommandée pour tout pipeline CI :
+      <code>--accept-legal --no-tui --no-color --fail-on high</code></div>
+    </div>
+
+    <div class="tabs">
+      <div class="tab-list">
+        <button class="tab-btn active" onclick="switchTab(this, 'tab-gh')">GitHub Actions</button>
+        <button class="tab-btn" onclick="switchTab(this, 'tab-gl')">GitLab CI</button>
+        <button class="tab-btn" onclick="switchTab(this, 'tab-docker')">Docker</button>
+        <button class="tab-btn" onclick="switchTab(this, 'tab-best')" data-i18n="cicd.tab.best">Bonnes pratiques</button>
+      </div>
+
+      <div class="tab-panel active" id="tab-gh">
+        <div class="code-block">
+          <div class="code-header"><span>.github/workflows/security.yml</span><button class="copy-btn" onclick="copyCode(this)" data-i18n="copy.btn">Copier</button></div>
+          <pre><code class="language-yaml">name: API Security Scan
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  nevelio-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Build Nevelio
+        run: cargo build --release --bin nevelio
+
+      - name: Run API Security Scan
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          ./target/release/nevelio scan \
+            --target ${{ vars.API_STAGING_URL }} \
+            --spec openapi.yaml \
+            --output sarif \
+            --out-dir sarif-results \
+            --fail-on high \
+            --accept-legal \
+            --no-tui \
+            --no-color \
+            --ai-suggestions
+
+      - name: Upload SARIF to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: sarif-results/report.sarif
+
+      - name: Upload AI Suggestions
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ai-suggestions
+          path: sarif-results/ai_suggestions.md</code></pre>
+        </div>
+      </div>
+
+      <div class="tab-panel" id="tab-gl">
+        <div class="code-block">
+          <div class="code-header"><span>.gitlab-ci.yml</span><button class="copy-btn" onclick="copyCode(this)" data-i18n="copy.btn">Copier</button></div>
+          <pre><code class="language-yaml">api-security-scan:
+  stage: test
+  image: rust:latest
+  before_script:
+    - cargo build --release --bin nevelio
+  script:
+    - ./target/release/nevelio scan
+        --target "$API_STAGING_URL"
+        --spec openapi.yaml
+        --output junit
+        --out-dir results
+        --fail-on medium
+        --accept-legal
+        --no-tui
+        --no-color
+  artifacts:
+    when: always
+    reports:
+      junit: results/report.xml
+    paths:
+      - results/
+  variables:
+    ANTHROPIC_API_KEY: "$ANTHROPIC_API_KEY"</code></pre>
+        </div>
+      </div>
+
+      <div class="tab-panel" id="tab-docker">
+        <div class="code-block">
+          <div class="code-header"><span>Dockerfile</span><button class="copy-btn" onclick="copyCode(this)" data-i18n="copy.btn">Copier</button></div>
+          <pre><code class="language-dockerfile">FROM rust:1.75 AS builder
+WORKDIR /app
+COPY . .
+RUN cargo build --release --bin nevelio
+
+FROM debian:bookworm-slim
+RUN apt-get update && apt-get install -y ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+COPY --from=builder /app/target/release/nevelio /usr/local/bin/nevelio
+ENTRYPOINT ["nevelio"]</code></pre>
+        </div>
+        <div class="code-block">
+          <div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)" data-i18n="copy.btn">Copier</button></div>
+          <pre><code class="language-bash">docker build -t nevelio .
+docker run --rm nevelio scan \
+  --target https://api.example.com \
+  --accept-legal \
+  --no-tui \
+  --no-color</code></pre>
+        </div>
+      </div>
+
+      <div class="tab-panel" id="tab-best">
+        <div class="table-wrap">
+        <table>
+          <thead><tr><th data-i18n="cicd.col.practice">Pratique</th><th data-i18n="cicd.col.why">Pourquoi</th></tr></thead>
+          <tbody>
+            <tr><td><code>--accept-legal</code></td><td data-i18n="cicd.accept-legal.why">Évite le blocage sur prompt interactif</td></tr>
+            <tr><td><code>--no-tui</code></td><td data-i18n="cicd.no-tui.why">Le TUI nécessite un TTY absent en CI</td></tr>
+            <tr><td><code>--no-color</code></td><td data-i18n="cicd.no-color.why">Les codes ANSI polluent les logs CI</td></tr>
+            <tr><td><code>--fail-on high</code></td><td data-i18n="cicd.fail-on.why">Bloque les PRs avec vulnérabilités critiques</td></tr>
+            <tr><td><code>--profile normal</code></td><td data-i18n="cicd.profile.why">Ne pas saturer l'environnement de staging</td></tr>
+            <tr><td><code>ANTHROPIC_API_KEY</code> en secret</td><td data-i18n="cicd.api-key.why">Ne jamais écrire la clé en clair</td></tr>
+            <tr><td><code>--output sarif</code> sur GitHub</td><td data-i18n="cicd.sarif.why">Intégration native GitHub Security</td></tr>
+            <tr><td><code>--output junit</code> sur GitLab</td><td data-i18n="cicd.junit.why">Intégration native des rapports de test</td></tr>
+          </tbody>
+        </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── 12. Scénarios ─────────────────────────────────────────────────── -->
+  <section class="doc-section" id="scenarios">
+    <h2><span class="section-icon">🎯</span> <span data-i18n="scenarios.title">Scénarios pratiques</span></h2>
+
+    <div class="tabs">
+      <div class="tab-list">
+        <button class="tab-btn active" onclick="switchTab(this, 'sc-a')" data-i18n="scenarios.tab.a">A — Express</button>
+        <button class="tab-btn" onclick="switchTab(this, 'sc-b')" data-i18n="scenarios.tab.b">B — Professionnel</button>
+        <button class="tab-btn" onclick="switchTab(this, 'sc-c')" data-i18n="scenarios.tab.c">C — Burp Suite</button>
+        <button class="tab-btn" onclick="switchTab(this, 'sc-d')" data-i18n="scenarios.tab.d">D — IA + multi-format</button>
+        <button class="tab-btn" onclick="switchTab(this, 'sc-e')" data-i18n="scenarios.tab.e">E — Reprise</button>
+        <button class="tab-btn" onclick="switchTab(this, 'sc-f')" data-i18n="scenarios.tab.f">F — GraphQL</button>
+      </div>
+
+      <div class="tab-panel active" id="sc-a">
+        <h3 data-i18n="scenarios.a.title">Audit rapide sans spec OpenAPI</h3>
+        <p data-i18n="scenarios.a.desc">Idéal pour une première prise en main ou une cible sans spec disponible.</p>
+        <div class="code-block"><div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)" data-i18n="copy.btn">Copier</button></div>
+        <pre><code class="language-bash">nevelio init   # crée .nevelio.toml
+# éditer .nevelio.toml selon la cible
+
+nevelio scan --target https://api.example.com \
+             --profile stealth \
+             --accept-legal
+
+open report.html   # macOS
+xdg-open report.html   # Linux</code></pre></div>
+      </div>
+
+      <div class="tab-panel" id="sc-b">
+        <h3 data-i18n="scenarios.b.title">Audit professionnel complet</h3>
+        <div class="code-block"><div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)" data-i18n="copy.btn">Copier</button></div>
+        <pre><code class="language-bash">TOKEN="Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+
+nevelio scan \
+  --target https://staging.api.example.com \
+  --spec ./openapi.yaml \
+  --profile normal \
+  --auth-token "$TOKEN" \
+  --out-dir ./pentest-$(date +%Y%m%d) \
+  --output html \
+  --fail-on high \
+  --accept-legal
+
+open ./pentest-$(date +%Y%m%d)/report.html</code></pre></div>
+      </div>
+
+      <div class="tab-panel" id="sc-c">
+        <h3 data-i18n="scenarios.c.title">Audit avec interception Burp Suite</h3>
+        <div class="code-block"><div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)" data-i18n="copy.btn">Copier</button></div>
+        <pre><code class="language-bash"># Burp Suite en écoute sur 127.0.0.1:8080
+nevelio scan \
+  --target https://api.example.com \
+  --module auth injection \
+  --proxy http://127.0.0.1:8080 \
+  --no-tui \
+  --verbose \
+  --accept-legal
+# Les requêtes apparaissent dans l'historique Burp</code></pre></div>
+      </div>
+
+      <div class="tab-panel" id="sc-d">
+        <h3 data-i18n="scenarios.d.title">Scan avec suggestions IA et multi-format</h3>
+        <div class="code-block"><div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)" data-i18n="copy.btn">Copier</button></div>
+        <pre><code class="language-bash">export ANTHROPIC_API_KEY=sk-ant-api03-...
+
+nevelio scan \
+  --target https://api.example.com \
+  --spec ./openapi.yaml \
+  --ai-suggestions \
+  --out-dir ./results \
+  --accept-legal
+
+# Résultats dans ./results/ :
+# ├── findings.json       (données brutes)
+# ├── report.html         (rapport interactif)
+# └── ai_suggestions.md   (remédiation IA)
+
+# Générer un SARIF en plus
+nevelio convert --input ./results/findings.json \
+                --format sarif \
+                --out-dir ./results</code></pre></div>
+      </div>
+
+      <div class="tab-panel" id="sc-e">
+        <h3 data-i18n="scenarios.e.title">Reprise après interruption</h3>
+        <div class="code-block"><div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)" data-i18n="copy.btn">Copier</button></div>
+        <pre><code class="language-bash"># Scan initial — interrompu par ^C ou crash
+nevelio scan --target https://api.example.com \
+             --spec ./openapi.yaml \
+             --out-dir ./results \
+             --accept-legal
+
+# Reprise — saute les modules déjà complétés
+nevelio scan --target https://api.example.com \
+             --spec ./openapi.yaml \
+             --out-dir ./results \
+             --resume \
+             --accept-legal</code></pre></div>
+      </div>
+
+      <div class="tab-panel" id="sc-f">
+        <h3 data-i18n="scenarios.f.title">Audit d'une API GraphQL</h3>
+        <div class="code-block"><div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)" data-i18n="copy.btn">Copier</button></div>
+        <pre><code class="language-bash">nevelio scan \
+  --target https://api.example.com \
+  --module graphql infra \
+  --auth-token "Bearer $TOKEN" \
+  --verbose \
+  --accept-legal</code></pre></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── i18n ─────────────────────────────────────────────────────────── -->
+  <section class="doc-section" id="i18n">
+    <h2><span class="section-icon">🌐</span> <span data-i18n="i18n.title">Internationalisation</span></h2>
+    <p data-i18n-html="1" data-i18n="i18n.desc">Nevelio supporte <strong>3 langues</strong> — français (<code>fr</code>), anglais (<code>en</code>), espagnol (<code>es</code>).
+    Tous les messages CLI, le TUI, le disclaimer légal, les suggestions IA et le rapport HTML sont traduits automatiquement.</p>
+
+    <h3 data-i18n="i18n.detection">Détection automatique</h3>
+    <p data-i18n="i18n.detection.desc">La langue est résolue dans cet ordre de priorité :</p>
+    <div class="table-wrap">
+    <table>
+      <thead><tr><th data-i18n="i18n.col.priority">Priorité</th><th data-i18n="i18n.col.source">Source</th><th data-i18n="scan.col.example">Exemple</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td data-i18n-html="1" data-i18n="i18n.src.flag">Flag <code>--lang</code></td><td><code>nevelio --lang es scan …</code></td></tr>
+        <tr><td>2</td><td data-i18n-html="1" data-i18n="i18n.src.env">Variable <code>NEVELIO_LANG</code></td><td><code>NEVELIO_LANG=fr nevelio scan …</code></td></tr>
+        <tr><td>3</td><td data-i18n-html="1" data-i18n="i18n.src.sys">Variable système <code>$LANGUAGE</code> / <code>$LANG</code></td><td><code>LANG=fr_FR.UTF-8</code> → <code>fr</code></td></tr>
+        <tr><td>4</td><td data-i18n="i18n.src.default">Défaut</td><td><code>en</code></td></tr>
+      </tbody>
+    </table>
+    </div>
+    <p data-i18n-html="1" data-i18n="i18n.normalize">La normalisation est automatique : <code>fr_FR.UTF-8</code>, <code>fr-FR</code> et <code>fr</code> donnent tous <code>fr</code>.</p>
+
+    <h3 data-i18n="i18n.examples">Exemples</h3>
+    <div class="tab-group">
+      <div class="tab-bar">
+        <button class="tab active" onclick="switchTab(this,'i18n-fr')">🇫🇷 Français</button>
+        <button class="tab" onclick="switchTab(this,'i18n-en')">🇬🇧 English</button>
+        <button class="tab" onclick="switchTab(this,'i18n-es')">🇪🇸 Español</button>
+      </div>
+      <div class="tab-content active" id="i18n-fr">
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)" data-i18n="copy.btn">Copier</button><pre><code class="language-bash">LANG=fr_FR.UTF-8 nevelio scan --target https://api.example.com --dry-run
+# Cible       : https://api.example.com
+# Profil      : Normal
+# Sortie      : .
+#   [mode dry-run — aucune requête réelle envoyée]
+# Résumé  :  0 Critical  0 High  0 Medium  0 Low  0 Informative</code></pre></div>
+      </div>
+      <div class="tab-content" id="i18n-en">
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)" data-i18n="copy.btn">Copier</button><pre><code class="language-bash">nevelio --lang en scan --target https://api.example.com --dry-run
+# Target      : https://api.example.com
+# Profile     : Normal
+# Output      : .
+#   [dry-run mode — no real HTTP requests sent]
+# Summary  :  0 Critical  0 High  0 Medium  0 Low  0 Informative</code></pre></div>
+      </div>
+      <div class="tab-content" id="i18n-es">
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)" data-i18n="copy.btn">Copier</button><pre><code class="language-bash">NEVELIO_LANG=es nevelio scan --target https://api.example.com --dry-run
+# Objetivo    : https://api.example.com
+# Perfil      : Normal
+# Salida      : .
+#   [modo dry-run — no se envían solicitudes HTTP reales]
+# Resumen  :  0 Crítico  0 Alto  0 Medio  0 Bajo  0 Informativo</code></pre></div>
+      </div>
+    </div>
+
+    <h3 data-i18n="i18n.legal-multilang">Disclaimer légal multilingue</h3>
+    <p data-i18n="i18n.legal-multilang.desc">Le texte légal affiché au premier lancement est traduit. La réponse positive varie selon la langue :</p>
+    <div class="table-wrap">
+    <table>
+      <thead><tr><th data-i18n="i18n.col.lang">Langue</th><th data-i18n="i18n.col.answers">Réponses acceptées</th></tr></thead>
+      <tbody>
+        <tr><td data-i18n="i18n.lang.fr">Français</td><td><code>o</code>, <code>oui</code></td></tr>
+        <tr><td data-i18n="i18n.lang.en">Anglais</td><td><code>y</code>, <code>yes</code></td></tr>
+        <tr><td data-i18n="i18n.lang.es">Espagnol</td><td><code>s</code>, <code>sí</code>, <code>si</code></td></tr>
+      </tbody>
+    </table>
+    </div>
+
+    <h3 data-i18n="i18n.html-report">Rapport HTML localisé</h3>
+    <p data-i18n-html="1" data-i18n="i18n.html-report.desc">Le rapport HTML généré (<code>report.html</code>) hérite de la langue du scan.
+    Tous ses labels (Cible / Target / Objetivo, Description, Recommandation…) sont traduits automatiquement.</p>
+
+    <h3 data-i18n="i18n.ai-localized">Suggestions IA localisées</h3>
+    <p data-i18n-html="1" data-i18n="i18n.ai-localized.desc">Avec <code>--ai-suggestions</code>, le prompt envoyé à Claude est rédigé dans la langue sélectionnée — les suggestions reçues sont donc dans la même langue.</p>
+    <div class="code-block"><button class="copy-btn" onclick="copyCode(this)" data-i18n="copy.btn">Copier</button><pre><code class="language-bash">nevelio --lang es scan --target https://api.example.com \
+  --ai-suggestions --accept-legal
+# → Les suggestions IA seront en espagnol</code></pre></div>
+  </section>
+
+  <!-- ── 13. Flags ref ──────────────────────────────────────────────────── -->
+  <section class="doc-section" id="flags-ref">
+    <h2><span class="section-icon">📖</span> <span data-i18n="flags.title">Référence complète des flags</span></h2>
+
+    <h3 data-i18n="flags.scan-h3">nevelio scan</h3>
+    <div class="table-wrap">
+    <table>
+      <thead><tr><th data-i18n="scan.col.flag">Flag</th><th data-i18n="flags.col.type">Type</th><th data-i18n="scan.col.desc">Description</th></tr></thead>
+      <tbody>
+        <tr><td class="flag">--target URL</td><td>string</td><td data-i18n="scan.target.desc">URL de base de l'API</td></tr>
+        <tr><td class="flag">--url URL</td><td>string</td><td data-i18n="scan.url.desc">Alias de --target</td></tr>
+        <tr><td class="flag">--spec FILE|URL</td><td>string</td><td data-i18n="flags.spec.desc">Spec OpenAPI (JSON ou YAML)</td></tr>
+        <tr><td class="flag">--profile PROFIL</td><td>stealth / normal / aggressive</td><td data-i18n="config.profile.desc">Profil de scan</td></tr>
+        <tr><td class="flag">--module MOD...</td><td data-i18n="flags.type.list">liste</td><td data-i18n="flags.module.desc">Modules à exécuter (espace-séparés)</td></tr>
+        <tr><td class="flag">--concurrency N</td><td data-i18n="flags.type.int">entier</td><td data-i18n="config.concurrency.desc">Requêtes simultanées</td></tr>
+        <tr><td class="flag">--rate-limit N</td><td data-i18n="flags.type.int">entier</td><td data-i18n="flags.rate.desc">Requêtes par seconde max</td></tr>
+        <tr><td class="flag">--timeout S</td><td data-i18n="flags.type.seconds">secondes</td><td data-i18n="flags.timeout.desc">Timeout par requête</td></tr>
+        <tr><td class="flag">--auth-token TOKEN</td><td>string</td><td data-i18n="config.auth.desc">Header Authorization complet</td></tr>
+        <tr><td class="flag">--proxy URL</td><td>URL</td><td data-i18n="flags.proxy.desc">Proxy HTTP</td></tr>
+        <tr><td class="flag">--output FORMAT</td><td>json / html / markdown / junit / sarif</td><td data-i18n="flags.output.desc">Format de sortie (défaut: html)</td></tr>
+        <tr><td class="flag">--out-dir PATH</td><td data-i18n="flags.type.path">chemin</td><td data-i18n="config.outdir.desc">Répertoire de sortie</td></tr>
+        <tr><td class="flag">--fail-on SEV</td><td>none / low / medium / high / critical</td><td data-i18n="config.failon.desc">Seuil d'échec CI</td></tr>
+        <tr><td class="flag">--resume</td><td data-i18n="flags.type.bool">booléen</td><td data-i18n="mode.resume.desc">Reprendre un scan interrompu</td></tr>
+        <tr><td class="flag">--dry-run</td><td data-i18n="flags.type.bool">booléen</td><td data-i18n="mode.dryrun.desc">Simuler sans requêtes réelles</td></tr>
+        <tr><td class="flag">--no-tui</td><td data-i18n="flags.type.bool">booléen</td><td data-i18n="flags.notui.desc">Désactiver le TUI dashboard</td></tr>
+        <tr><td class="flag">--ai-suggestions</td><td data-i18n="flags.type.bool">booléen</td><td data-i18n="flags.ai.desc">Suggestions IA (ANTHROPIC_API_KEY requis)</td></tr>
+      </tbody>
+    </table>
+    </div>
+
+    <h3 data-i18n="flags.global-h3">Flags globaux (toutes commandes)</h3>
+    <div class="table-wrap">
+    <table>
+      <thead><tr><th data-i18n="scan.col.flag">Flag</th><th data-i18n="scan.col.desc">Description</th></tr></thead>
+      <tbody>
+        <tr><td class="flag">--verbose</td><td data-i18n="mode.verbose.desc">Logs détaillés et requêtes HTTP</td></tr>
+        <tr><td class="flag">--accept-legal</td><td data-i18n="mode.acceptlegal.desc">Accepter le disclaimer sans prompt</td></tr>
+        <tr><td class="flag">--no-color</td><td data-i18n="mode.nocolor.desc">Désactiver les couleurs ANSI</td></tr>
+        <tr><td class="flag">--lang LANG</td><td data-i18n-html="1" data-i18n="flags.lang.desc">Langue : <code>fr</code> | <code>en</code> | <code>es</code> (détection auto via <code>$LANG</code> si absent)</td></tr>
+      </tbody>
+    </table>
+    </div>
+
+    <h3 data-i18n="flags.report-h3">nevelio report / convert</h3>
+    <div class="table-wrap">
+    <table>
+      <thead><tr><th data-i18n="scan.col.flag">Flag</th><th data-i18n="report.col.required">Requis</th><th data-i18n="config.col.default">Défaut</th><th data-i18n="scan.col.desc">Description</th></tr></thead>
+      <tbody>
+        <tr><td class="flag">--input FILE</td><td data-i18n="report.yes">Oui</td><td>—</td><td data-i18n="flags.input.desc">Fichier findings.json source</td></tr>
+        <tr><td class="flag">--format FORMAT</td><td data-i18n="report.no">Non</td><td>html</td><td data-i18n="report.format.desc">Format cible</td></tr>
+        <tr><td class="flag">--out-dir PATH</td><td data-i18n="report.no">Non</td><td>.</td><td data-i18n="config.outdir.desc">Répertoire de sortie</td></tr>
+      </tbody>
+    </table>
+    </div>
+
+    <h3 data-i18n="flags.env-h3">Variables d'environnement</h3>
+    <div class="table-wrap">
+    <table>
+      <thead><tr><th data-i18n="flags.col.variable">Variable</th><th data-i18n="scan.col.desc">Description</th></tr></thead>
+      <tbody>
+        <tr><td class="flag">ANTHROPIC_API_KEY</td><td data-i18n="flags.anthropic-key.desc">Clé API Claude (requis pour --ai-suggestions)</td></tr>
+        <tr><td class="flag">NEVELIO_LANG</td><td data-i18n-html="1" data-i18n="flags.nevelio-lang.desc">Forcer la langue sans flag (<code>fr</code> / <code>en</code> / <code>es</code>). Prioritaire sur <code>$LANG</code>.</td></tr>
+      </tbody>
+    </table>
+    </div>
+  </section>
+
+</div><!-- .content -->
+
+<footer class="footer">
+  <span data-i18n="footer.text">Nevelio v0.1 — API Security Scanner — Usage autorisé uniquement</span>
+</footer>
+</main>
+
+<!-- ── Scripts ─────────────────────────────────────────────────────────── -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="script.js"></script>
+</body>
+</html>

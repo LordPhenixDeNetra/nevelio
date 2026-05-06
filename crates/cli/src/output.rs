@@ -1,5 +1,6 @@
 use colored::Colorize;
 use nevelio_core::types::{Finding, Severity};
+use rust_i18n::t;
 
 pub fn print_finding(finding: &Finding) {
     let badge = match finding.severity {
@@ -26,11 +27,14 @@ pub fn print_summary(findings: &[Finding]) {
 
     println!("{}", "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━".cyan());
     println!(
-        "Résumé  :  {}  {}  {}  {}  {}",
-        format!("{} Critical", critical).red().bold(),
-        format!("{} High", high).bright_red(),
-        format!("{} Medium", medium).yellow(),
-        format!("{} Low", low).blue(),
-        format!("{} Informative", informative).white(),
+        "{}",
+        t!(
+            "scan.summary",
+            c = critical,
+            h = high,
+            m = medium,
+            l = low,
+            i = informative
+        )
     );
 }

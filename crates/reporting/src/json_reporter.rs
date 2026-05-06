@@ -22,6 +22,7 @@ impl JsonReporter {
             profile: format!("{:?}", session.config.profile).to_lowercase(),
             summary: ReportSummary::from_findings(&session.findings),
             findings: session.findings.clone(),
+            locale: session.config.locale.clone(),
         }
     }
 

@@ -1,5 +1,6 @@
 category: idor
 description: "Stratégies de détection IDOR pour IDs numériques et UUIDs"
+
 strategies:
   - type: numeric_sequential
     description: "Tester les IDs adjacents (id+1, id-1)"
@@ -15,3 +16,43 @@ detection_signals:
   - "status_200_different_body"
   - "status_200_when_403_expected"
   - "different_user_data_in_response"
+
+# Paths d'administration à tester pour la privilege escalation verticale
+admin_paths:
+  - "/admin"
+  - "/admin/users"
+  - "/admin/settings"
+  - "/internal"
+  - "/internal/config"
+  - "/management"
+  - "/superadmin"
+  - "/api/admin"
+  - "/api/v1/admin"
+  - "/api/v2/admin"
+  - "/dashboard/admin"
+  - "/console"
+  - "/actuator"
+  - "/actuator/env"
+
+# Champs extra à injecter pour le mass assignment
+mass_assignment_fields:
+  - field: "isAdmin"
+    value: true
+  - field: "is_admin"
+    value: true
+  - field: "admin"
+    value: true
+  - field: "role"
+    value: "admin"
+  - field: "roles"
+    value: ["admin"]
+  - field: "verified"
+    value: true
+  - field: "premium"
+    value: true
+  - field: "permissions"
+    value: ["*"]
+  - field: "group"
+    value: "admin"
+  - field: "level"
+    value: 99
