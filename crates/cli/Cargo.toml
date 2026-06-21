@@ -41,3 +41,20 @@ ratatui.workspace            = true
 crossterm.workspace          = true
 reqwest.workspace            = true
 rust-i18n.workspace          = true
+
+[package.metadata.deb]
+name                 = "nevelio"
+maintainer           = "Nevelio Contributors"
+copyright            = "2024, Nevelio Contributors"
+license-file         = ["LICENSE", "0"]
+extended-description = """\
+Fast, modular API security scanner for REST and GraphQL APIs. \
+Detects vulnerabilities from an OpenAPI spec or a bare URL and \
+produces actionable reports (JSON, HTML, Markdown, JUnit XML, SARIF)."""
+depends              = "$auto"
+section              = "utils"
+priority             = "optional"
+assets               = [
+  ["target/release/nevelio", "usr/bin/nevelio", "755"],
+  ["README.md",              "usr/share/doc/nevelio/README.md", "644"],
+]

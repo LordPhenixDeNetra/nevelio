@@ -28,6 +28,32 @@ and produces actionable reports in JSON, HTML, Markdown, JUnit XML and SARIF for
 
 ## Installation
 
+### Debian / Ubuntu — apt
+
+> Requires GitHub Pages enabled on the `apt` branch of the repository.
+
+```bash
+# 1. Add the GPG signing key
+curl -fsSL https://lordphenixdenetra.github.io/nevelio/KEY.gpg \
+  | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/nevelio.gpg
+
+# 2. Add the repository
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/trusted.gpg.d/nevelio.gpg] \
+  https://lordphenixdenetra.github.io/nevelio stable main" \
+  | sudo tee /etc/apt/sources.list.d/nevelio.list
+
+# 3. Install
+sudo apt update && sudo apt install nevelio
+```
+
+Or install directly from a `.deb` file (no repo needed):
+
+```bash
+ARCH=$(dpkg --print-architecture)  # amd64 or arm64
+curl -LO https://github.com/LordPhenixDeNetra/nevelio/releases/latest/download/nevelio_latest_${ARCH}.deb
+sudo dpkg -i nevelio_latest_${ARCH}.deb
+```
+
 ### macOS and Linux — Homebrew
 
 ```bash
