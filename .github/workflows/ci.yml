@@ -3,6 +3,8 @@ name: CI
 on:
   push:
     branches: [main]
+    tags-ignore:
+      - 'v[0-9]+.*'   # les tags versionnés sont gérés par release.yml
   pull_request:
 
 env:

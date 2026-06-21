@@ -1,22 +1,30 @@
 [package]
-name    = "nevelio"
-version.workspace = true
-edition.workspace = true
+name              = "nevelio"
+version.workspace     = true
+edition.workspace     = true
+authors.workspace     = true
+license.workspace     = true
+description.workspace = true
+homepage.workspace    = true
+repository.workspace  = true
+keywords.workspace    = true
+categories.workspace  = true
+readme.workspace      = true
 
 [[bin]]
 name = "nevelio"
 path = "src/main.rs"
 
 [dependencies]
-nevelio-core                  = { path = "../core" }
-nevelio-recon                 = { path = "../recon" }
-nevelio-reporting             = { path = "../reporting" }
-nevelio-module-auth           = { path = "../modules/auth" }
-nevelio-module-injection      = { path = "../modules/injection" }
-nevelio-module-access-control = { path = "../modules/access-control" }
-nevelio-module-business-logic = { path = "../modules/business-logic" }
-nevelio-module-graphql        = { path = "../modules/graphql" }
-nevelio-module-infra          = { path = "../modules/infra" }
+nevelio-core                  = { path = "../core",                  version = "0.1" }
+nevelio-recon                 = { path = "../recon",                 version = "0.1" }
+nevelio-reporting             = { path = "../reporting",             version = "0.1" }
+nevelio-module-auth           = { path = "../modules/auth",          version = "0.1" }
+nevelio-module-injection      = { path = "../modules/injection",     version = "0.1" }
+nevelio-module-access-control = { path = "../modules/access-control",version = "0.1" }
+nevelio-module-business-logic = { path = "../modules/business-logic",version = "0.1" }
+nevelio-module-graphql        = { path = "../modules/graphql",       version = "0.1" }
+nevelio-module-infra          = { path = "../modules/infra",         version = "0.1" }
 
 clap.workspace               = true
 tokio.workspace              = true

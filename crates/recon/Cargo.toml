@@ -1,10 +1,18 @@
 [package]
-name    = "nevelio-recon"
-version.workspace = true
-edition.workspace = true
+name              = "nevelio-recon"
+version.workspace     = true
+edition.workspace     = true
+authors.workspace     = true
+license.workspace     = true
+description           = "OpenAPI parser and endpoint discovery for the Nevelio API security scanner"
+homepage.workspace    = true
+repository.workspace  = true
+keywords.workspace    = true
+categories.workspace  = true
+readme.workspace      = true
 
 [dependencies]
-nevelio-core          = { path = "../core" }
+nevelio-core          = { path = "../core", version = "0.1" }
 anyhow.workspace      = true
 thiserror.workspace   = true
 tracing.workspace     = true

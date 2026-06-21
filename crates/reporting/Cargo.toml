@@ -1,10 +1,18 @@
 [package]
-name    = "nevelio-reporting"
-version.workspace = true
-edition.workspace = true
+name              = "nevelio-reporting"
+version.workspace     = true
+edition.workspace     = true
+authors.workspace     = true
+license.workspace     = true
+description           = "HTML, Markdown, JUnit and SARIF reporters for the Nevelio API security scanner"
+homepage.workspace    = true
+repository.workspace  = true
+keywords.workspace    = true
+categories.workspace  = true
+readme.workspace      = true
 
 [dependencies]
-nevelio-core         = { path = "../core" }
+nevelio-core         = { path = "../core", version = "0.1" }
 serde.workspace      = true
 serde_json.workspace = true
 tera.workspace       = true

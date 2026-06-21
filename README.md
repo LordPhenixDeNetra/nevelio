@@ -1,11 +1,15 @@
 # Nevelio — API Penetration Testing Tool
 
+[![CI](https://github.com/LordPhenixDeNetra/nevelio/actions/workflows/ci.yml/badge.svg)](https://github.com/LordPhenixDeNetra/nevelio/actions/workflows/ci.yml)
+[![Release](https://github.com/LordPhenixDeNetra/nevelio/actions/workflows/release.yml/badge.svg)](https://github.com/LordPhenixDeNetra/nevelio/releases/latest)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 > **LEGAL NOTICE** — Use Nevelio only on systems you own or have explicit written
 > authorization to test. Unauthorized use is illegal. See [Legal](#legal).
 
 Nevelio is a fast, modular API security scanner written in Rust. It detects
-vulnerabilities in REST APIs from an OpenAPI spec or a bare URL, and produces
-actionable reports in JSON, HTML, Markdown, and JUnit XML formats.
+vulnerabilities in REST and GraphQL APIs from an OpenAPI spec or a bare URL,
+and produces actionable reports in JSON, HTML, Markdown, JUnit XML and SARIF formats.
 
 ---
 
@@ -16,44 +20,84 @@ actionable reports in JSON, HTML, Markdown, and JUnit XML formats.
 | `auth` | JWT alg:none bypass, weak secrets, claims manipulation, missing auth, Basic Auth brute force |
 | `injection` | SQLi (boolean/time/union/error), NoSQLi (MongoDB operators), SSTI, Command Injection |
 | `access-control` | IDOR (numeric + UUID), BFLA, vertical privilege escalation, mass assignment |
+| `graphql` | Introspection exposure, field suggestions, depth-based DoS |
 | `business-logic` | Rate limit bypass (XFF/UA rotation), race conditions, negative values, price manipulation |
-| `infra` | CORS, HSTS, CSP, TLS/HTTP, cookie flags, Referrer-Policy, secrets in responses, stack traces, debug endpoints |
+| `infra` | CORS, HSTS, CSP, TLS, cookie flags, secrets in responses, stack traces, 20+ debug endpoints |
 
 ---
 
 ## Installation
 
-### From source
+### macOS and Linux — Homebrew
 
 ```bash
-git clone https://github.com/your-org/nevelio.git
-cd nevelio
-cargo build --release
-cp target/release/nevelio /usr/local/bin/
+brew tap LordPhenixDeNetra/nevelio
+brew install nevelio
+```
+
+### Windows — winget
+
+```powershell
+winget install LordPhenixDeNetra.nevelio
+```
+
+### Linux / macOS — Script universel
+
+```bash
+curl --proto '=https' --tlsv1.2 -LsSf \
+  https://github.com/LordPhenixDeNetra/nevelio/releases/latest/download/nevelio-installer.sh \
+  | sh
+```
+
+### Windows — PowerShell
+
+```powershell
+irm https://github.com/LordPhenixDeNetra/nevelio/releases/latest/download/nevelio-installer.ps1 | iex
 ```
 
 ### Docker
 
 ```bash
-docker pull nevelio/nevelio:latest
+docker pull lordphenixdenetra/nevelio:latest
+docker run --rm lordphenixdenetra/nevelio:latest --version
+```
 
-# or build locally
-docker build -t nevelio/nevelio:dev .
+### Binaires pré-compilés (GitHub Releases)
+
+Téléchargez l'archive correspondant à votre plateforme depuis la
+[page Releases](https://github.com/LordPhenixDeNetra/nevelio/releases/latest) :
+
+| Plateforme | Archive |
+|---|---|
+| Linux x86_64 (musl) | `nevelio-vX.Y.Z-x86_64-unknown-linux-musl.tar.gz` |
+| Linux ARM64 (musl) | `nevelio-vX.Y.Z-aarch64-unknown-linux-musl.tar.gz` |
+| macOS Intel | `nevelio-vX.Y.Z-x86_64-apple-darwin.tar.gz` |
+| macOS Apple Silicon | `nevelio-vX.Y.Z-aarch64-apple-darwin.tar.gz` |
+| Windows x86_64 | `nevelio-vX.Y.Z-x86_64-pc-windows-msvc.zip` |
+
+### Depuis les sources (Rust requis ≥ 1.75)
+
+```bash
+git clone https://github.com/LordPhenixDeNetra/nevelio.git
+cd nevelio
+cargo build --release
+cp target/release/nevelio /usr/local/bin/   # Linux/macOS
 ```
 
 ---
 
 ## Usage
 
-### Accept the legal disclaimer
+### Disclaimer légal (premier lancement)
 
-All commands require `--accept-legal` (or interactive confirmation on first run):
+Au premier scan, Nevelio affiche un avertissement et demande confirmation.
+Pour CI/CD, utilisez `--accept-legal` ou la variable `NEVELIO_ACCEPT_LEGAL=1` :
 
 ```bash
-nevelio --accept-legal <subcommand>
+nevelio --accept-legal scan --url https://api.example.com --dry-run
 ```
 
-### Scan from an OpenAPI spec
+### Scan depuis une spec OpenAPI
 
 ```bash
 nevelio --accept-legal scan \
@@ -63,16 +107,15 @@ nevelio --accept-legal scan \
   --out-dir ./reports
 ```
 
-### Scan from a URL (auto-discovery)
+### Scan sans spec (auto-discovery)
 
 ```bash
 nevelio --accept-legal scan \
   --url https://api.example.com \
-  --module auth \
-  --module injection
+  --module auth injection
 ```
 
-### Authenticated scan
+### Scan authentifié
 
 ```bash
 nevelio --accept-legal scan \
@@ -80,7 +123,7 @@ nevelio --accept-legal scan \
   --auth-token "Bearer eyJhbGci..."
 ```
 
-### Via a proxy (Burp Suite)
+### Via un proxy (Burp Suite)
 
 ```bash
 nevelio --accept-legal scan \
@@ -88,19 +131,19 @@ nevelio --accept-legal scan \
   --proxy http://127.0.0.1:8080
 ```
 
-### Dry-run (no real HTTP requests)
+### Dry-run (aucune requête réelle)
 
 ```bash
 nevelio --accept-legal scan --url https://api.example.com --dry-run
 ```
 
-### Docker usage
+### Via Docker
 
 ```bash
 docker run --rm \
   -v $(pwd)/openapi.yaml:/spec.yaml \
   -v $(pwd)/reports:/reports \
-  nevelio/nevelio:latest \
+  lordphenixdenetra/nevelio:latest \
   --accept-legal scan \
   --spec /spec.yaml \
   --target https://staging.api.example.com \
@@ -110,55 +153,93 @@ docker run --rm \
 
 ---
 
+## Internationalisation (`--lang`)
+
+Nevelio supporte **3 langues** — français (`fr`), anglais (`en`), espagnol (`es`).
+
+```bash
+nevelio --lang en scan --url https://api.example.com --accept-legal
+nevelio --lang es scan --url https://api.example.com --accept-legal
+NEVELIO_LANG=fr nevelio scan --url https://api.example.com --accept-legal
+```
+
+Priorité de détection : `--lang` > `NEVELIO_LANG` > `$LANG` > anglais par défaut.
+
+---
+
 ## CLI Reference
+
+### Global flags
+
+| Flag | Description |
+|---|---|
+| `--accept-legal` | Accepter le disclaimer sans prompt interactif |
+| `--lang <LANG>` | Langue : `fr` / `en` / `es` |
+| `--verbose` | Logs détaillés et requêtes HTTP |
+| `--no-color` | Désactiver les couleurs ANSI |
 
 ### `scan`
 
 | Flag | Default | Description |
 |---|---|---|
-| `--url <URL>` | — | Base URL of the target API |
-| `--spec <SPEC>` | — | Path or URL to an OpenAPI/Swagger spec |
-| `--target <URL>` | — | Alias for `--url` when used with `--spec` |
+| `--url <URL>` | — | URL de base de l'API cible |
+| `--target <URL>` | — | Alias de `--url` |
+| `--spec <SPEC>` | — | Fichier ou URL OpenAPI/Swagger (JSON ou YAML) |
 | `--profile` | `normal` | `stealth` / `normal` / `aggressive` |
-| `--module <NAME>` | all | Restrict to specific module(s) |
-| `--output <FORMAT>` | `json` | `json` / `html` / `markdown` / `junit` |
-| `--out-dir <PATH>` | `.` | Directory for output files |
-| `--auth-token <TOKEN>` | — | `Bearer <jwt>` or `Basic <b64>` |
-| `--proxy <URL>` | — | HTTP/S proxy (e.g. Burp Suite) |
-| `--concurrency <N>` | profile | Override max concurrent requests |
-| `--rate-limit <N>` | profile | Override requests per second |
-| `--timeout <SECS>` | `5` | Request timeout in seconds |
-| `--dry-run` | false | Simulate without real requests |
-| `--verbose` | false | Enable debug logging |
+| `--module <NAME>` | tous | Restreindre à un ou plusieurs modules |
+| `--output <FORMAT>` | `html` | `json` / `html` / `markdown` / `junit` / `sarif` |
+| `--out-dir <PATH>` | `.` | Répertoire de sortie |
+| `--auth-token <TOKEN>` | — | Header Authorization complet |
+| `--proxy <URL>` | — | Proxy HTTP/S |
+| `--concurrency <N>` | profil | Requêtes simultanées |
+| `--rate-limit <N>` | profil | Requêtes par seconde |
+| `--timeout <SECS>` | `10` | Timeout par requête |
+| `--fail-on <SEV>` | — | Seuil CI : `none` / `low` / `medium` / `high` / `critical` |
+| `--dry-run` | false | Simuler sans requêtes réelles |
+| `--resume` | false | Reprendre un scan interrompu |
+| `--no-tui` | false | Désactiver le dashboard TUI |
+| `--ai-suggestions` | false | Suggestions IA (nécessite `ANTHROPIC_API_KEY`) |
 
-### `report`
+### `report` / `convert`
 
-Re-generate a report from an existing `findings.json`:
+Re-génère un rapport depuis un `findings.json` existant, sans relancer le scan :
 
 ```bash
 nevelio --accept-legal report \
   --input findings.json \
-  --format html \
-  --out-dir ./reports
+  --format sarif \
+  --out-dir ./security
 ```
 
 ### `modules`
 
 ```bash
-nevelio --accept-legal modules list
-nevelio --accept-legal modules show auth
+nevelio modules list
+nevelio modules show auth
+nevelio modules show injection
 ```
 
 ---
 
-## Output Formats
+## Profils de scan
 
-| Format | File | Use case |
+| Profil | Concurrence | Rate limit | Usage recommandé |
+|---|---|---|---|
+| `stealth` | 1 | 2 req/s | Production sensible |
+| `normal` | 5 | 10 req/s | Staging (défaut) |
+| `aggressive` | 20 | 50 req/s | Lab / environnement dédié |
+
+---
+
+## Formats de sortie
+
+| Format | Fichier | Usage |
 |---|---|---|
-| `json` | `findings.json` | Machine-readable, SIEM/Jira ingestion |
-| `html` | `report.html` | Interactive report with severity filters |
-| `markdown` | `report.md` | GitHub PRs, wikis |
-| `junit` | `security-report.xml` | GitHub Actions / GitLab CI / Jenkins |
+| `json` | `findings.json` | Source canonique, SIEM, Jira |
+| `html` | `report.html` | Rapport interactif avec filtres et thème |
+| `markdown` | `report.md` | PRs GitHub, wikis, Confluence |
+| `junit` | `report.xml` | GitHub Actions, GitLab CI, Jenkins |
+| `sarif` | `report.sarif` | GitHub Advanced Security, CodeQL |
 
 ---
 
@@ -166,55 +247,69 @@ nevelio --accept-legal modules show auth
 
 ### Exit codes
 
-| Code | Meaning | Pipeline behavior |
-|---|---|---|
-| `0` | No findings | Continue |
-| `1` | Low / Medium findings | Continue (warning) |
-| `2` | High findings | Configurable fail |
-| `3` | Critical findings | Automatic fail |
+| Code | Signification |
+|---|---|
+| `0` | Aucun finding (ou sous le seuil `--fail-on`) |
+| `1` | Findings au-dessus du seuil |
 
 ### GitHub Actions
 
-Copy [`.github/workflows/security-scan.yml`](.github/workflows/security-scan.yml)
-into your project and set these secrets:
+```yaml
+- name: Run API Security Scan
+  run: |
+    nevelio scan \
+      --target ${{ vars.API_STAGING_URL }} \
+      --spec openapi.yaml \
+      --output sarif \
+      --out-dir sarif-results \
+      --fail-on high \
+      --accept-legal \
+      --no-tui \
+      --no-color
 
-- `API_STAGING_URL` — base URL of your staging API
-- `API_TOKEN` — authentication token (optional)
+- name: Upload SARIF to GitHub Security
+  uses: github/codeql-action/upload-sarif@v3
+  if: always()
+  with:
+    sarif_file: sarif-results/report.sarif
+```
+
+Voir le workflow complet : [`.github/workflows/security-scan.yml`](.github/workflows/security-scan.yml)
 
 ### GitLab CI
 
-Copy [`.gitlab-ci.yml`](.gitlab-ci.yml) and set CI/CD variables:
-`API_STAGING_URL`, `API_TOKEN`.
+```yaml
+api-security-scan:
+  stage: test
+  image: lordphenixdenetra/nevelio:latest
+  script:
+    - nevelio scan --target "$API_STAGING_URL" --spec openapi.yaml
+        --output junit --out-dir results --fail-on high
+        --accept-legal --no-tui --no-color
+  artifacts:
+    reports:
+      junit: results/report.xml
+```
 
 ---
 
-## Scan Profiles
+## Environnements de test
 
-| Profile | Concurrency | Rate limit |
-|---|---|---|
-| `stealth` | 5 | 10 req/s |
-| `normal` | 20 | 50 req/s |
-| `aggressive` | 100 | 200 req/s |
-
----
-
-## Test Environments
-
-Start vulnerable test targets locally:
+Démarrez des cibles vulnérables localement :
 
 ```bash
 docker compose up -d
 ```
 
-| Target | URL | Description |
+| Cible | URL | Description |
 |---|---|---|
-| OWASP Juice Shop | http://localhost:3000 | Rich vulnerable Node.js API |
-| VAmPI | http://localhost:5000 | Vulnerable REST API (OWASP) |
-| DVWA | http://localhost:8080 | PHP vulnerable web application |
-
-Example scan against Juice Shop:
+| OWASP Juice Shop | http://localhost:3000 | API Node.js riche en vulnérabilités |
+| VAmPI | http://localhost:5000 | REST API vulnérable (OWASP API Top 10) |
+| DVWA | http://localhost:8080 | Application PHP vulnérable |
+| crAPI | http://localhost:8888 | API automobile vulnérable (OWASP) |
 
 ```bash
+# Exemple de scan contre Juice Shop
 nevelio --accept-legal scan \
   --url http://localhost:3000 \
   --profile aggressive \
@@ -224,7 +319,7 @@ nevelio --accept-legal scan \
 
 ---
 
-## Development
+## Développement
 
 ```bash
 # Build
@@ -247,17 +342,19 @@ cargo fmt --all
 ```
 nevelio/
 ├── crates/
-│   ├── cli/               # Entry point, CLI (clap), commands
-│   ├── core/              # Types, session, HttpClient, AttackModule trait
+│   ├── cli/                # Point d'entrée, CLI (clap), commandes
+│   ├── core/               # Types, session, HttpClient, trait AttackModule
 │   ├── modules/
-│   │   ├── auth/          # JWT, Basic Auth, missing authentication
-│   │   ├── injection/     # SQLi, NoSQLi, SSTI, Command Injection
-│   │   ├── access-control/# IDOR, BFLA, privilege escalation, mass assignment
-│   │   ├── business-logic/# Rate limit, race conditions, price manipulation
-│   │   └── infra/         # Headers, TLS, cookies, secrets, debug endpoints
-│   ├── recon/             # OpenAPI parser, endpoint crawler, header analyzer
-│   └── reporting/         # JSON, HTML (Tera), Markdown, JUnit reporters
-└── payloads/              # YAML payload libraries (sqli, jwt, idor)
+│   │   ├── auth/           # JWT, Basic Auth, authentification manquante
+│   │   ├── injection/      # SQLi, NoSQLi, SSTI, Command Injection
+│   │   ├── access-control/ # IDOR, BFLA, élévation de privilèges, mass assignment
+│   │   ├── graphql/        # Introspection, field suggestions, depth DoS
+│   │   ├── business-logic/ # Rate limit, race conditions, manipulation de prix
+│   │   └── infra/          # Headers, TLS, cookies, secrets, debug endpoints
+│   ├── recon/              # Parseur OpenAPI, crawleur d'endpoints
+│   └── reporting/          # Reporters JSON, HTML (Tera), Markdown, JUnit, SARIF
+├── docs/                   # Documentation web (index.html, style.css, script.js)
+└── payloads/               # Bibliothèques de payloads YAML (sqli, jwt, idor)
 ```
 
 ---
@@ -267,10 +364,9 @@ nevelio/
 > Nevelio is intended exclusively for security testing on systems you own or
 > have explicit written authorization to test.
 
-1. You must have written authorization from the system owner before scanning.
-2. Do not use on production systems without a formal pentest agreement.
-3. Any vulnerability discovered on third-party systems must be reported
-   via Responsible Disclosure.
-4. The authors accept no liability for unauthorized use.
+1. Vous devez disposer d'une **autorisation écrite** du propriétaire du système avant tout scan.
+2. Ne pas utiliser sur des systèmes de production sans accord formel de pentest.
+3. Toute vulnérabilité découverte sur un système tiers doit être signalée via une **Responsible Disclosure**.
+4. Les auteurs déclinent toute responsabilité en cas d'utilisation non autorisée.
 
-**References:** CFAA (US), Computer Misuse Act (UK), Directive NIS2 (EU).
+**Références légales :** CFAA (US), Computer Misuse Act (UK), Directive NIS2 (EU), LCEN (FR).

@@ -14,10 +14,31 @@ members = [
 resolver = "2"
 
 [workspace.package]
-version = "0.1.0"
-edition = "2021"
-authors = ["Nevelio Contributors"]
-license = "MIT"
+version       = "0.1.0"
+edition       = "2021"
+authors       = ["Nevelio Contributors"]
+license       = "MIT"
+description   = "REST & GraphQL API penetration testing tool written in Rust"
+homepage      = "https://github.com/LordPhenixDeNetra/nevelio"
+repository    = "https://github.com/LordPhenixDeNetra/nevelio"
+documentation = "https://lordphenixdenetra.github.io/nevelio"
+keywords      = ["security", "pentest", "api", "scanner", "cli"]
+categories    = ["command-line-utilities", "development-tools"]
+readme        = "README.md"
+
+[workspace.metadata.dist]
+cargo-dist-version = "0.22.1"
+ci                 = ["github"]
+installers         = ["shell", "powershell", "homebrew"]
+tap                = "LordPhenixDeNetra/homebrew-nevelio"
+targets            = [
+  "x86_64-unknown-linux-musl",
+  "aarch64-unknown-linux-musl",
+  "x86_64-apple-darwin",
+  "aarch64-apple-darwin",
+  "x86_64-pc-windows-msvc",
+]
+pr-run-mode = "plan"
 
 [workspace.dependencies]
 tokio              = { version = "1",    features = ["full"] }

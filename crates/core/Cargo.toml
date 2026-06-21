@@ -1,7 +1,15 @@
 [package]
-name    = "nevelio-core"
-version.workspace = true
-edition.workspace = true
+name              = "nevelio-core"
+version.workspace     = true
+edition.workspace     = true
+authors.workspace     = true
+license.workspace     = true
+description           = "Core types and HTTP client for the Nevelio API security scanner"
+homepage.workspace    = true
+repository.workspace  = true
+keywords.workspace    = true
+categories.workspace  = true
+readme.workspace      = true
 
 [dependencies]
 tokio.workspace       = true
