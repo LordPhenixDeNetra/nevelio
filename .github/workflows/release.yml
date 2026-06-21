@@ -208,10 +208,60 @@ jobs:
           name: deb-${{ matrix.arch }}
           path: dist/nevelio_${{ github.ref_name }}_${{ matrix.arch }}.deb
 
-  # ── 6. Publish GitHub Release ──────────────────────────────────────────────
+  # ── 6. Build .rpm packages ─────────────────────────────────────────────────
+  build-rpm:
+    name: Build .rpm (${{ matrix.arch }})
+    needs: plan
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - arch: x86_64
+            target: x86_64-unknown-linux-gnu
+            cross: false
+          - arch: aarch64
+            target: aarch64-unknown-linux-gnu
+            cross: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Install cross
+        if: ${{ matrix.cross }}
+        run: cargo install cross --git https://github.com/cross-rs/cross
+
+      - name: Install cargo-generate-rpm
+        run: cargo install cargo-generate-rpm
+
+      - name: Build binary (native)
+        if: ${{ !matrix.cross }}
+        run: cargo build --release --target ${{ matrix.target }} -p nevelio
+
+      - name: Build binary (cross)
+        if: ${{ matrix.cross }}
+        run: cross build --release --target ${{ matrix.target }} -p nevelio
+
+      - name: Package .rpm
+        run: |
+          mkdir -p dist
+          cargo generate-rpm -p nevelio --target ${{ matrix.target }}
+          find target -name "*.rpm" -exec cp {} \
+            "dist/nevelio_${{ github.ref_name }}_${{ matrix.arch }}.rpm" \;
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rpm-${{ matrix.arch }}
+          path: dist/nevelio_${{ github.ref_name }}_${{ matrix.arch }}.rpm
+
+  # ── 7. Publish GitHub Release ──────────────────────────────────────────────
   publish:
     name: Publish GitHub Release
-    needs: [build-linux, build-macos, build-windows, build-deb]
+    needs: [build-linux, build-macos, build-windows, build-deb, build-rpm]
     runs-on: ubuntu-latest
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -232,8 +282,9 @@ jobs:
             dist/*.tar.gz
             dist/*.zip
             dist/*.deb
+            dist/*.rpm
 
-  # ── 7. Docker Hub ──────────────────────────────────────────────────────────
+  # ── 8. Docker Hub ──────────────────────────────────────────────────────────
   publish-docker:
     name: Publish Docker Hub
     needs: publish
@@ -260,7 +311,7 @@ jobs:
             lordphenixdenetra/nevelio:${{ github.ref_name }}
             lordphenixdenetra/nevelio:latest
 
-  # ── 8. Homebrew tap update ──────────────────────────────────────────────────
+  # ── 9. Homebrew tap update ──────────────────────────────────────────────────
   publish-homebrew:
     name: Update Homebrew tap
     needs: publish
@@ -281,10 +332,10 @@ jobs:
           cargo dist generate --tag ${{ github.ref_name }}
           # cargo-dist génère et pousse automatiquement la formule dans le tap
 
-  # ── 9. apt repository (GitHub Pages, branche apt) ─────────────────────────
-  publish-apt:
-    name: Publish apt repository
-    needs: [publish, build-deb]
+  # ── 10. Package repository apt + yum/dnf (GitHub Pages, branche packages) ──
+  publish-packages:
+    name: Publish apt + yum/dnf repository
+    needs: [publish, build-deb, build-rpm]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -298,11 +349,18 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           pattern: deb-*
-          path: /tmp/incoming
+          path: /tmp/deb
           merge-multiple: true
 
-      - name: Install apt tools
-        run: sudo apt-get install -y dpkg-dev apt-utils
+      - name: Download .rpm packages
+        uses: actions/download-artifact@v4
+        with:
+          pattern: rpm-*
+          path: /tmp/rpm
+          merge-multiple: true
+
+      - name: Install tools
+        run: sudo apt-get install -y dpkg-dev apt-utils createrepo-c
 
       - name: Import GPG signing key
         run: |
@@ -316,30 +374,32 @@ jobs:
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Checkout or initialize apt branch
+      - name: Checkout or initialize packages branch
         run: |
-          if git show-ref --verify refs/remotes/origin/apt 2>/dev/null; then
-            git checkout -B apt origin/apt
+          if git show-ref --verify refs/remotes/origin/packages 2>/dev/null; then
+            git checkout -B packages origin/packages
           else
-            git checkout --orphan apt
+            git checkout --orphan packages
             git rm -rf . --quiet 2>/dev/null || true
           fi
 
-      - name: Add packages to pool
-        run: |
-          mkdir -p pool/main
-          cp /tmp/incoming/*.deb pool/main/
+      # ── apt ──────────────────────────────────────────────────────────────
 
-      - name: Generate Packages indices
+      - name: apt — add packages to pool
+        run: |
+          mkdir -p apt/pool/main
+          cp /tmp/deb/*.deb apt/pool/main/
+
+      - name: apt — generate Packages indices
         run: |
           for ARCH in amd64 arm64; do
-            mkdir -p "dists/stable/main/binary-${ARCH}"
-            dpkg-scanpackages --arch "${ARCH}" pool/main \
-              > "dists/stable/main/binary-${ARCH}/Packages"
-            gzip -k "dists/stable/main/binary-${ARCH}/Packages"
+            mkdir -p "apt/dists/stable/main/binary-${ARCH}"
+            dpkg-scanpackages --arch "${ARCH}" apt/pool/main \
+              > "apt/dists/stable/main/binary-${ARCH}/Packages"
+            gzip -k "apt/dists/stable/main/binary-${ARCH}/Packages"
           done
 
-      - name: Generate and sign Release file
+      - name: apt — generate and sign Release file
         run: |
           {
             echo "Origin: Nevelio"
@@ -349,25 +409,44 @@ jobs:
             echo "Architectures: amd64 arm64"
             echo "Components: main"
             echo "Description: Nevelio apt repository"
-          } > dists/stable/Release
-          apt-ftparchive release dists/stable >> dists/stable/Release
+          } > apt/dists/stable/Release
+          apt-ftparchive release apt/dists/stable >> apt/dists/stable/Release
 
           gpg --batch --yes \
             --passphrase "${{ secrets.APT_GPG_PASSPHRASE }}" \
             --pinentry-mode loopback \
             --default-key "$GPG_KEY_ID" \
-            --clearsign -o dists/stable/InRelease dists/stable/Release
+            --clearsign -o apt/dists/stable/InRelease apt/dists/stable/Release
 
           gpg --batch --yes \
             --passphrase "${{ secrets.APT_GPG_PASSPHRASE }}" \
             --pinentry-mode loopback \
             --default-key "$GPG_KEY_ID" \
-            -abs -o dists/stable/Release.gpg dists/stable/Release
+            -abs -o apt/dists/stable/Release.gpg apt/dists/stable/Release
 
-          gpg --armor --export "$GPG_KEY_ID" > KEY.gpg
+          gpg --armor --export "$GPG_KEY_ID" > apt/KEY.gpg
 
-      - name: Commit and push apt branch
+      # ── yum/dnf ──────────────────────────────────────────────────────────
+
+      - name: rpm — add packages and generate repodata
         run: |
-          git add pool/ dists/ KEY.gpg
-          git commit -m "apt: nevelio ${{ github.ref_name }}"
-          git push origin apt
+          for ARCH in x86_64 aarch64; do
+            mkdir -p "rpm/${ARCH}"
+            cp /tmp/rpm/*_${ARCH}.rpm "rpm/${ARCH}/" 2>/dev/null || true
+            createrepo_c "rpm/${ARCH}/"
+            gpg --batch --yes \
+              --passphrase "${{ secrets.APT_GPG_PASSPHRASE }}" \
+              --pinentry-mode loopback \
+              --default-key "$GPG_KEY_ID" \
+              --detach-sign --armor \
+              -o "rpm/${ARCH}/repodata/repomd.xml.asc" "rpm/${ARCH}/repodata/repomd.xml"
+          done
+          gpg --armor --export "$GPG_KEY_ID" > rpm/RPM-GPG-KEY-nevelio
+
+      # ── commit ───────────────────────────────────────────────────────────
+
+      - name: Commit and push packages branch
+        run: |
+          git add apt/ rpm/
+          git commit -m "packages: nevelio ${{ github.ref_name }}"
+          git push origin packages

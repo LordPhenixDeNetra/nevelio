@@ -58,3 +58,17 @@ assets               = [
   ["target/release/nevelio", "usr/bin/nevelio", "755"],
   ["README.md",              "usr/share/doc/nevelio/README.md", "644"],
 ]
+
+[package.metadata.generate-rpm]
+name        = "nevelio"
+license     = "MIT"
+summary     = "API security scanner for REST and GraphQL"
+description = """\
+Fast, modular API security scanner for REST and GraphQL APIs. \
+Detects vulnerabilities from an OpenAPI spec or a bare URL and \
+produces actionable reports (JSON, HTML, Markdown, JUnit XML, SARIF)."""
+group       = "Applications/Security"
+assets      = [
+  { source = "target/release/nevelio", dest = "/usr/bin/nevelio", mode = "755" },
+  { source = "README.md", dest = "/usr/share/doc/nevelio/README.md", mode = "644", doc = true },
+]
