@@ -14,11 +14,21 @@ EXEMPLES :
   Scanner sans spec (découverte automatique) :
     nevelio scan --target https://api.example.com
 
+  Importer une collection Postman ou un fichier HAR :
+    nevelio scan --target https://api.example.com --spec collection.postman.json
+    nevelio scan --target https://api.example.com --spec traffic.har
+
   Scanner et générer un rapport HTML :
     nevelio scan --target https://api.example.com --output html --out-dir ./results
 
-  Générer des suggestions IA après un scan :
-    ANTHROPIC_API_KEY=sk-... nevelio scan --target https://api.example.com --ai-suggestions
+  Comparer deux scans (diff CI/CD) :
+    nevelio diff before.json after.json
+
+  Surveiller une API toutes les 6h :
+    nevelio watch --url https://api.example.com --interval 6h
+
+  Shell interactif :
+    nevelio shell --url https://api.example.com
 
   Convertir un JSON existant en rapport HTML :
     nevelio report --input findings.json --format html
@@ -58,6 +68,12 @@ pub enum Commands {
     Modules(ModulesArgs),
     /// Créer un fichier .nevelio.toml commenté dans le répertoire courant
     Init,
+    /// Compare two scan reports and detect regressions (CI/CD diff)
+    Diff(DiffArgs),
+    /// Monitor an API continuously and alert on new findings
+    Watch(WatchArgs),
+    /// Interactive shell for manual exploration and testing
+    Shell(ShellArgs),
 }
 
 #[derive(Debug, clap::Args)]
@@ -216,4 +232,84 @@ pub enum FailOnArg {
     Medium,
     High,
     Critical,
+}
+
+// ── Diff ──────────────────────────────────────────────────────────────────────
+
+#[derive(Debug, clap::Args)]
+#[command(after_help = "\
+EXIT CODES :
+  0  Aucun nouveau finding
+  1  Nouveaux findings LOW ou MEDIUM
+  2  Nouveaux findings HIGH ou CRITICAL")]
+pub struct DiffArgs {
+    /// Scan report before (baseline) — findings.json from a previous scan
+    pub before: PathBuf,
+    /// Scan report after (new scan) — findings.json to compare
+    pub after: PathBuf,
+    /// Exit with failure only when new findings meet or exceed this severity
+    #[arg(long, value_name = "SEVERITY")]
+    pub fail_on: Option<FailOnArg>,
+}
+
+// ── Watch ─────────────────────────────────────────────────────────────────────
+
+#[derive(Debug, clap::Args)]
+pub struct WatchArgs {
+    /// Target API URL to monitor
+    #[arg(long, value_name = "URL")]
+    pub url: String,
+
+    /// Scan interval (e.g. 30s, 5m, 6h, 1d)
+    #[arg(long, default_value = "6h")]
+    pub interval: String,
+
+    /// Path to spec file (OpenAPI / Postman / HAR — auto-detected)
+    #[arg(long, value_name = "SPEC")]
+    pub spec: Option<String>,
+
+    /// Authentication token
+    #[arg(long, value_name = "TOKEN")]
+    pub auth_token: Option<String>,
+
+    /// HTTP proxy URL
+    #[arg(long, value_name = "URL")]
+    pub proxy: Option<String>,
+
+    /// Scan profile
+    #[arg(long, value_name = "PROFILE")]
+    pub profile: Option<ProfileArg>,
+
+    /// Webhook URL to notify on new findings (POST JSON)
+    #[arg(long, value_name = "URL")]
+    pub notify_webhook: Option<String>,
+
+    /// Directory to store watch state and reports
+    #[arg(long, value_name = "PATH")]
+    pub out_dir: Option<PathBuf>,
+}
+
+// ── Shell ─────────────────────────────────────────────────────────────────────
+
+#[derive(Debug, clap::Args)]
+pub struct ShellArgs {
+    /// Initial target API URL (can also be set inside the shell with `target <url>`)
+    #[arg(long, value_name = "URL")]
+    pub url: Option<String>,
+
+    /// Path to spec file (OpenAPI / Postman / HAR — auto-detected)
+    #[arg(long, value_name = "SPEC")]
+    pub spec: Option<String>,
+
+    /// Authentication token
+    #[arg(long, value_name = "TOKEN")]
+    pub auth_token: Option<String>,
+
+    /// HTTP proxy URL
+    #[arg(long, value_name = "URL")]
+    pub proxy: Option<String>,
+
+    /// Directory to write exported reports
+    #[arg(long, value_name = "PATH")]
+    pub out_dir: Option<PathBuf>,
 }

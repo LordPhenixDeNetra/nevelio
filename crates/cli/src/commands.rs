@@ -11,15 +11,6 @@ use tracing_subscriber::{fmt, EnvFilter};
 
 use nevelio_core::types::{Finding, ScanConfig, ScanProfile, Severity};
 use nevelio_core::{AttackModule, HttpClient, ScanSession};
-use nevelio_module_access_control::AccessControlModule;
-use nevelio_module_auth::AuthModule;
-use nevelio_module_business_logic::BusinessLogicModule;
-use nevelio_module_graphql::GraphqlModule;
-use nevelio_module_infra::InfraModule;
-use nevelio_module_injection::InjectionModule;
-use nevelio_module_oauth2::OAuth2Module;
-use nevelio_module_prototype_pollution::PrototypePollutionModule;
-use nevelio_module_ssrf::SsrfModule;
 use nevelio_reporting::{
     HtmlReporter, JsonReporter, JunitReporter, MarkdownReporter, ReportFormat, SarifReporter,
     ScanReport,
@@ -58,10 +49,13 @@ pub async fn run() -> Result<()> {
     }
 
     match cli.command {
-        Commands::Scan(args) => handle_scan(args, cli.verbose).await,
-        Commands::Report(args) => handle_report(args).await,
+        Commands::Scan(args)    => handle_scan(args, cli.verbose).await,
+        Commands::Report(args)  => handle_report(args).await,
         Commands::Modules(args) => handle_modules(args),
-        Commands::Init => handle_init(),
+        Commands::Init          => handle_init(),
+        Commands::Diff(args)    => crate::diff::handle_diff(args).await,
+        Commands::Watch(args)   => crate::watch::handle_watch(args, cli.verbose).await,
+        Commands::Shell(args)   => crate::shell::handle_shell(args, cli.verbose).await,
     }
 }
 
@@ -255,18 +249,7 @@ async fn handle_scan(args: crate::args::ScanArgs, verbose: bool) -> Result<()> {
 
     let mut session = ScanSession::new(config);
 
-    let all_modules: Vec<Box<dyn AttackModule>> = vec![
-        Box::new(AuthModule),
-        Box::new(InjectionModule),
-        Box::new(AccessControlModule),
-        Box::new(BusinessLogicModule),
-        Box::new(GraphqlModule),
-        Box::new(InfraModule),
-        Box::new(SsrfModule),
-        Box::new(OAuth2Module),
-        Box::new(PrototypePollutionModule),
-    ];
-
+    let all_modules = crate::modules::build_all_modules();
     let module_names: Vec<String> = all_modules.iter().map(|m| m.name().to_string()).collect();
 
     // Resume: load previous findings and completed modules from <out_dir>
@@ -506,17 +489,7 @@ async fn handle_report(args: crate::args::ReportArgs) -> Result<()> {
 // ---------------------------------------------------------------------------
 
 fn handle_modules(args: crate::args::ModulesArgs) -> Result<()> {
-    let modules: Vec<Box<dyn AttackModule>> = vec![
-        Box::new(AuthModule),
-        Box::new(InjectionModule),
-        Box::new(AccessControlModule),
-        Box::new(BusinessLogicModule),
-        Box::new(GraphqlModule),
-        Box::new(InfraModule),
-        Box::new(SsrfModule),
-        Box::new(OAuth2Module),
-        Box::new(PrototypePollutionModule),
-    ];
+    let modules = crate::modules::build_all_modules();
 
     match args.action {
         ModulesAction::List => {
@@ -644,7 +617,7 @@ fn parse_output_format(s: Option<&str>) -> Option<OutputFormat> {
 // Spec format detection
 // ---------------------------------------------------------------------------
 
-enum SpecFormat {
+pub(crate) enum SpecFormat {
     OpenApi,
     Postman,
     Har,
@@ -652,7 +625,7 @@ enum SpecFormat {
 
 /// Detect the spec format from file extension or content.
 /// Remote URLs always route to OpenAPI (only local files for Postman/HAR).
-fn detect_spec_format(path: &str) -> SpecFormat {
+pub(crate) fn detect_spec_format(path: &str) -> SpecFormat {
     if path.starts_with("http://") || path.starts_with("https://") {
         return SpecFormat::OpenApi;
     }

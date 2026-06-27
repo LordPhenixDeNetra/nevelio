@@ -12,7 +12,7 @@
 | **v0.1.0** | ✅ Livrée | 6 | auth, injection, access-control, business-logic, graphql, infra | `git tag v0.1.0` |
 | **v0.2.0** | ✅ Livrée | +4 | +XXE, +SSRF, +OAuth2, +Prototype Pollution | `git tag v0.2.0` |
 | **v0.3.0** | ✅ Livrée | — | Postman/HAR/Insomnia import, crawling JS | `git tag v0.3.0` |
-| **v0.4.0** | 📋 Planifiée | — | Watch mode, diff scan, REPL | — |
+| **v0.4.0** | ✅ Livrée | — | Watch mode, diff scan, REPL interactif | `git tag v0.4.0` |
 | **v0.5.0** | 📋 Planifiée | — | GitHub App, Jira, dashboard web | — |
 | **v0.6.0** | 📋 Planifiée | — | Plugins WASM, scripting | — |
 | **v0.7.0** | 📋 Planifiée | — | gRPC, WebSocket, SOAP | — |
@@ -65,6 +65,19 @@ Crawling           ████████████████░░░░ 
 - ✅ Reprise de scan (`--resume`)
 - ✅ Suggestions IA (Claude via `ANTHROPIC_API_KEY`)
 - ✅ Distribution : Homebrew, winget, curl/sh, PowerShell, Docker, apt, yum, cargo
+
+### v0.4.0 — Modes opérationnels (livrée)
+
+**Nouveaux modes**
+- ✅ `nevelio diff <before.json> <after.json>` — compare deux scans, exit code CI/CD (0/1/2), flag `--fail-on`
+- ✅ `nevelio watch --url <URL> --interval <6h>` — scan périodique, diff automatique, webhook notification
+- ✅ `nevelio shell [--url <URL>]` — REPL interactif (target/spec/token/scan/list/show/findings/replay/export)
+
+**Refactoring interne**
+- ✅ `modules.rs` — `build_all_modules()` partagé par scan, watch, shell (DRY)
+- ✅ `detect_spec_format()` et `SpecFormat` exportés `pub(crate)` pour réutilisation
+
+---
 
 ### v0.3.0 — Sources d'entrée & DX (livrée)
 
@@ -197,29 +210,32 @@ Crawling           ████████████████░░░░ 
 
 ---
 
-## v0.4 — Modes opérationnels 📋
+## v0.4 — Modes opérationnels ✅
 
 ### 🟡 Mode surveillance continue (`watch`)
 
-- [ ] Commande `nevelio watch --url ... --interval 6h`
-- [ ] Sauvegarde de l'état entre les scans (hash des findings connus)
-- [ ] Alerte uniquement sur les *nouveaux* findings
-- [ ] Notifications : Slack, Teams, email, webhook générique
+- [x] Commande `nevelio watch --url ... --interval 6h`
+- [x] Sauvegarde de l'état entre les scans (`watch_state.json`)
+- [x] Alerte uniquement sur les *nouveaux* findings (diff automatique)
+- [x] Notification webhook générique (POST JSON)
 - [ ] Mode daemon (`--daemon`) avec PID file
+- [ ] Notifications Slack, Teams, email
 
 ### 🟡 Scan différentiel
 
-- [ ] Commande `nevelio diff findings-v1.json findings-v2.json`
-- [ ] Rapport des findings apparus, disparus, changés en sévérité
-- [ ] Format de sortie : Markdown, JSON, HTML
-- [ ] Intégration CI : exit code non-nul si régressions détectées
+- [x] Commande `nevelio diff findings-v1.json findings-v2.json`
+- [x] Rapport des findings apparus, disparus, changés en sévérité
+- [x] Intégration CI : exit code 0/1/2 selon sévérité des nouvelles régressions
+- [x] Flag `--fail-on <severity>` pour contrôler le seuil d'échec CI
 
 ### 🟡 Mode interactif (REPL)
 
-- [ ] Shell interactif `nevelio shell` avec complétion
-- [ ] Inspection manuelle des endpoints découverts
-- [ ] Rejeu de requêtes avec modification des paramètres
-- [ ] Export de la session en rapport
+- [x] Shell interactif `nevelio shell`
+- [x] Inspection manuelle des endpoints découverts (`list`, `show <N>`)
+- [x] Rejeu de requêtes avec réponse brute (`replay <N>`)
+- [x] Scan complet depuis le shell (`scan`)
+- [x] Export de la session en rapport JSON (`export`)
+- [ ] Complétion des commandes
 
 ---
 
@@ -351,15 +367,15 @@ Crawling           ████████████████░░░░ 
 
 ## Prochaine release
 
-v0.3.0 est complète. Pour publier :
+v0.4.0 est complète. Pour publier :
 
 ```bash
 git add -A
-git commit -m "feat(v0.3): Postman/Insomnia/HAR import, JS crawling, robots.txt stealth, versioning detection"
-git tag v0.3.0
+git commit -m "feat(v0.4): diff scan CI/CD, watch mode, REPL interactif, modules.rs DRY"
+git tag v0.4.0
 git push && git push --tags
 ```
 
 ---
 
-*Dernière mise à jour : 2026-06-27 — v0.3.0 ✅ livrée — prochaine : v0.4.0 (watch mode, diff scan, REPL)*
+*Dernière mise à jour : 2026-06-27 — v0.4.0 ✅ livrée — prochaine : v0.5.0 (GitHub App, Jira, dashboard web)*
