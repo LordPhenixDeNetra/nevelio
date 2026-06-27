@@ -67,3 +67,4 @@ toml               = "0.8"
 ratatui            = "0.29"
 crossterm          = { version = "0.28", features = ["event-stream"] }
 rust-i18n          = "3"
+rhai               = { version = "1", features = ["sync"] }

@@ -14,7 +14,7 @@
 | **v0.3.0** | ✅ Livrée | — | Postman/HAR/Insomnia import, crawling JS | `git tag v0.3.0` |
 | **v0.4.0** | ✅ Livrée | — | Watch mode, diff scan, REPL interactif | `git tag v0.4.0` |
 | **v0.5.0** | ✅ Livrée | — | serve, notify (Slack/Teams), issue (GitHub/Jira) | `git tag v0.5.0` |
-| **v0.6.0** | 📋 Planifiée | — | Plugins WASM, scripting | — |
+| **v0.6.0** | ✅ Livrée | — | Scripting Rhai, suppressions faux positifs, ABI plugin | `git tag v0.6.0` |
 | **v0.7.0** | 📋 Planifiée | — | gRPC, WebSocket, SOAP | — |
 
 ### Progression globale v0.3
@@ -65,6 +65,24 @@ Crawling           ████████████████░░░░ 
 - ✅ Reprise de scan (`--resume`)
 - ✅ Suggestions IA (Claude via `ANTHROPIC_API_KEY`)
 - ✅ Distribution : Homebrew, winget, curl/sh, PowerShell, Docker, apt, yum, cargo
+
+### v0.6.0 — Extensibilité (livrée)
+
+**Suppression de faux positifs (`[[suppress]]` dans `.nevelio.toml`)**
+- ✅ Règles AND : `title_contains`, `module`, `severity`, `endpoint_prefix`, `reason`
+- ✅ Appliquées automatiquement à la fin de chaque scan
+
+**Scripting Rhai (`--script`)**
+- ✅ `nevelio scan --target ... --script ./custom.rhai`
+- ✅ Variables : `title`, `severity`, `finding_module`, `endpoint`, `method`, `description`, `cvss`
+- ✅ Retourner `false` = supprimer le finding, erreur = conserver (fail-safe)
+- ✅ Multiples scripts chaînables en AND
+
+**Plugin ABI (skeleton)**
+- ✅ `PluginManifest` + `NevelioPlugin` trait + `PLUGIN_ABI_VERSION = 1` dans `crates/core`
+- ✅ Runtime WASM prévu pour v0.7
+
+---
 
 ### v0.5.0 — Intégrations écosystème (livrée)
 
@@ -271,7 +289,7 @@ Crawling           ████████████████░░░░ 
 - [x] Slack — webhook entrant (`nevelio notify --slack <url>`)
 - [x] Microsoft Teams — webhook (`nevelio notify --teams <url>`)
 - [x] Webhook générique — POST JSON (`nevelio notify --webhook <url>`)
-- [x] Seuil de sévérité configurable (`--min-severity medium|high|critical`)
+- [x] Seuil de sévérité configurable (`--min T-severity medium|high|critical`)
 - [ ] Email (SMTP configurable)
 - [ ] PagerDuty (pour les findings CRITICAL en production)
 
@@ -286,28 +304,31 @@ Crawling           ████████████████░░░░ 
 
 ---
 
-## v0.6 — Extensibilité 📋
+## v0.6 — Extensibilité ✅
 
 ### 🟡 Système de plugins WebAssembly
 
-- [ ] Interface de plugin via WASM (ABI stable défini dans `core`)
-- [ ] Chargement dynamique : `nevelio --plugin ./mon-module.wasm scan ...`
-- [ ] Registry de plugins (similaire à crates.io mais pour les modules Nevelio)
-- [ ] Sandbox sécurisée (pas d'accès filesystem ni réseau non autorisé)
-- [ ] Documentation d'écriture de plugin
+- [x] Interface de plugin via ABI stable définie dans `crates/core/src/plugin.rs`
+- [x] `PluginManifest` sérialisable (JSON), `NevelioPlugin` trait, `PLUGIN_ABI_VERSION`
+- [ ] Chargement dynamique : `nevelio --plugin ./mon-module.wasm scan ...` (runtime v0.7)
+- [ ] Registry de plugins (v0.8)
+- [ ] Sandbox sécurisée (v0.7)
 
 ### 🟡 Configuration déclarative (`.nevelio.toml`)
 
 - [x] Fichier de config par projet : cibles, modules, profil, seuils
 - [x] Merge config globale + locale
 - [x] Profils nommés (stealth / normal / aggressive)
-- [ ] Exclusions de faux positifs persistantes
+- [x] Exclusions de faux positifs persistantes (`[[suppress]]` dans `.nevelio.toml`)
 
-### 🟢 Scripting Lua / Rhai
+### 🟢 Scripting Rhai
 
-- [ ] Scripts personnalisés pour des checks métier spécifiques
-- [ ] Accès à l'objet `request` / `response` dans le script
-- [ ] Partage de scripts dans le registry
+- [x] Scripts personnalisés `--script ./check.rhai` (filtre les findings après scan)
+- [x] Variables disponibles : `title`, `severity`, `finding_module`, `endpoint`, `method`, `description`, `cvss`
+- [x] Retourner `false` pour supprimer un finding, `true` pour le conserver
+- [x] Multiples scripts chaînables (AND logique)
+- [x] Erreur de script = finding conservé (fail-safe)
+- [ ] Partage de scripts dans un registry
 
 ---
 
@@ -380,15 +401,15 @@ Crawling           ████████████████░░░░ 
 
 ## Prochaine release
 
-v0.5.0 est complète. Pour publier :
+v0.6.0 est complète. Pour publier :
 
 ```bash
 git add -A
-git commit -m "feat(v0.5): nevelio serve, nevelio notify (Slack/Teams), nevelio issue (GitHub/Jira)"
-git tag v0.5.0
+git commit -m "feat(v0.6): scripting Rhai (--script), suppressions [[suppress]], ABI plugin WASM skeleton"
+git tag v0.6.0
 git push && git push --tags
 ```
 
 ---
 
-*Dernière mise à jour : 2026-06-27 — v0.5.0 ✅ livrée — prochaine : v0.6.0 (plugins WASM, scripting Lua/Rhai)*
+*Dernière mise à jour : 2026-06-27 — v0.6.0 ✅ livrée — prochaine : v0.7.0 (gRPC, WebSocket, SOAP + runtime WASM)*

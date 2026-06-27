@@ -44,6 +44,7 @@ ratatui.workspace            = true
 crossterm.workspace          = true
 reqwest.workspace            = true
 rust-i18n.workspace          = true
+rhai.workspace               = true
 
 [package.metadata.deb]
 name                 = "nevelio"

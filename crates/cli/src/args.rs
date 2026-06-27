@@ -154,6 +154,10 @@ pub struct ScanArgs {
     /// Generate AI-powered remediation suggestions via Claude API (requires ANTHROPIC_API_KEY)
     #[arg(long)]
     pub ai_suggestions: bool,
+
+    /// Rhai scripts to run after scan — return false to suppress a finding
+    #[arg(long, value_name = "SCRIPT")]
+    pub scripts: Vec<String>,
 }
 
 #[derive(Debug, clap::Args)]

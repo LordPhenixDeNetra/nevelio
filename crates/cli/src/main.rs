@@ -14,6 +14,7 @@ mod modules;
 mod notify;
 mod output;
 mod serve;
+mod script;
 mod shell;
 mod tui;
 mod watch;

@@ -110,6 +110,7 @@ async fn handle_scan(args: crate::args::ScanArgs, verbose: bool) -> Result<()> {
     let file_cfg = NevelioConfig::load();
     // Call method first (before any field moves that invalidate the borrow)
     let cfg_auth_token  = file_cfg.resolved_auth_token();
+    let cfg_suppress    = file_cfg.suppress;
     let cfg_target      = file_cfg.target;
     let cfg_profile     = file_cfg.profile;
     let cfg_output      = file_cfg.output;
@@ -185,6 +186,7 @@ async fn handle_scan(args: crate::args::ScanArgs, verbose: bool) -> Result<()> {
     use std::io::IsTerminal;
     let use_tui = !args.no_tui && !args.dry_run && std::io::stdout().is_terminal();
     let ai_suggestions = args.ai_suggestions;
+    let script_paths = args.scripts.clone();
 
     if ai_suggestions && std::env::var("ANTHROPIC_API_KEY").is_err() {
         eprintln!("{}", t!("scan.ai_warning").yellow());
@@ -364,6 +366,33 @@ async fn handle_scan(args: crate::args::ScanArgs, verbose: bool) -> Result<()> {
     }
     if let Some(bar) = pb {
         bar.finish_with_message(t!("scan.finished").to_string());
+    }
+
+    // ── Post-scan filtering: suppress rules + Rhai scripts ───────────────────
+    let before_count = session.findings.len();
+
+    // 1. Config-based suppression rules (from .nevelio.toml [[suppress]])
+    if !cfg_suppress.is_empty() {
+        session.findings.retain(|f| !cfg_suppress.iter().any(|r| r.matches(f)));
+    }
+
+    // 2. Rhai script filtering
+    if !script_paths.is_empty() {
+        match crate::script::ScriptRunner::load(&script_paths) {
+            Ok(runner) => {
+                session.findings = runner.filter_findings(&session.findings);
+            }
+            Err(e) => eprintln!("  {}: {}", "Erreur chargement scripts".red(), e),
+        }
+    }
+
+    let suppressed = before_count.saturating_sub(session.findings.len());
+    if suppressed > 0 {
+        println!(
+            "  {} {} finding(s) supprimé(s) (règles + scripts).",
+            "↩".yellow(),
+            suppressed
+        );
     }
 
     session.finish();
