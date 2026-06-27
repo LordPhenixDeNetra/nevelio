@@ -1,7 +1,30 @@
-# Nevelio — Roadmap des évolutions futures
+# Nevelio — Roadmap & Suivi de progression
 
-> Ce document liste les fonctionnalités planifiées, classées par priorité et par thème.
-> Les items sans assignation sont ouverts à contribution.
+> Ce document est la source de vérité pour l'état d'avancement du projet.
+> Mis à jour à chaque release. Les items `- [ ]` sont ouverts à contribution.
+
+---
+
+## Tableau de bord
+
+| Version | Statut | Modules | Checks | Release |
+|---|---|---|---|---|
+| **v0.1.0** | ✅ Livrée | 6 | auth, injection, access-control, business-logic, graphql, infra | `git tag v0.1.0` |
+| **v0.2.0** | 🚧 En cours | +3 | +XXE, +SSRF, +OAuth2 | `git tag v0.2.0` |
+| **v0.3.0** | 📋 Planifiée | — | Postman/HAR import, crawling JS | — |
+| **v0.4.0** | 📋 Planifiée | — | Watch mode, diff scan, REPL | — |
+| **v0.5.0** | 📋 Planifiée | — | GitHub App, Jira, dashboard web | — |
+| **v0.6.0** | 📋 Planifiée | — | Plugins WASM, scripting | — |
+| **v0.7.0** | 📋 Planifiée | — | gRPC, WebSocket, SOAP | — |
+
+### Progression globale v0.2
+
+```
+Modules sécurité   ████████░░░░░░░░░░░░  3/9  checks planifiés
+Distribution       ████████████████████  5/5  gestionnaires de paquets
+Reporting          ████████████████████  5/5  formats (JSON/HTML/MD/JUnit/SARIF)
+i18n               ████████████████████  3/3  langues (fr/en/es)
+```
 
 ---
 
@@ -13,39 +36,72 @@
 | 🟡 | Priorité moyenne — valeur différenciante |
 | 🟢 | Priorité basse — intégrations / confort |
 | ✅ | Implémenté |
-| 🚧 | En cours |
+| 🚧 | En cours de développement |
+| 📋 | Planifié, pas encore démarré |
 
 ---
 
-## v0.2 — Couverture sécurité étendue
+## Historique des versions livrées
 
-### 🔴 Module OAuth2 / OpenID Connect
+### v0.1.0 — Fondation (livrée)
 
-- [ ] Détection du flow utilisé (Authorization Code, Implicit, Client Credentials, PKCE)
-- [ ] Test de manipulation du paramètre `redirect_uri` (open redirect, host injection)
-- [ ] Bypass PKCE (code_challenge faible ou absent)
-- [ ] Fuite de token via header `Referer` / logs
+**Modules de sécurité**
+- ✅ `auth` — JWT (alg:none, secrets faibles, claims), Basic Auth brute force, auth manquante
+- ✅ `injection` — SQLi (boolean/time/union/error), NoSQLi MongoDB, SSTI, Command Injection
+- ✅ `access-control` — IDOR (numeric + UUID), BFLA, élévation de privilèges, mass assignment
+- ✅ `business-logic` — Rate limit bypass (XFF/UA), race conditions, valeurs négatives
+- ✅ `graphql` — Introspection exposée, field suggestions, depth DoS
+- ✅ `infra` — CORS, HSTS, CSP, TLS, cookies, secrets dans réponses, 20+ debug endpoints
+
+**Infrastructure**
+- ✅ CLI avec TUI temps réel (ratatui)
+- ✅ Parseur OpenAPI/Swagger (JSON + YAML)
+- ✅ Crawleur d'endpoints (auto-discovery)
+- ✅ Rapports : JSON, HTML, Markdown, JUnit XML, SARIF
+- ✅ i18n : français, anglais, espagnol (`--lang`)
+- ✅ Configuration `.nevelio.toml`
+- ✅ Reprise de scan (`--resume`)
+- ✅ Suggestions IA (Claude via `ANTHROPIC_API_KEY`)
+- ✅ Distribution : Homebrew, winget, curl/sh, PowerShell, Docker, apt, yum, cargo
+
+---
+
+## v0.2 — Couverture sécurité étendue 🚧
+
+### 🔴 Module OAuth2 / OpenID Connect 🚧
+
+- [x] Test de manipulation du paramètre `redirect_uri` (open redirect, host injection)
+- [x] Bypass PKCE — `code_challenge` absent accepté
+- [x] Test de `state` absent ou fixe (CSRF sur le flow)
+- [x] Token introspection non protégée (`/introspect` sans auth)
+- [x] Token endpoint acceptant GET (fuite via logs/Referer)
+- [x] Clé privée exposée dans JWKS
+- [ ] Détection du flow utilisé (Authorization Code, Implicit, Client Credentials)
+- [ ] Fuite de token via header `Referer` / logs (test actif)
 - [ ] Test du flow Implicit (token dans URL fragment)
 - [ ] Réutilisation d'`authorization_code` (rejeu)
 - [ ] Enumération de clients OAuth via `client_id` prévisible
-- [ ] Test de `state` absent ou fixe (CSRF sur le flow)
-- [ ] Token introspection non protégée (`/introspect` sans auth)
+- [ ] Test `kid` (Key ID) injection dans le header JWT
+- [ ] Test `jku` / `x5u` SSRF (JWT header pointant vers clé distante)
 
-### 🔴 Module SSRF (Server-Side Request Forgery)
+### 🔴 Module SSRF (Server-Side Request Forgery) 🚧
 
-- [ ] Détection des paramètres candidats (`url=`, `redirect=`, `webhook=`, `callback=`, `proxy=`, `uri=`, `path=`)
-- [ ] Payloads SSRF vers `http://169.254.169.254` (AWS metadata)
-- [ ] Payloads vers `http://localhost` / `http://127.0.0.1`
+- [x] Détection des paramètres candidats (30 noms : `url=`, `redirect=`, `webhook=`…)
+- [x] Probes AWS IMDS (`169.254.169.254`), Azure, GCP, Alibaba Cloud
+- [x] Payloads vers `http://localhost` / `http://127.0.0.1:22`
+- [x] Détection par indicateurs spécifiques à chaque cloud provider
 - [ ] Intégration OAST (out-of-band) via `interactsh` pour détection aveugle
-- [ ] Bypass filtres : encodage d'URL, IPv6, redirections DNS
+- [ ] Bypass filtres : encodage d'URL, représentation IPv6, redirections DNS
+- [ ] SSRF via en-têtes HTTP (`X-Forwarded-Host`, `Host`, `X-Real-IP`)
 
-### 🔴 Module XXE (XML External Entity)
+### 🔴 Module XXE (XML External Entity) 🚧
 
-- [ ] Détection des endpoints acceptant `Content-Type: application/xml` ou `text/xml`
-- [ ] Injection XXE classique (exfiltration fichier)
-- [ ] Blind XXE via out-of-band (OOB)
+- [x] Détection des endpoints acceptant `application/xml`, `text/xml`, `application/soap+xml`
+- [x] Injection XXE classique — exfiltration `/etc/passwd`, `/proc/self/environ`
+- [x] SSRF interne via entité externe (AWS IMDS)
+- [x] Blind XXE — payload entité paramètre (OOB, sans callback server actif)
 - [ ] XXE via SVG / DOCX / format dérivé XML
-- [ ] Billion laughs (DoS par entités récursives)
+- [ ] Billion laughs (DoS par entités récursives) — hors scope par défaut
 
 ### 🟡 Module Prototype Pollution
 
@@ -66,7 +122,7 @@
 ### 🟡 Renforcement module `injection`
 
 - [ ] Détection de SSTI dans les headers (User-Agent, X-Forwarded-For)
-- [ ] Payloads XXS stocké et réfléchi sur les endpoints REST
+- [ ] XSS stocké et réfléchi sur les endpoints REST
 - [ ] Injection CSV / formule Excel dans les exports
 - [ ] LDAP injection
 - [ ] XPath injection
@@ -80,7 +136,7 @@
 
 ---
 
-## v0.3 — Sources d'entrée & DX
+## v0.3 — Sources d'entrée & DX 📋
 
 ### 🔴 Import Postman / Insomnia
 
@@ -111,7 +167,7 @@
 
 ---
 
-## v0.4 — Modes opérationnels
+## v0.4 — Modes opérationnels 📋
 
 ### 🟡 Mode surveillance continue (`watch`)
 
@@ -135,15 +191,9 @@
 - [ ] Rejeu de requêtes avec modification des paramètres
 - [ ] Export de la session en rapport
 
-### 🟢 Reprise de scan (`--resume`)
-
-- [ ] Sauvegarder l'état du scan dans un fichier `.nevelio-state.json`
-- [ ] Reprendre après interruption sans re-scanner les endpoints déjà traités
-- [ ] Afficher la progression par rapport à l'état sauvegardé
-
 ---
 
-## v0.5 — Intégrations écosystème
+## v0.5 — Intégrations écosystème 📋
 
 ### 🟡 GitHub App
 
@@ -177,7 +227,7 @@
 
 ---
 
-## v0.6 — Extensibilité
+## v0.6 — Extensibilité 📋
 
 ### 🟡 Système de plugins WebAssembly
 
@@ -189,9 +239,9 @@
 
 ### 🟡 Configuration déclarative (`.nevelio.toml`)
 
-- [ ] Fichier de config par projet : cibles, modules, profil, seuils
-- [ ] Merge config globale (`~/.config/nevelio/config.toml`) + locale
-- [ ] Profils nommés (ex: `[profile.staging]`, `[profile.prod]`)
+- [x] Fichier de config par projet : cibles, modules, profil, seuils
+- [x] Merge config globale + locale
+- [x] Profils nommés (stealth / normal / aggressive)
 - [ ] Exclusions de faux positifs persistantes
 
 ### 🟢 Scripting Lua / Rhai
@@ -202,7 +252,7 @@
 
 ---
 
-## v0.7 — Protocoles additionnels
+## v0.7 — Protocoles additionnels 📋
 
 ### 🟡 gRPC / Protobuf
 
@@ -225,7 +275,7 @@
 
 ---
 
-## Améliorations transversales
+## Améliorations transversales 📋
 
 ### Reporting
 
@@ -256,7 +306,7 @@
 
 ---
 
-## Idées à évaluer (backlog non priorisé)
+## Backlog — idées à évaluer
 
 - Intégration avec Nuclei (réutiliser les templates YAML de Nuclei)
 - Export vers Notion / Confluence via API
@@ -269,4 +319,17 @@
 
 ---
 
-*Dernière mise à jour : 2026-06-21*
+## Prochaine release
+
+Pour publier la v0.2.0 avec les modules XXE, SSRF et OAuth2 :
+
+```bash
+git add -A
+git commit -m "feat(v0.2): add XXE, SSRF and OAuth2 modules"
+git tag v0.2.0
+git push && git push --tags
+```
+
+---
+
+*Dernière mise à jour : 2026-06-27 — v0.2.0 en cours*
