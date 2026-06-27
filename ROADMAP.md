@@ -135,7 +135,7 @@ Crawling           ████████████████░░░░ 
 - [x] Détection par indicateurs spécifiques à chaque cloud provider
 - [x] SSRF via en-têtes HTTP (`X-Forwarded-Host`, `X-Forwarded-For`, `X-Real-IP`, `True-Client-IP`)
 - [ ] Intégration OAST (out-of-band) via `interactsh` pour détection aveugle
-- [ ] Bypass filtres : encodage d'URL, représentation IPv6, redirections DNS
+- [ ] Bypass filtres : encodage d'URL, représentation IPv6, redirections DNS -
 
 ### 🔴 Module XXE (XML External Entity) 🚧
 
