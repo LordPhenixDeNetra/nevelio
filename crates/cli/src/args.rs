@@ -74,6 +74,12 @@ pub enum Commands {
     Watch(WatchArgs),
     /// Interactive shell for manual exploration and testing
     Shell(ShellArgs),
+    /// Serve the HTML report on a local web dashboard
+    Serve(ServeArgs),
+    /// Send findings to Slack, Teams or a webhook
+    Notify(NotifyArgs),
+    /// Create GitHub issues or Jira tickets from findings
+    Issue(IssueArgs),
 }
 
 #[derive(Debug, clap::Args)]
@@ -312,4 +318,128 @@ pub struct ShellArgs {
     /// Directory to write exported reports
     #[arg(long, value_name = "PATH")]
     pub out_dir: Option<PathBuf>,
+}
+
+// ── Serve ─────────────────────────────────────────────────────────────────────
+
+#[derive(Debug, clap::Args)]
+#[command(after_help = "\
+EXEMPLES :
+  nevelio serve
+  nevelio serve --dir ./results --port 8080
+  nevelio serve --findings ./scan/findings.json --no-open")]
+pub struct ServeArgs {
+    /// Directory containing findings.json or report.html
+    #[arg(long, value_name = "PATH")]
+    pub dir: Option<PathBuf>,
+
+    /// Explicit path to findings.json (overrides --dir lookup)
+    #[arg(long, value_name = "FILE")]
+    pub findings: Option<PathBuf>,
+
+    /// Port for the local web server
+    #[arg(long, default_value = "4000")]
+    pub port: u16,
+
+    /// Do not open the browser automatically
+    #[arg(long)]
+    pub no_open: bool,
+}
+
+// ── Notify ────────────────────────────────────────────────────────────────────
+
+#[derive(Debug, clap::Args)]
+#[command(after_help = "\
+VARIABLES D'ENVIRONNEMENT :
+  (aucune — fournir les URLs directement)
+
+EXEMPLES :
+  nevelio notify --findings findings.json --slack https://hooks.slack.com/services/...
+  nevelio notify --teams https://... --min-severity high")]
+pub struct NotifyArgs {
+    /// Path to findings.json produced by a scan
+    #[arg(long, value_name = "FILE", default_value = "./nevelio-results/findings.json")]
+    pub findings: PathBuf,
+
+    /// Slack Incoming Webhook URL
+    #[arg(long, value_name = "URL")]
+    pub slack: Option<String>,
+
+    /// Microsoft Teams Incoming Webhook URL
+    #[arg(long, value_name = "URL")]
+    pub teams: Option<String>,
+
+    /// Generic webhook URL (POST JSON payload)
+    #[arg(long, value_name = "URL")]
+    pub webhook: Option<String>,
+
+    /// Minimum severity to include in the notification
+    #[arg(long, value_name = "SEVERITY", default_value = "medium")]
+    pub min_severity: FailOnArg,
+}
+
+// ── Issue ─────────────────────────────────────────────────────────────────────
+
+#[derive(Debug, clap::Args)]
+#[command(after_help = "\
+EXEMPLES :
+  nevelio issue github --repo owner/repo --token ghp_...
+  nevelio issue jira --jira-url https://myco.atlassian.net --project SEC --email me@myco.com")]
+pub struct IssueArgs {
+    /// Path to findings.json produced by a scan
+    #[arg(long, value_name = "FILE", default_value = "./nevelio-results/findings.json")]
+    pub findings: PathBuf,
+
+    #[command(subcommand)]
+    pub provider: IssueProvider,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum IssueProvider {
+    /// Create GitHub issues for each finding
+    Github(GithubIssueArgs),
+    /// Create Jira Cloud tickets for each finding
+    Jira(JiraIssueArgs),
+}
+
+#[derive(Debug, clap::Args)]
+pub struct GithubIssueArgs {
+    /// GitHub repository in owner/repo format
+    #[arg(long, value_name = "OWNER/REPO")]
+    pub repo: String,
+
+    /// GitHub API token (or set GITHUB_TOKEN env var)
+    #[arg(long, value_name = "TOKEN")]
+    pub token: Option<String>,
+
+    /// Additional labels to add to each issue
+    #[arg(long, value_name = "LABEL")]
+    pub labels: Vec<String>,
+
+    /// Minimum severity to create issues for
+    #[arg(long, value_name = "SEVERITY", default_value = "medium")]
+    pub min_severity: FailOnArg,
+}
+
+#[derive(Debug, clap::Args)]
+pub struct JiraIssueArgs {
+    /// Jira Cloud base URL (e.g. https://mycompany.atlassian.net)
+    #[arg(long, value_name = "URL")]
+    pub jira_url: String,
+
+    /// Jira project key (e.g. SEC)
+    #[arg(long, value_name = "KEY")]
+    pub project: String,
+
+    /// Jira API token (or set JIRA_API_TOKEN env var)
+    #[arg(long, value_name = "TOKEN")]
+    pub token: Option<String>,
+
+    /// Jira user email (or set JIRA_EMAIL env var)
+    #[arg(long, value_name = "EMAIL")]
+    pub email: Option<String>,
+
+    /// Minimum severity to create tickets for
+    #[arg(long, value_name = "SEVERITY", default_value = "medium")]
+    pub min_severity: FailOnArg,
 }

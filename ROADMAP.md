@@ -13,7 +13,7 @@
 | **v0.2.0** | ✅ Livrée | +4 | +XXE, +SSRF, +OAuth2, +Prototype Pollution | `git tag v0.2.0` |
 | **v0.3.0** | ✅ Livrée | — | Postman/HAR/Insomnia import, crawling JS | `git tag v0.3.0` |
 | **v0.4.0** | ✅ Livrée | — | Watch mode, diff scan, REPL interactif | `git tag v0.4.0` |
-| **v0.5.0** | 📋 Planifiée | — | GitHub App, Jira, dashboard web | — |
+| **v0.5.0** | ✅ Livrée | — | serve, notify (Slack/Teams), issue (GitHub/Jira) | `git tag v0.5.0` |
 | **v0.6.0** | 📋 Planifiée | — | Plugins WASM, scripting | — |
 | **v0.7.0** | 📋 Planifiée | — | gRPC, WebSocket, SOAP | — |
 
@@ -65,6 +65,17 @@ Crawling           ████████████████░░░░ 
 - ✅ Reprise de scan (`--resume`)
 - ✅ Suggestions IA (Claude via `ANTHROPIC_API_KEY`)
 - ✅ Distribution : Homebrew, winget, curl/sh, PowerShell, Docker, apt, yum, cargo
+
+### v0.5.0 — Intégrations écosystème (livrée)
+
+**Nouvelles commandes**
+- ✅ `nevelio serve [--port 4000]` — dashboard HTML sur localhost, ouvre le navigateur automatiquement
+- ✅ `nevelio notify --slack <url> [--teams <url>] [--webhook <url>] [--min-severity medium]`
+- ✅ `nevelio issue github --repo <owner/repo>` — issues GitHub avec labels `security`, `nevelio`, `severity:*`
+- ✅ `nevelio issue jira --jira-url <url> --project <KEY>` — tickets Jira Cloud (ADF, priorité mappée)
+- ✅ Déduplication : ne recrée pas un issue/ticket si le titre existe déjà (label `nevelio`)
+
+---
 
 ### v0.4.0 — Modes opérationnels (livrée)
 
@@ -239,7 +250,7 @@ Crawling           ████████████████░░░░ 
 
 ---
 
-## v0.5 — Intégrations écosystème 📋
+## v0.5 — Intégrations écosystème ✅
 
 ### 🟡 GitHub App
 
@@ -250,26 +261,28 @@ Crawling           ████████████████░░░░ 
 
 ### 🟡 Intégrations ticketing
 
-- [ ] Création automatique d'issues GitHub pour chaque finding
-- [ ] Création de tickets Jira (API REST Jira Cloud)
+- [x] Création automatique d'issues GitHub (`nevelio issue github --repo owner/repo`)
+- [x] Création de tickets Jira Cloud (`nevelio issue jira --jira-url ... --project SEC`)
+- [x] Déduplique : ne pas recréer un ticket si le finding existe déjà (label `nevelio`)
 - [ ] Création de tickets Linear
-- [ ] Déduplique : ne pas recréer un ticket si le finding existe déjà
 
 ### 🟢 Notifications
 
-- [ ] Slack (webhook entrant)
-- [ ] Microsoft Teams (webhook)
+- [x] Slack — webhook entrant (`nevelio notify --slack <url>`)
+- [x] Microsoft Teams — webhook (`nevelio notify --teams <url>`)
+- [x] Webhook générique — POST JSON (`nevelio notify --webhook <url>`)
+- [x] Seuil de sévérité configurable (`--min-severity medium|high|critical`)
 - [ ] Email (SMTP configurable)
-- [ ] Webhook générique (payload JSON POST)
 - [ ] PagerDuty (pour les findings CRITICAL en production)
 
 ### 🟢 Dashboard web local
 
-- [ ] Commande `nevelio serve` → interface sur `http://localhost:4000`
-- [ ] Visualisation des findings avec filtres (sévérité, module, endpoint)
+- [x] Commande `nevelio serve` → serveur HTTP sur `http://localhost:4000`
+- [x] Ouverture automatique dans le navigateur (macOS/Linux/Windows)
+- [x] Rapport HTML généré à la volée depuis `findings.json` si absent
+- [ ] Visualisation avec filtres côté client (sévérité, module, endpoint)
 - [ ] Historique des scans passés
 - [ ] Diff visuel entre deux scans
-- [ ] Export PDF depuis l'interface
 
 ---
 
@@ -367,15 +380,15 @@ Crawling           ████████████████░░░░ 
 
 ## Prochaine release
 
-v0.4.0 est complète. Pour publier :
+v0.5.0 est complète. Pour publier :
 
 ```bash
 git add -A
-git commit -m "feat(v0.4): diff scan CI/CD, watch mode, REPL interactif, modules.rs DRY"
-git tag v0.4.0
+git commit -m "feat(v0.5): nevelio serve, nevelio notify (Slack/Teams), nevelio issue (GitHub/Jira)"
+git tag v0.5.0
 git push && git push --tags
 ```
 
 ---
 
-*Dernière mise à jour : 2026-06-27 — v0.4.0 ✅ livrée — prochaine : v0.5.0 (GitHub App, Jira, dashboard web)*
+*Dernière mise à jour : 2026-06-27 — v0.5.0 ✅ livrée — prochaine : v0.6.0 (plugins WASM, scripting Lua/Rhai)*

@@ -56,6 +56,9 @@ pub async fn run() -> Result<()> {
         Commands::Diff(args)    => crate::diff::handle_diff(args).await,
         Commands::Watch(args)   => crate::watch::handle_watch(args, cli.verbose).await,
         Commands::Shell(args)   => crate::shell::handle_shell(args, cli.verbose).await,
+        Commands::Serve(args)   => crate::serve::handle_serve(args).await,
+        Commands::Notify(args)  => crate::notify::handle_notify(args).await,
+        Commands::Issue(args)   => crate::issue::handle_issue(args).await,
     }
 }
 
