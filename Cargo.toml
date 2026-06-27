@@ -8,6 +8,8 @@ members = [
     "crates/modules/business-logic",
     "crates/modules/graphql",
     "crates/modules/infra",
+    "crates/modules/ssrf",
+    "crates/modules/oauth2",
     "crates/recon",
     "crates/reporting",
 ]

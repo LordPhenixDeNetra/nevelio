@@ -25,6 +25,8 @@ nevelio-module-access-control = { path = "../modules/access-control",version = "
 nevelio-module-business-logic = { path = "../modules/business-logic",version = "0.1" }
 nevelio-module-graphql        = { path = "../modules/graphql",       version = "0.1" }
 nevelio-module-infra          = { path = "../modules/infra",         version = "0.1" }
+nevelio-module-ssrf           = { path = "../modules/ssrf",          version = "0.1" }
+nevelio-module-oauth2         = { path = "../modules/oauth2",        version = "0.1" }
 
 clap.workspace               = true
 tokio.workspace              = true

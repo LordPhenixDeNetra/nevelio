@@ -17,6 +17,8 @@ use nevelio_module_business_logic::BusinessLogicModule;
 use nevelio_module_graphql::GraphqlModule;
 use nevelio_module_infra::InfraModule;
 use nevelio_module_injection::InjectionModule;
+use nevelio_module_oauth2::OAuth2Module;
+use nevelio_module_ssrf::SsrfModule;
 use nevelio_reporting::{
     HtmlReporter, JsonReporter, JunitReporter, MarkdownReporter, ReportFormat, SarifReporter,
     ScanReport,
@@ -205,7 +207,7 @@ async fn handle_scan(args: crate::args::ScanArgs, verbose: bool) -> Result<()> {
 
     if !use_tui && !config.dry_run {
         let names: Vec<&str> = if config.modules.is_empty() {
-            vec!["auth", "injection", "access-control", "business-logic", "graphql", "infra"]
+            vec!["auth", "injection", "access-control", "business-logic", "graphql", "infra", "ssrf", "oauth2"]
         } else {
             config.modules.iter().map(String::as_str).collect()
         };
@@ -250,6 +252,8 @@ async fn handle_scan(args: crate::args::ScanArgs, verbose: bool) -> Result<()> {
         Box::new(BusinessLogicModule),
         Box::new(GraphqlModule),
         Box::new(InfraModule),
+        Box::new(SsrfModule),
+        Box::new(OAuth2Module),
     ];
 
     let module_names: Vec<String> = all_modules.iter().map(|m| m.name().to_string()).collect();
@@ -498,6 +502,8 @@ fn handle_modules(args: crate::args::ModulesArgs) -> Result<()> {
         Box::new(BusinessLogicModule),
         Box::new(GraphqlModule),
         Box::new(InfraModule),
+        Box::new(SsrfModule),
+        Box::new(OAuth2Module),
     ];
 
     match args.action {

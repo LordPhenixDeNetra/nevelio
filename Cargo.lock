@@ -1373,6 +1373,8 @@ dependencies = [
  "nevelio-module-graphql",
  "nevelio-module-infra",
  "nevelio-module-injection",
+ "nevelio-module-oauth2",
+ "nevelio-module-ssrf",
  "nevelio-recon",
  "nevelio-reporting",
  "ratatui",
@@ -1486,6 +1488,34 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_yaml",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "nevelio-module-oauth2"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "nevelio-core",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "nevelio-module-ssrf"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "nevelio-core",
+ "reqwest",
+ "serde",
+ "serde_json",
  "tokio",
  "tracing",
 ]

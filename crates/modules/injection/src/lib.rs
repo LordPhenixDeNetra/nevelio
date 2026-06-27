@@ -10,6 +10,7 @@ use nevelio_core::{AttackModule, HttpClient, ScanSession};
 // ---------------------------------------------------------------------------
 
 const SQLI_PAYLOADS: &str = include_str!("../../../../payloads/sqli.yaml");
+const XXE_PAYLOADS: &str  = include_str!("../../../../payloads/xxe.yaml");
 
 // SQL error substrings that indicate a reflected database error
 const SQL_ERRORS: &[&str] = &[
@@ -55,6 +56,19 @@ struct InjectionPayloadFile {
 }
 
 #[derive(Debug, Deserialize)]
+struct XxePayloadFile {
+    #[serde(default)]
+    payloads: Vec<XxeEntry>,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+struct XxeEntry {
+    kind: String,
+    value: String,
+    detect: String,
+}
+
+#[derive(Debug, Deserialize)]
 struct SqliEntry {
     value: String,
     #[serde(rename = "type")]
@@ -91,7 +105,7 @@ impl AttackModule for InjectionModule {
     }
 
     fn description(&self) -> &str {
-        "Tests SQLi, NoSQLi, SSTI, Command Injection, LDAP, and XXE"
+        "Tests SQLi, NoSQLi, SSTI, Command Injection et XXE"
     }
 
     async fn run(
@@ -100,7 +114,7 @@ impl AttackModule for InjectionModule {
         client: &HttpClient,
         endpoints: &[Endpoint],
     ) -> Vec<Finding> {
-        let file: InjectionPayloadFile =
+        let sqli_file: InjectionPayloadFile =
             serde_yaml::from_str(SQLI_PAYLOADS).unwrap_or_else(|_| InjectionPayloadFile {
                 payloads: vec![],
                 nosql_payloads: vec![],
@@ -108,11 +122,13 @@ impl AttackModule for InjectionModule {
                 cmdi_payloads: vec![],
             });
 
+        let xxe_file: XxePayloadFile =
+            serde_yaml::from_str(XXE_PAYLOADS).unwrap_or(XxePayloadFile { payloads: vec![] });
+
         let mut findings = Vec::new();
 
         for ep in endpoints {
             // Collect parameter names to inject into.
-            // Use defined params first; fall back to generic names if none.
             let param_names: Vec<String> = if ep.parameters.is_empty() {
                 GENERIC_PARAMS.iter().map(|s| s.to_string()).collect()
             } else {
@@ -129,19 +145,14 @@ impl AttackModule for InjectionModule {
             };
 
             for param in &param_names {
-                findings.extend(
-                    check_sqli(client, ep, param, &file.payloads).await,
-                );
-                findings.extend(
-                    check_nosqli(client, ep, param, &file.nosql_payloads).await,
-                );
-                findings.extend(
-                    check_ssti(client, ep, param, &file.ssti_payloads).await,
-                );
-                findings.extend(
-                    check_cmdi(client, ep, param, &file.cmdi_payloads).await,
-                );
+                findings.extend(check_sqli(client, ep, param, &sqli_file.payloads).await);
+                findings.extend(check_nosqli(client, ep, param, &sqli_file.nosql_payloads).await);
+                findings.extend(check_ssti(client, ep, param, &sqli_file.ssti_payloads).await);
+                findings.extend(check_cmdi(client, ep, param, &sqli_file.cmdi_payloads).await);
             }
+
+            // XXE : testé sur les endpoints POST/PUT/PATCH acceptant XML
+            findings.extend(check_xxe(client, ep, &xxe_file.payloads).await);
         }
 
         findings
@@ -629,6 +640,103 @@ async fn check_cmdi(
                 "https://cheatsheetseries.owasp.org/cheatsheets/OS_Command_Injection_Defense_Cheat_Sheet.html".to_string(),
             ];
             return vec![f];
+        }
+    }
+
+    vec![]
+}
+
+// ---------------------------------------------------------------------------
+// Check: XXE — XML External Entity Injection
+// ---------------------------------------------------------------------------
+
+const XML_CONTENT_TYPES: &[&str] = &["application/xml", "text/xml", "application/soap+xml"];
+
+async fn check_xxe(
+    client: &HttpClient,
+    ep: &Endpoint,
+    payloads: &[XxeEntry],
+) -> Vec<Finding> {
+    // XXE requires the server to process an XML body — only relevant for write methods
+    if !matches!(ep.method.as_str(), "POST" | "PUT" | "PATCH") {
+        return vec![];
+    }
+
+    // Try each content-type the server might accept
+    for ct in XML_CONTENT_TYPES {
+        for entry in payloads {
+            // Skip blind OOB payloads (no in-band detection possible without callback server)
+            if entry.kind == "blind" {
+                continue;
+            }
+
+            let req = match client
+                .inner()
+                .request(ep.method.parse().unwrap_or(reqwest::Method::POST), &ep.full_url)
+                .header("Content-Type", *ct)
+                .body(entry.value.trim().to_string())
+                .build()
+            {
+                Ok(r) => r,
+                Err(_) => continue,
+            };
+
+            let Ok(resp) = client.send(req).await else {
+                continue;
+            };
+
+            let status = resp.status().as_u16();
+            let body = resp.text().await.unwrap_or_default();
+
+            let triggered = if !entry.detect.is_empty() {
+                body.contains(entry.detect.as_str())
+            } else {
+                // No specific marker: a 200 on a SSRF probe is suspicious
+                entry.kind == "ssrf" && status == 200 && !body.is_empty()
+            };
+
+            if triggered {
+                let (title, cwe, severity, cvss) = match entry.kind.as_str() {
+                    "ssrf" => (
+                        format!("XXE + SSRF — {}", ep.full_url),
+                        "CWE-918",
+                        Severity::Critical,
+                        9.8,
+                    ),
+                    _ => (
+                        format!("XXE File Disclosure — {}", ep.full_url),
+                        "CWE-611",
+                        Severity::Critical,
+                        9.1,
+                    ),
+                };
+
+                let mut f = Finding::new(title, severity, cvss, "injection", ep.full_url.clone(), ep.method.clone());
+                f.description = format!(
+                    "L'endpoint {} accepte du contenu XML ({}) et traite les entités externes. \
+                     Un attaquant peut lire des fichiers locaux du serveur ou déclencher des requêtes \
+                     vers des ressources internes.",
+                    ep.full_url, ct
+                );
+                f.proof = format!(
+                    "Payload envoyé avec Content-Type: {}\nRéponse HTTP {}: {}",
+                    ct,
+                    status,
+                    body.chars().take(200).collect::<String>()
+                );
+                f.recommendation =
+                    "Désactiver le traitement des entités externes dans le parseur XML \
+                     (FEATURE_SECURE_PROCESSING, setExpandEntityReferences(false)). \
+                     Utiliser une allowlist de Content-Types acceptés. \
+                     Valider et assainir tout contenu XML avant traitement."
+                        .to_string();
+                f.cwe = Some(cwe.to_string());
+                f.references = vec![
+                    "https://owasp.org/www-community/vulnerabilities/XML_External_Entity_(XXE)_Processing".to_string(),
+                    "https://cheatsheetseries.owasp.org/cheatsheets/XML_External_Entity_Prevention_Cheat_Sheet.html".to_string(),
+                ];
+                return vec![f];
+            }
         }
     }
 

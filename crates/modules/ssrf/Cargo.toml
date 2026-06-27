@@ -1,0 +1,22 @@
+[package]
+name              = "nevelio-module-ssrf"
+version.workspace     = true
+edition.workspace     = true
+authors.workspace     = true
+license.workspace     = true
+description           = "SSRF detection module for the Nevelio API security scanner"
+homepage.workspace    = true
+repository.workspace  = true
+keywords.workspace    = true
+categories.workspace  = true
+readme.workspace      = true
+
+[dependencies]
+nevelio-core          = { path = "../../core", version = "0.1" }
+async-trait.workspace = true
+anyhow.workspace      = true
+tracing.workspace     = true
+tokio.workspace       = true
+reqwest.workspace     = true
+serde.workspace       = true
+serde_json.workspace  = true
