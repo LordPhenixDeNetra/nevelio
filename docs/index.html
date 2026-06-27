@@ -21,7 +21,7 @@
     <div class="logo-icon">🔐</div>
     Nevelio
   </a>
-  <span class="header-version">v0.1</span>
+  <span class="header-version">v0.6</span>
 
   <div class="header-spacer"></div>
 
@@ -71,6 +71,12 @@
     <a class="nav-link nav-sub" href="#scan-modes"><span data-i18n="nav.sub.modes">↳ Modes spéciaux</span></a>
     <a class="nav-link" href="#report"><span class="nav-icon">📄</span>nevelio report</a>
     <a class="nav-link" href="#modules-cmd"><span class="nav-icon">📦</span>nevelio modules</a>
+    <a class="nav-link" href="#diff"><span class="nav-icon">⚖️</span>nevelio diff</a>
+    <a class="nav-link" href="#watch"><span class="nav-icon">👁️</span>nevelio watch</a>
+    <a class="nav-link" href="#shell"><span class="nav-icon">💻</span>nevelio shell</a>
+    <a class="nav-link" href="#serve"><span class="nav-icon">🌐</span>nevelio serve</a>
+    <a class="nav-link" href="#notify"><span class="nav-icon">🔔</span>nevelio notify</a>
+    <a class="nav-link" href="#issue"><span class="nav-icon">🎫</span>nevelio issue</a>
     <a class="nav-link" href="#tui"><span class="nav-icon">🖥️</span><span data-i18n="nav.tui">TUI Dashboard</span></a>
   </div>
 
@@ -82,6 +88,10 @@
     <a class="nav-link" href="#mod-graphql"><span class="nav-icon">◈</span>graphql</a>
     <a class="nav-link" href="#mod-infra"><span class="nav-icon">🏗️</span>infra</a>
     <a class="nav-link" href="#mod-business"><span class="nav-icon">💼</span>business-logic</a>
+    <a class="nav-link" href="#mod-xxe"><span class="nav-icon">📄</span>xxe</a>
+    <a class="nav-link" href="#mod-ssrf"><span class="nav-icon">🔀</span>ssrf</a>
+    <a class="nav-link" href="#mod-oauth2"><span class="nav-icon">🔐</span>oauth2</a>
+    <a class="nav-link" href="#mod-proto"><span class="nav-icon">🧬</span>prototype-pollution</a>
   </div>
 
   <div class="nav-section">
@@ -90,6 +100,8 @@
     <a class="nav-link" href="#ai"><span class="nav-icon">🤖</span><span data-i18n="nav.ai">Suggestions IA</span></a>
     <a class="nav-link" href="#cicd"><span class="nav-icon">🔄</span><span data-i18n="nav.cicd">CI/CD</span></a>
     <a class="nav-link" href="#scenarios"><span class="nav-icon">🎯</span><span data-i18n="nav.scenarios">Scénarios pratiques</span></a>
+    <a class="nav-link" href="#suppress"><span class="nav-icon">🚫</span>Suppressions</a>
+    <a class="nav-link" href="#scripting"><span class="nav-icon">📜</span>Scripting Rhai</a>
   </div>
 
   <div class="nav-section">
@@ -118,10 +130,10 @@
       <a href="tutorial.md" class="btn btn-secondary" data-i18n="hero.btn.md">📝 Version Markdown</a>
     </div>
     <div class="hero-stats">
-      <div class="stat"><div class="stat-value">6</div><div class="stat-label" data-i18n="hero.stat.modules">Modules d'attaque</div></div>
-      <div class="stat"><div class="stat-value">32+</div><div class="stat-label" data-i18n="hero.stat.checks">Vérifications</div></div>
+      <div class="stat"><div class="stat-value">10</div><div class="stat-label" data-i18n="hero.stat.modules">Modules d'attaque</div></div>
+      <div class="stat"><div class="stat-value">50+</div><div class="stat-label" data-i18n="hero.stat.checks">Vérifications</div></div>
       <div class="stat"><div class="stat-value">5</div><div class="stat-label" data-i18n="hero.stat.formats">Formats de sortie</div></div>
-      <div class="stat"><div class="stat-value">79</div><div class="stat-label" data-i18n="hero.stat.tests">Tests</div></div>
+      <div class="stat"><div class="stat-value">163</div><div class="stat-label" data-i18n="hero.stat.tests">Tests</div></div>
     </div>
   </section>
 
@@ -134,13 +146,21 @@
       <li><a href="#config" data-i18n="toc.3">Configuration (init)</a></li>
       <li><a href="#scan" data-i18n="toc.4">Commande scan</a></li>
       <li><a href="#tui" data-i18n="toc.5">TUI Dashboard</a></li>
-      <li><a href="#modules" data-i18n="toc.6">Modules d'attaque</a></li>
+      <li><a href="#modules" data-i18n="toc.6">10 Modules d'attaque</a></li>
       <li><a href="#formats" data-i18n="toc.7">Formats de sortie</a></li>
       <li><a href="#ai" data-i18n="toc.8">Suggestions IA</a></li>
       <li><a href="#report" data-i18n="toc.9">Commande report</a></li>
       <li><a href="#modules-cmd" data-i18n="toc.10">Commande modules</a></li>
       <li><a href="#cicd" data-i18n="toc.11">Intégration CI/CD</a></li>
       <li><a href="#scenarios" data-i18n="toc.12">Scénarios pratiques</a></li>
+      <li><a href="#diff">nevelio diff</a></li>
+      <li><a href="#watch">nevelio watch</a></li>
+      <li><a href="#shell">nevelio shell</a></li>
+      <li><a href="#serve">nevelio serve</a></li>
+      <li><a href="#notify">nevelio notify</a></li>
+      <li><a href="#issue">nevelio issue</a></li>
+      <li><a href="#suppress">Suppressions</a></li>
+      <li><a href="#scripting">Scripting Rhai</a></li>
       <li><a href="#flags-ref" data-i18n="toc.13">Référence des flags</a></li>
     </ol>
   </div>
@@ -277,6 +297,7 @@ nevelio init
         <tr><td><code>proxy</code></td><td>URL</td><td>—</td><td data-i18n="config.proxy.desc">Proxy HTTP (Burp Suite, etc.)</td></tr>
         <tr><td><code>out_dir</code></td><td>chemin</td><td>.</td><td data-i18n="config.outdir.desc">Répertoire de sortie</td></tr>
         <tr><td><code>fail_on</code></td><td>none / low / medium / high / critical</td><td>—</td><td data-i18n="config.failon.desc">Seuil d'échec CI</td></tr>
+        <tr><td><code>[[suppress]]</code></td><td>tableau</td><td>—</td><td>Règles de suppression de faux positifs (module, severity, title_contains, endpoint_prefix, reason)</td></tr>
       </tbody>
     </table>
     </div>
@@ -293,7 +314,18 @@ profile = "normal"
 # auth_token  = "Bearer eyJhbGciOiJIUzI1NiJ9..."
 # proxy       = "http://127.0.0.1:8080"
 out_dir  = "./results"
-# fail_on = "high"</code></pre>
+# fail_on = "high"
+
+# Suppressions de faux positifs (critères AND — tous optionnels)
+[[suppress]]
+module = "infra"
+severity = "informative"
+reason = "endpoints /health et /metrics acceptés"
+
+[[suppress]]
+title_contains = "JWT"
+endpoint_prefix = "/public/"
+reason = "endpoints publics — authentification non requise"</code></pre>
     </div>
 
     <div class="callout info">
@@ -422,6 +454,7 @@ echo $?   # 1 si HIGH/CRITICAL trouvé</code></pre>
         <tr><td><code>--dry-run</code></td><td data-i18n="mode.dryrun.desc">Simuler sans envoyer de requêtes réelles</td></tr>
         <tr><td><code>--no-tui</code></td><td data-i18n="mode.notui.desc">Désactiver le dashboard TUI (CI/CD, pipes)</td></tr>
         <tr><td><code>--ai-suggestions</code></td><td data-i18n="mode.ai.desc">Suggestions IA après le scan (nécessite <code>ANTHROPIC_API_KEY</code>)</td></tr>
+        <tr><td><code>--script FILE</code></td><td>Script Rhai de filtrage post-scan (répétable, logique AND entre scripts)</td></tr>
         <tr><td><code>--verbose</code></td><td data-i18n="mode.verbose.desc">Logs détaillés et requêtes HTTP</td></tr>
         <tr><td><code>--accept-legal</code></td><td data-i18n="mode.acceptlegal.desc">Accepter le disclaimer sans prompt</td></tr>
         <tr><td><code>--no-color</code></td><td data-i18n="mode.nocolor.desc">Désactiver les couleurs ANSI (logs CI)</td></tr>
@@ -563,6 +596,51 @@ nevelio scan --target https://api.example.com --no-tui --accept-legal</code></pr
           <li>User-Agent bypass</li>
           <li>Race condition</li>
           <li data-i18n="mod.bl.negative">Valeurs négatives / prix</li>
+        </ul>
+      </div>
+      <div class="module-card">
+        <div class="module-header">
+          <div class="module-icon">📄</div>
+          <div><div class="module-name">xxe</div><div class="module-cmd">--module xxe</div></div>
+        </div>
+        <ul class="module-checks">
+          <li>XXE In-Band (CWE-611)</li>
+          <li>XXE Out-of-Band / Blind</li>
+          <li>DTD externe (DNS/HTTP OOB)</li>
+        </ul>
+      </div>
+      <div class="module-card">
+        <div class="module-header">
+          <div class="module-icon">🔀</div>
+          <div><div class="module-name">ssrf</div><div class="module-cmd">--module ssrf</div></div>
+        </div>
+        <ul class="module-checks">
+          <li>SSRF via paramètres URL (CWE-918)</li>
+          <li>AWS IMDSv1 / GCP metadata</li>
+          <li>SSRF via en-têtes HTTP</li>
+        </ul>
+      </div>
+      <div class="module-card">
+        <div class="module-header">
+          <div class="module-icon">🔐</div>
+          <div><div class="module-name">oauth2</div><div class="module-cmd">--module oauth2</div></div>
+        </div>
+        <ul class="module-checks">
+          <li>Open redirect redirect_uri (CWE-601)</li>
+          <li>Token leakage via Referrer (CWE-200)</li>
+          <li>PKCE absent (CWE-345)</li>
+          <li>Scope creep (CWE-269)</li>
+        </ul>
+      </div>
+      <div class="module-card">
+        <div class="module-header">
+          <div class="module-icon">🧬</div>
+          <div><div class="module-name">prototype-pollution</div><div class="module-cmd">--module prototype-pollution</div></div>
+        </div>
+        <ul class="module-checks">
+          <li>JSON body __proto__ (CWE-1321)</li>
+          <li>constructor.prototype injection</li>
+          <li>Query string pollution</li>
         </ul>
       </div>
     </div>
@@ -838,6 +916,139 @@ CF-Connecting-IP: 192.168.1.1</code></pre></div>
         <div class="check-body">
           <p data-i18n-html="1" data-i18n="check.race.desc">Envoie simultanément 10 requêtes identiques (achat, réservation, coupon) et détecte si plusieurs
           répondent avec succès alors qu'une seule devrait l'être.</p>
+        </div>
+      </div>
+    </div>
+    <!-- XXE -->
+    <h3 id="mod-xxe">Module xxe — Détail</h3>
+    <div class="check-list">
+      <div class="check-item">
+        <div class="check-header" onclick="toggleCheck(this)">
+          <span class="badge badge-critical">CRITICAL</span>
+          <span class="check-title">XXE In-Band</span>
+          <span class="check-cwe">CWE-611</span>
+          <span class="check-arrow">▶</span>
+        </div>
+        <div class="check-body">
+          <p>Injecte des entités XML externes dans les endpoints XML/multipart. Détecte si le contenu de <code>/etc/passwd</code> est reflété dans la réponse.</p>
+          <div class="code-block"><div class="code-header"><span>payload XXE</span><button class="copy-btn" onclick="copyCode(this)" data-i18n="copy.btn">Copier</button></div>
+          <pre><code class="language-xml">&lt;?xml version="1.0"?&gt;
+&lt;!DOCTYPE foo [&lt;!ENTITY xxe SYSTEM "file:///etc/passwd"&gt;]&gt;
+&lt;root&gt;&lt;data&gt;&amp;xxe;&lt;/data&gt;&lt;/root&gt;</code></pre></div>
+        </div>
+      </div>
+      <div class="check-item">
+        <div class="check-header" onclick="toggleCheck(this)">
+          <span class="badge badge-high">HIGH</span>
+          <span class="check-title">XXE Out-of-Band (Blind)</span>
+          <span class="check-cwe">CWE-611</span>
+          <span class="check-arrow">▶</span>
+        </div>
+        <div class="check-body">
+          <p>Utilise un DTD externe pour déclencher une connexion DNS/HTTP sortante, détectable même sans réflexion dans la réponse.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- SSRF -->
+    <h3 id="mod-ssrf">Module ssrf — Détail</h3>
+    <div class="check-list">
+      <div class="check-item">
+        <div class="check-header" onclick="toggleCheck(this)">
+          <span class="badge badge-critical">CRITICAL</span>
+          <span class="check-title">SSRF via paramètres URL</span>
+          <span class="check-cwe">CWE-918</span>
+          <span class="check-arrow">▶</span>
+        </div>
+        <div class="check-body">
+          <p>Injecte des URLs internes dans les paramètres <code>url</code>, <code>callback</code>, <code>redirect</code>, <code>src</code>, <code>href</code>, <code>uri</code>.</p>
+          <div class="table-wrap"><table>
+            <thead><tr><th>Cible</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>169.254.169.254/latest/meta-data/</code></td><td>AWS IMDSv1</td></tr>
+              <tr><td><code>metadata.google.internal/...</code></td><td>GCP metadata</td></tr>
+              <tr><td><code>127.0.0.1/admin</code></td><td>Services internes</td></tr>
+            </tbody>
+          </table></div>
+        </div>
+      </div>
+      <div class="check-item">
+        <div class="check-header" onclick="toggleCheck(this)">
+          <span class="badge badge-high">HIGH</span>
+          <span class="check-title">SSRF via en-têtes HTTP</span>
+          <span class="check-cwe">CWE-918</span>
+          <span class="check-arrow">▶</span>
+        </div>
+        <div class="check-body">
+          <p>Teste <code>X-Forwarded-Host</code>, <code>X-Original-URL</code>, <code>X-Rewrite-URL</code> pour détecter les SSRF côté infrastructure.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- OAuth2 -->
+    <h3 id="mod-oauth2">Module oauth2 — Détail</h3>
+    <div class="check-list">
+      <div class="check-item">
+        <div class="check-header" onclick="toggleCheck(this)">
+          <span class="badge badge-high">HIGH</span>
+          <span class="check-title">Open Redirect redirect_uri</span>
+          <span class="check-cwe">CWE-601</span>
+          <span class="check-arrow">▶</span>
+        </div>
+        <div class="check-body">
+          <p>Injecte des URIs malveillantes dans <code>redirect_uri</code> pour voler des codes d'autorisation OAuth2.</p>
+        </div>
+      </div>
+      <div class="check-item">
+        <div class="check-header" onclick="toggleCheck(this)">
+          <span class="badge badge-medium">MEDIUM</span>
+          <span class="check-title">PKCE absent</span>
+          <span class="check-cwe">CWE-345</span>
+          <span class="check-arrow">▶</span>
+        </div>
+        <div class="check-body">
+          <p>Vérifie que les flux sans secret client exigent <code>code_challenge</code> / <code>code_verifier</code> (obligatoire pour SPAs et apps mobiles).</p>
+        </div>
+      </div>
+      <div class="check-item">
+        <div class="check-header" onclick="toggleCheck(this)">
+          <span class="badge badge-medium">MEDIUM</span>
+          <span class="check-title">Token Leakage via Referrer</span>
+          <span class="check-cwe">CWE-200</span>
+          <span class="check-arrow">▶</span>
+        </div>
+        <div class="check-body">
+          <p>Détecte les endpoints transmettant des tokens OAuth2 dans l'URL (fragment ou query), exposés dans les logs et le header <code>Referer</code>.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Prototype Pollution -->
+    <h3 id="mod-proto">Module prototype-pollution — Détail</h3>
+    <div class="check-list">
+      <div class="check-item">
+        <div class="check-header" onclick="toggleCheck(this)">
+          <span class="badge badge-high">HIGH</span>
+          <span class="check-title">JSON Body Pollution</span>
+          <span class="check-cwe">CWE-1321</span>
+          <span class="check-arrow">▶</span>
+        </div>
+        <div class="check-body">
+          <div class="code-block"><div class="code-header"><span>json — payloads injectés</span><button class="copy-btn" onclick="copyCode(this)" data-i18n="copy.btn">Copier</button></div>
+          <pre><code class="language-json">{"__proto__": {"admin": true}}
+{"constructor": {"prototype": {"admin": true}}}</code></pre></div>
+          <p>Détecte si ces propriétés sont reflétées dans la réponse ou accordent des droits inattendus.</p>
+        </div>
+      </div>
+      <div class="check-item">
+        <div class="check-header" onclick="toggleCheck(this)">
+          <span class="badge badge-medium">MEDIUM</span>
+          <span class="check-title">Query String Pollution</span>
+          <span class="check-cwe">CWE-1321</span>
+          <span class="check-arrow">▶</span>
+        </div>
+        <div class="check-body">
+          <p>Injecte via les paramètres GET : <code>?__proto__[admin]=true&amp;constructor[prototype][admin]=true</code>.</p>
         </div>
       </div>
     </div>
@@ -1330,6 +1541,283 @@ nevelio scan --target https://api.example.com \
 # → Les suggestions IA seront en espagnol</code></pre></div>
   </section>
 
+  <!-- ── diff ──────────────────────────────────────────────────────────── -->
+  <section class="doc-section" id="diff">
+    <h2><span class="section-icon">⚖️</span> nevelio <code>diff</code></h2>
+    <p>Compare deux fichiers <code>findings.json</code> et affiche les nouvelles vulnérabilités, les régressions et les vulnérabilités résolues.</p>
+
+    <div class="code-block">
+      <div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)" data-i18n="copy.btn">Copier</button></div>
+      <pre><code class="language-bash"># Scan de référence (avant déploiement)
+nevelio scan --target https://staging.api.example.com \
+             --out-dir ./baseline --accept-legal
+
+# Scan après déploiement
+nevelio scan --target https://staging.api.example.com \
+             --out-dir ./after-deploy --accept-legal
+
+# Comparer — exit 0 si ok, 1 si nouvelles vulnérabilités
+nevelio diff ./baseline/findings.json ./after-deploy/findings.json --fail-on high</code></pre>
+    </div>
+
+    <div class="callout info">
+      <span class="callout-icon">ℹ️</span>
+      <div><strong>Codes de sortie :</strong> <code>0</code> = aucune régression, <code>1</code> = nouvelles vulnérabilités, <code>2</code> = erreur de lecture.</div>
+    </div>
+  </section>
+
+  <!-- ── watch ──────────────────────────────────────────────────────────── -->
+  <section class="doc-section" id="watch">
+    <h2><span class="section-icon">👁️</span> nevelio <code>watch</code></h2>
+    <p>Lance des scans répétés à intervalles réguliers et envoie une notification webhook si de nouveaux findings apparaissent.</p>
+
+    <div class="code-block">
+      <div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)" data-i18n="copy.btn">Copier</button></div>
+      <pre><code class="language-bash">nevelio watch \
+  --url https://api.example.com \
+  --interval 6h \
+  --webhook https://hooks.slack.com/services/T.../B.../... \
+  --min-severity high \
+  --accept-legal</code></pre>
+    </div>
+
+    <div class="table-wrap">
+    <table>
+      <thead><tr><th>Flag</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td><code>--url URL</code></td><td>URL cible (obligatoire)</td></tr>
+        <tr><td><code>--interval</code></td><td>Fréquence : <code>30m</code>, <code>6h</code>, <code>1d</code></td></tr>
+        <tr><td><code>--webhook URL</code></td><td>Webhook de notification sur changement</td></tr>
+        <tr><td><code>--min-severity</code></td><td>Sévérité minimale déclenchant la notification</td></tr>
+      </tbody>
+    </table>
+    </div>
+  </section>
+
+  <!-- ── shell ──────────────────────────────────────────────────────────── -->
+  <section class="doc-section" id="shell">
+    <h2><span class="section-icon">💻</span> nevelio <code>shell</code></h2>
+    <p>REPL interactif pour explorer et tester une API sans relancer une commande complète à chaque fois.</p>
+
+    <div class="code-block">
+      <div class="code-header"><span>terminal</span><button class="copy-btn" onclick="copyCode(this)" data-i18n="copy.btn">Copier</button></div>
+      <pre><code class="language-text">$ nevelio shell --url https://api.example.com
+nevelio shell> spec ./openapi.yaml
+  ✓ 23 endpoints chargés
+nevelio shell> token "Bearer eyJhbGci..."
+  ✓ Token défini
+nevelio shell> scan auth injection
+  ► auth...  2 findings
+nevelio shell> findings
+  [CRITICAL] JWT Algorithm None Accepted
+  [HIGH]     SQLi détecté
+nevelio shell> export html
+  ✓ report.html généré
+nevelio shell> exit</code></pre>
+    </div>
+
+    <div class="table-wrap">
+    <table>
+      <thead><tr><th>Commande REPL</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td><code>target &lt;URL&gt;</code></td><td>Changer l'URL cible</td></tr>
+        <tr><td><code>spec &lt;path&gt;</code></td><td>Charger une spec OpenAPI/Postman/HAR</td></tr>
+        <tr><td><code>token &lt;TOKEN&gt;</code></td><td>Définir le token d'auth</td></tr>
+        <tr><td><code>scan [modules...]</code></td><td>Lancer un scan</td></tr>
+        <tr><td><code>list</code></td><td>Lister les endpoints</td></tr>
+        <tr><td><code>findings</code></td><td>Afficher les derniers résultats</td></tr>
+        <tr><td><code>replay &lt;N&gt;</code></td><td>Rejouer la Nème requête</td></tr>
+        <tr><td><code>export &lt;format&gt;</code></td><td>Exporter : json / html / sarif</td></tr>
+        <tr><td><code>exit</code></td><td>Quitter le REPL</td></tr>
+      </tbody>
+    </table>
+    </div>
+  </section>
+
+  <!-- ── serve ──────────────────────────────────────────────────────────── -->
+  <section class="doc-section" id="serve">
+    <h2><span class="section-icon">🌐</span> nevelio <code>serve</code></h2>
+    <p>Lance un serveur HTTP local qui sert le dernier rapport HTML et ouvre automatiquement le navigateur.</p>
+
+    <div class="code-block">
+      <div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)" data-i18n="copy.btn">Copier</button></div>
+      <pre><code class="language-bash"># Port par défaut (3000)
+nevelio serve
+
+# Port personnalisé
+nevelio serve --port 4000
+
+# Depuis un répertoire de résultats spécifique
+nevelio serve --out-dir ./results/2026-06-27</code></pre>
+    </div>
+
+    <div class="callout info">
+      <span class="callout-icon">ℹ️</span>
+      <div>Si <code>report.html</code> n'existe pas, Nevelio régénère le rapport depuis <code>findings.json</code> à la volée.
+      Le navigateur s'ouvre automatiquement (<code>open</code> macOS, <code>xdg-open</code> Linux, <code>cmd start</code> Windows).</div>
+    </div>
+  </section>
+
+  <!-- ── notify ─────────────────────────────────────────────────────────── -->
+  <section class="doc-section" id="notify">
+    <h2><span class="section-icon">🔔</span> nevelio <code>notify</code></h2>
+    <p>Envoie les findings du dernier scan vers Slack, Teams ou un webhook générique.</p>
+
+    <div class="code-block">
+      <div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)" data-i18n="copy.btn">Copier</button></div>
+      <pre><code class="language-bash"># Slack uniquement
+nevelio notify \
+  --slack https://hooks.slack.com/services/T.../B.../... \
+  --min-severity high
+
+# Slack + Teams + webhook générique
+nevelio notify \
+  --slack https://hooks.slack.com/... \
+  --teams https://outlook.office.com/webhook/... \
+  --webhook https://alerting.example.com/hooks/nevelio \
+  --min-severity medium \
+  --input ./results/findings.json</code></pre>
+    </div>
+
+    <div class="table-wrap">
+    <table>
+      <thead><tr><th>Flag</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td><code>--slack URL</code></td><td>Incoming Webhook Slack</td></tr>
+        <tr><td><code>--teams URL</code></td><td>Incoming Webhook Teams (MessageCard)</td></tr>
+        <tr><td><code>--webhook URL</code></td><td>Webhook générique JSON</td></tr>
+        <tr><td><code>--min-severity SEV</code></td><td>Sévérité minimale à envoyer</td></tr>
+        <tr><td><code>--input FILE</code></td><td>Source (défaut : <code>./findings.json</code>)</td></tr>
+      </tbody>
+    </table>
+    </div>
+  </section>
+
+  <!-- ── issue ──────────────────────────────────────────────────────────── -->
+  <section class="doc-section" id="issue">
+    <h2><span class="section-icon">🎫</span> nevelio <code>issue</code></h2>
+    <p>Crée des issues/tickets pour chaque finding. La déduplication est intégrée : un ticket existant avec le même titre ne sera pas recréé.</p>
+
+    <div class="tabs">
+      <div class="tab-list">
+        <button class="tab-btn active" onclick="switchTab(this, 'issue-gh')">GitHub</button>
+        <button class="tab-btn" onclick="switchTab(this, 'issue-jira')">Jira Cloud</button>
+      </div>
+
+      <div class="tab-panel active" id="issue-gh">
+        <div class="code-block">
+          <div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)" data-i18n="copy.btn">Copier</button></div>
+          <pre><code class="language-bash">GITHUB_TOKEN=ghp_... nevelio issue github \
+  --repo monorg/mon-api \
+  --min-severity high</code></pre>
+        </div>
+        <p>Labels ajoutés automatiquement : <code>security</code>, <code>nevelio</code>, <code>severity:critical</code> (etc.)</p>
+        <p>Déduplication : cherche les issues ouvertes avec label <code>nevelio</code> et même titre avant de créer.</p>
+      </div>
+
+      <div class="tab-panel" id="issue-jira">
+        <div class="code-block">
+          <div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)" data-i18n="copy.btn">Copier</button></div>
+          <pre><code class="language-bash">JIRA_EMAIL=user@example.com \
+JIRA_API_TOKEN=... \
+nevelio issue jira \
+  --jira-url https://monorg.atlassian.net \
+  --project SEC \
+  --min-severity medium</code></pre>
+        </div>
+        <p>Description formatée en <strong>ADF</strong> (Atlassian Document Format). Priorité mappée automatiquement : Critical→Highest, High→High, Medium→Medium, Low→Low, Informative→Lowest.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── suppress ───────────────────────────────────────────────────────── -->
+  <section class="doc-section" id="suppress">
+    <h2><span class="section-icon">🚫</span> Suppressions de faux positifs</h2>
+    <p>Les règles <code>[[suppress]]</code> dans <code>.nevelio.toml</code> filtrent les findings <strong>après le scan</strong>, avant l'écriture des rapports. Les critères sont combinés en logique <strong>AND</strong>.</p>
+
+    <div class="code-block">
+      <div class="code-header"><span>.nevelio.toml</span><button class="copy-btn" onclick="copyCode(this)" data-i18n="copy.btn">Copier</button></div>
+      <pre><code class="language-toml">[[suppress]]
+module = "infra"
+severity = "informative"
+reason = "endpoints /health et /metrics acceptés"
+
+[[suppress]]
+title_contains = "JWT"
+endpoint_prefix = "/public/"
+reason = "endpoints publics — authentification non requise"
+
+[[suppress]]
+title_contains = "CORS"
+endpoint_prefix = "/internal/healthz"
+reason = "CORS intentionnel pour le monitoring interne"</code></pre>
+    </div>
+
+    <div class="table-wrap">
+    <table>
+      <thead><tr><th>Champ</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td><code>title_contains</code></td><td>Le titre du finding contient cette chaîne</td></tr>
+        <tr><td><code>module</code></td><td>Nom exact du module (<code>auth</code>, <code>infra</code>…)</td></tr>
+        <tr><td><code>severity</code></td><td>Sévérité en minuscules (<code>critical</code>, <code>high</code>…)</td></tr>
+        <tr><td><code>endpoint_prefix</code></td><td>L'URL du finding commence par ce préfixe</td></tr>
+        <tr><td><code>reason</code></td><td>Commentaire libre — non évalué par le moteur</td></tr>
+      </tbody>
+    </table>
+    </div>
+
+    <div class="callout info">
+      <span class="callout-icon">ℹ️</span>
+      <div>Après application des règles, Nevelio affiche : <code>↩ 3 finding(s) supprimé(s).</code></div>
+    </div>
+  </section>
+
+  <!-- ── scripting ──────────────────────────────────────────────────────── -->
+  <section class="doc-section" id="scripting">
+    <h2><span class="section-icon">📜</span> Scripting Rhai (<code>--script</code>)</h2>
+    <p>Filtrage <strong>programmatique</strong> des findings via des scripts Rhai, complémentaire aux règles <code>[[suppress]]</code> déclaratives.</p>
+
+    <div class="code-block">
+      <div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)" data-i18n="copy.btn">Copier</button></div>
+      <pre><code class="language-bash">nevelio scan --target https://api.example.com \
+             --script ./filtres/seuil-cvss.rhai \
+             --script ./filtres/no-monitoring.rhai \
+             --accept-legal</code></pre>
+    </div>
+
+    <div class="code-block">
+      <div class="code-header"><span>filtres/seuil-cvss.rhai</span><button class="copy-btn" onclick="copyCode(this)" data-i18n="copy.btn">Copier</button></div>
+      <pre><code class="language-text">// Garder uniquement CRITICAL/HIGH ou MEDIUM avec CVSS > 6.5
+if severity == "Critical" || severity == "High" {
+    true
+} else if severity == "Medium" && cvss > 6.5 {
+    true
+} else {
+    false
+}</code></pre>
+    </div>
+
+    <div class="table-wrap">
+    <table>
+      <thead><tr><th>Variable</th><th>Type</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td><code>title</code></td><td>string</td><td>Titre du finding</td></tr>
+        <tr><td><code>severity</code></td><td>string</td><td><code>"Critical"</code> / <code>"High"</code> / <code>"Medium"</code> / <code>"Low"</code> / <code>"Informative"</code></td></tr>
+        <tr><td><code>finding_module</code></td><td>string</td><td>Nom du module (<code>"auth"</code>, <code>"infra"</code>…) — noter : <code>module</code> est réservé par Rhai</td></tr>
+        <tr><td><code>endpoint</code></td><td>string</td><td>URL de l'endpoint vulnérable</td></tr>
+        <tr><td><code>method</code></td><td>string</td><td>Méthode HTTP</td></tr>
+        <tr><td><code>description</code></td><td>string</td><td>Description du finding</td></tr>
+        <tr><td><code>cvss</code></td><td>float</td><td>Score CVSS (0.0–10.0)</td></tr>
+      </tbody>
+    </table>
+    </div>
+
+    <div class="callout warning">
+      <span class="callout-icon">⚠️</span>
+      <div>En cas d'erreur dans un script, le finding est <strong>conservé</strong> (comportement fail-safe). Retourner <code>false</code> supprime le finding, <code>true</code> le conserve.</div>
+    </div>
+  </section>
+
   <!-- ── 13. Flags ref ──────────────────────────────────────────────────── -->
   <section class="doc-section" id="flags-ref">
     <h2><span class="section-icon">📖</span> <span data-i18n="flags.title">Référence complète des flags</span></h2>
@@ -1356,6 +1844,70 @@ nevelio scan --target https://api.example.com \
         <tr><td class="flag">--dry-run</td><td data-i18n="flags.type.bool">booléen</td><td data-i18n="mode.dryrun.desc">Simuler sans requêtes réelles</td></tr>
         <tr><td class="flag">--no-tui</td><td data-i18n="flags.type.bool">booléen</td><td data-i18n="flags.notui.desc">Désactiver le TUI dashboard</td></tr>
         <tr><td class="flag">--ai-suggestions</td><td data-i18n="flags.type.bool">booléen</td><td data-i18n="flags.ai.desc">Suggestions IA (ANTHROPIC_API_KEY requis)</td></tr>
+        <tr><td class="flag">--script FILE</td><td>liste</td><td>Script Rhai de filtrage post-scan (répétable, AND entre scripts)</td></tr>
+      </tbody>
+    </table>
+    </div>
+
+    <h3>nevelio diff</h3>
+    <div class="table-wrap">
+    <table>
+      <thead><tr><th>Flag</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td class="flag">--fail-on SEV</td><td>Exit code 1 si nouvelles vulnérabilités ≥ sévérité</td></tr>
+      </tbody>
+    </table>
+    </div>
+
+    <h3>nevelio watch</h3>
+    <div class="table-wrap">
+    <table>
+      <thead><tr><th>Flag</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td class="flag">--url URL</td><td>URL cible (obligatoire)</td></tr>
+        <tr><td class="flag">--interval</td><td>Fréquence : <code>30m</code>, <code>6h</code>, <code>1d</code></td></tr>
+        <tr><td class="flag">--webhook URL</td><td>Webhook de notification</td></tr>
+        <tr><td class="flag">--min-severity SEV</td><td>Sévérité minimale pour notifier</td></tr>
+      </tbody>
+    </table>
+    </div>
+
+    <h3>nevelio notify</h3>
+    <div class="table-wrap">
+    <table>
+      <thead><tr><th>Flag</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td class="flag">--slack URL</td><td>Incoming Webhook Slack</td></tr>
+        <tr><td class="flag">--teams URL</td><td>Incoming Webhook Teams</td></tr>
+        <tr><td class="flag">--webhook URL</td><td>Webhook générique JSON</td></tr>
+        <tr><td class="flag">--min-severity SEV</td><td>Sévérité minimale à envoyer</td></tr>
+        <tr><td class="flag">--input FILE</td><td>Source findings.json (défaut : <code>./findings.json</code>)</td></tr>
+      </tbody>
+    </table>
+    </div>
+
+    <h3>nevelio issue github</h3>
+    <div class="table-wrap">
+    <table>
+      <thead><tr><th>Flag / Variable</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td class="flag">--repo owner/repo</td><td>Dépôt GitHub cible</td></tr>
+        <tr><td class="flag">--min-severity SEV</td><td>Sévérité minimale</td></tr>
+        <tr><td class="flag">GITHUB_TOKEN</td><td>Personal Access Token (scope <code>repo</code>)</td></tr>
+      </tbody>
+    </table>
+    </div>
+
+    <h3>nevelio issue jira</h3>
+    <div class="table-wrap">
+    <table>
+      <thead><tr><th>Flag / Variable</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td class="flag">--jira-url URL</td><td>URL Jira Cloud (<code>https://org.atlassian.net</code>)</td></tr>
+        <tr><td class="flag">--project KEY</td><td>Clé du projet Jira (ex. <code>SEC</code>)</td></tr>
+        <tr><td class="flag">--min-severity SEV</td><td>Sévérité minimale</td></tr>
+        <tr><td class="flag">JIRA_EMAIL</td><td>Email du compte Jira</td></tr>
+        <tr><td class="flag">JIRA_API_TOKEN</td><td>Token API Jira Cloud</td></tr>
       </tbody>
     </table>
     </div>
@@ -1400,7 +1952,7 @@ nevelio scan --target https://api.example.com \
 </div><!-- .content -->
 
 <footer class="footer">
-  <span data-i18n="footer.text">Nevelio v0.1 — API Security Scanner — Usage autorisé uniquement</span>
+  <span data-i18n="footer.text">Nevelio v0.6 — API Security Scanner — Usage autorisé uniquement</span>
 </footer>
 </main>
 

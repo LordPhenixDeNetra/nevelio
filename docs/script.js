@@ -44,7 +44,7 @@
       'toc.3': 'Configuration (init)',
       'toc.4': 'Commande scan',
       'toc.5': 'TUI Dashboard',
-      'toc.6': "Modules d'attaque",
+      'toc.6': "10 Modules d'attaque",
       'toc.7': 'Formats de sortie',
       'toc.8': 'Suggestions IA',
       'toc.9': 'Commande report',
@@ -99,7 +99,7 @@
       'scan.col.example': 'Exemple',
       'scan.target.desc': "URL de base de l'API",
       'scan.url.desc': 'Alias de --target',
-      'scan.spec.desc': 'Spec OpenAPI JSON ou YAML',
+      'scan.spec.desc': 'Spec OpenAPI, Postman v2.1, Insomnia v4 ou HAR (auto-détecté)',
       'scan.profiles': 'Profils de scan',
       'scan.stealth.meta': '1 req simultanée · 2 req/s',
       'scan.stealth.tag': 'Production sensible',
@@ -297,7 +297,7 @@
       'infra.stacktrace.desc': 'NullPointerException, Traceback… dans les erreurs',
       'cicd.tab.best': 'Bonnes pratiques',
       // Footer
-      'footer.text': 'Nevelio v0.1 — API Security Scanner — Usage autorisé uniquement',
+      'footer.text': 'Nevelio v0.6 — API Security Scanner — Usage autorisé uniquement',
     },
 
     en: {
@@ -344,7 +344,7 @@
       'toc.3': 'Configuration (init)',
       'toc.4': 'scan command',
       'toc.5': 'TUI Dashboard',
-      'toc.6': 'Attack modules',
+      'toc.6': '10 Attack modules',
       'toc.7': 'Output formats',
       'toc.8': 'AI suggestions',
       'toc.9': 'report command',
@@ -399,7 +399,7 @@
       'scan.col.example': 'Example',
       'scan.target.desc': 'Base URL of the API',
       'scan.url.desc': 'Alias for --target',
-      'scan.spec.desc': 'OpenAPI spec JSON or YAML',
+      'scan.spec.desc': 'OpenAPI spec, Postman v2.1, Insomnia v4 or HAR (auto-detected)',
       'scan.profiles': 'Scan profiles',
       'scan.stealth.meta': '1 concurrent req · 2 req/s',
       'scan.stealth.tag': 'Sensitive production',
@@ -597,7 +597,7 @@
       'infra.stacktrace.desc': 'NullPointerException, Traceback… in error responses',
       'cicd.tab.best': 'Best practices',
       // Footer
-      'footer.text': 'Nevelio v0.1 — API Security Scanner — Authorised use only',
+      'footer.text': 'Nevelio v0.6 — API Security Scanner — Authorised use only',
     },
 
     es: {
@@ -644,7 +644,7 @@
       'toc.3': 'Configuración (init)',
       'toc.4': 'Comando scan',
       'toc.5': 'Panel TUI',
-      'toc.6': 'Módulos de ataque',
+      'toc.6': '10 Módulos de ataque',
       'toc.7': 'Formatos de salida',
       'toc.8': 'Sugerencias IA',
       'toc.9': 'Comando report',
@@ -699,7 +699,7 @@
       'scan.col.example': 'Ejemplo',
       'scan.target.desc': 'URL base de la API',
       'scan.url.desc': 'Alias de --target',
-      'scan.spec.desc': 'Spec OpenAPI JSON o YAML',
+      'scan.spec.desc': 'Spec OpenAPI, Postman v2.1, Insomnia v4 o HAR (auto-detectado)',
       'scan.profiles': 'Perfiles de escaneo',
       'scan.stealth.meta': '1 solicitud simultánea · 2 sol/s',
       'scan.stealth.tag': 'Producción sensible',
@@ -897,7 +897,7 @@
       'infra.stacktrace.desc': 'NullPointerException, Traceback… en errores',
       'cicd.tab.best': 'Buenas prácticas',
       // Footer
-      'footer.text': 'Nevelio v0.1 — API Security Scanner — Solo uso autorizado',
+      'footer.text': 'Nevelio v0.6 — API Security Scanner — Solo uso autorizado',
     },
   };
 

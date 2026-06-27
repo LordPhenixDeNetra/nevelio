@@ -2,7 +2,10 @@
 
 > **Nevelio** est un scanner de sécurité d'API REST/GraphQL écrit en Rust.
 > Il automatise les tests de pénétration sur la couche applicative (couche 7) :
-> authentification, injection, contrôle d'accès, infrastructure, logique métier.
+> authentification, injection, contrôle d'accès, infrastructure, logique métier,
+> XXE, SSRF, OAuth2, Prototype Pollution et bien plus.
+>
+> **Version couverte : v0.6.0** — 10 modules, 163 tests, scripting Rhai, intégrations Slack/GitHub/Jira.
 
 ---
 
@@ -13,7 +16,7 @@
 3. [Configuration avec `nevelio init`](#3-configuration-avec-nevelio-init)
 4. [Commande `scan` — référence complète](#4-commande-scan--référence-complète)
 5. [TUI Dashboard](#5-tui-dashboard)
-6. [Les 6 modules d'attaque](#6-les-6-modules-dattaque)
+6. [Les 10 modules d'attaque](#6-les-10-modules-dattaque)
 7. [Formats de sortie](#7-formats-de-sortie)
 8. [Suggestions IA via Claude](#8-suggestions-ia-via-claude)
 9. [Commande `report` / `convert`](#9-commande-report--convert)
@@ -24,6 +27,15 @@
 14. [Scénarios pratiques complets](#14-scénarios-pratiques-complets)
 15. [Référence rapide des flags](#15-référence-rapide-des-flags)
 16. [Internationalisation (`--lang`)](#16-internationalisation---lang)
+17. [Import Postman / HAR / Insomnia](#17-import-postman--har--insomnia)
+18. [Commande `diff` — Comparaison de scans](#18-commande-diff--comparaison-de-scans)
+19. [Commande `watch` — Scan périodique](#19-commande-watch--scan-périodique)
+20. [Commande `shell` — REPL interactif](#20-commande-shell--repl-interactif)
+21. [Commande `serve` — Dashboard web](#21-commande-serve--dashboard-web)
+22. [Commande `notify` — Alertes Slack/Teams](#22-commande-notify--alertes-slackteams)
+23. [Commande `issue` — Tickets GitHub/Jira](#23-commande-issue--tickets-githubjira)
+24. [Suppressions de faux positifs](#24-suppressions-de-faux-positifs)
+25. [Scripting Rhai (`--script`)](#25-scripting-rhai---script)
 
 ---
 
@@ -175,6 +187,19 @@ out_dir = "./results"
 
 # Sévérité minimale pour quitter avec code 1 (CI/CD)
 # fail_on = "high"   # none | low | medium | high | critical
+
+# ── Suppressions de faux positifs ──────────────────────────
+# Chaque règle [[suppress]] supprime les findings correspondants
+# après le scan. Les critères sont combinés en AND.
+# [[suppress]]
+# module = "infra"
+# severity = "informative"
+# reason = "endpoints de monitoring acceptés"
+#
+# [[suppress]]
+# title_contains = "JWT"
+# endpoint_prefix = "/public/"
+# reason = "endpoints publics — pas d'auth requise"
 ```
 
 ### Référence des champs
@@ -192,6 +217,17 @@ out_dir = "./results"
 | `proxy` | URL | — | Proxy HTTP (ex. Burp Suite) |
 | `out_dir` | chemin | `.` | Répertoire où écrire les rapports |
 | `fail_on` | `none`/`low`/`medium`/`high`/`critical` | — | Seuil d'échec CI |
+| `[[suppress]]` | tableau | — | Règles de suppression de faux positifs (voir §24) |
+
+#### Champs d'une règle `[[suppress]]`
+
+| Champ | Description |
+|---|---|
+| `title_contains` | Le titre du finding doit contenir cette chaîne |
+| `module` | Nom exact du module (`auth`, `infra`, etc.) |
+| `severity` | `critical`/`high`/`medium`/`low`/`informative` (minuscules) |
+| `endpoint_prefix` | L'URL du finding doit commencer par ce préfixe |
+| `reason` | Commentaire libre (non évalué) |
 
 ### Priorité de configuration
 
@@ -256,7 +292,7 @@ nevelio scan --target https://api.example.com \
 ```
 
 Noms de modules disponibles : `auth`, `injection`, `access-control`,
-`graphql`, `infra`, `business-logic`.
+`graphql`, `infra`, `business-logic`, `xxe`, `ssrf`, `oauth2`, `prototype-pollution`.
 
 ### 4.4 Contrôle réseau fin
 
@@ -347,7 +383,49 @@ echo $?   # 1 si HIGH ou CRITICAL trouvé, 0 sinon
 | `high` | HIGH, CRITICAL |
 | `critical` | CRITICAL uniquement |
 
-### 4.9 Modes spéciaux
+### 4.9 Filtrage post-scan avec scripts Rhai (`--script`)
+
+Applique un ou plusieurs scripts Rhai pour filtrer les findings après le scan.
+Un finding est conservé uniquement si **tous** les scripts retournent `true`.
+
+```bash
+# Script unique
+nevelio scan --target https://api.example.com \
+             --script ./filtres/no-infra.rhai \
+             --accept-legal
+
+# Plusieurs scripts chaînés (logique AND)
+nevelio scan --target https://api.example.com \
+             --script ./filtres/no-infra.rhai \
+             --script ./filtres/min-cvss-7.rhai \
+             --accept-legal
+```
+
+Exemple de script `filtres/no-infra.rhai` :
+
+```rhai
+// Supprime tous les findings du module infra
+finding_module != "infra"
+```
+
+Variables disponibles dans un script :
+
+| Variable | Type | Description |
+|---|---|---|
+| `title` | string | Titre du finding |
+| `severity` | string | `"Critical"` / `"High"` / `"Medium"` / `"Low"` / `"Informative"` |
+| `finding_module` | string | Nom du module (`"auth"`, `"infra"`, etc.) |
+| `endpoint` | string | URL de l'endpoint vulnérable |
+| `method` | string | Méthode HTTP (`"GET"`, `"POST"`, etc.) |
+| `description` | string | Description du finding |
+| `cvss` | float | Score CVSS (0.0–10.0) |
+
+> **Note :** En cas d'erreur dans un script, le finding est **conservé** (comportement fail-safe).
+> `module` est un mot réservé Rhai — utiliser `finding_module`.
+
+---
+
+### 4.10 Modes spéciaux
 
 ```bash
 # Reprendre un scan interrompu
@@ -439,7 +517,7 @@ nevelio scan --target https://api.example.com --no-tui --accept-legal
 
 ---
 
-## 6. Les 6 modules d'attaque
+## 6. Les 10 modules d'attaque
 
 Chaque module est indépendant et peut être exécuté seul avec `--module`.
 
@@ -1237,6 +1315,105 @@ nevelio scan --target https://api.example.com \
              --accept-legal
 ```
 
+### 6.7 Module `xxe` — XML External Entity
+
+```bash
+nevelio scan --target https://api.example.com --module xxe --accept-legal
+```
+
+#### XXE In-Band — CWE-611
+
+Injecte des entités XML externes dans les endpoints acceptant du XML ou du contenu multipart.
+Détecte si le serveur résout les entités et reflète le contenu du fichier `/etc/passwd` ou une
+réponse réseau vers un hôte contrôlé.
+
+```xml
+<?xml version="1.0"?>
+<!DOCTYPE foo [<!ENTITY xxe SYSTEM "file:///etc/passwd">]>
+<root><data>&xxe;</data></root>
+```
+
+#### XXE Out-of-Band (Blind) — CWE-611
+
+Utilise un payload DTD externe pour déclencher une connexion DNS/HTTP sortante,
+détectable même lorsque le contenu n'est pas reflété dans la réponse.
+
+---
+
+### 6.8 Module `ssrf` — Server-Side Request Forgery
+
+```bash
+nevelio scan --target https://api.example.com --module ssrf --accept-legal
+```
+
+#### SSRF via paramètres URL — CWE-918
+
+Injecte des URLs pointant vers des ressources internes dans tous les paramètres
+de type string contenant des mots-clés (`url`, `callback`, `redirect`, `src`, `href`, `uri`).
+
+Cibles testées :
+- `http://169.254.169.254/latest/meta-data/` — AWS IMDSv1
+- `http://metadata.google.internal/computeMetadata/v1/` — GCP
+- `http://127.0.0.1/admin` — services internes
+
+#### SSRF via en-têtes HTTP — CWE-918
+
+Teste les en-têtes `X-Forwarded-Host`, `X-Original-URL`, `X-Rewrite-URL`
+pour détecter les SSRF côté infrastructure.
+
+---
+
+### 6.9 Module `oauth2` — OAuth2 / OpenID Connect
+
+```bash
+nevelio scan --target https://api.example.com --module oauth2 --accept-legal
+```
+
+#### Open Redirect dans le paramètre `redirect_uri` — CWE-601
+
+Injecte des URIs malveillantes dans `redirect_uri` pour voler des codes d'autorisation.
+
+#### Token Leakage via Referrer — CWE-200
+
+Détecte les endpoints qui transmettent des tokens OAuth2 dans l'URL (fragment ou query),
+les exposant dans les logs et le header `Referer`.
+
+#### PKCE Absent — CWE-345
+
+Vérifie que les flux d'autorisation sans secret client exigent le challenge PKCE
+(`code_challenge` / `code_verifier`), obligatoire pour les clients publics (SPAs, mobiles).
+
+#### Scope Creep — CWE-269
+
+Teste si le serveur accepte des scopes non autorisés en les ajoutant dans la
+requête d'autorisation.
+
+---
+
+### 6.10 Module `prototype-pollution` — Pollution de prototype
+
+```bash
+nevelio scan --target https://api.example.com --module prototype-pollution --accept-legal
+```
+
+#### JSON Body Pollution — CWE-1321
+
+Injecte des clés `__proto__` et `constructor.prototype` dans les corps JSON :
+
+```json
+{"__proto__": {"admin": true}}
+{"constructor": {"prototype": {"admin": true}}}
+```
+
+Détecte si ces propriétés sont reflétées dans la réponse ou modifient le comportement
+de l'application (code 200 sur un endpoint d'admin).
+
+#### Query String Pollution
+
+Injecte via les paramètres GET : `?__proto__[admin]=true&constructor[prototype][admin]=true`.
+
+---
+
 ### Scénario F — Test d'une API GraphQL
 
 ```bash
@@ -1273,6 +1450,7 @@ nevelio scan \
 | `--dry-run` | booléen | Simuler sans requêtes réelles |
 | `--no-tui` | booléen | Désactiver le dashboard TUI |
 | `--ai-suggestions` | booléen | Suggestions IA (nécessite ANTHROPIC_API_KEY) |
+| `--script FILE` | liste | Scripts Rhai de filtrage post-scan (répétable) |
 
 ### Flags globaux (toutes commandes)
 
@@ -1385,4 +1563,463 @@ nevelio --lang es scan --target https://api.example.com \
 
 ---
 
-*Généré pour Nevelio v0.1 — Scanner d'API de sécurité*
+---
+
+## 17. Import Postman / HAR / Insomnia
+
+Nevelio détecte automatiquement le format de la spec passée à `--spec` et
+sélectionne le bon parseur. Aucun flag supplémentaire n'est nécessaire.
+
+### Formats supportés
+
+| Extension / Signature | Format | Commande |
+|---|---|---|
+| `.yaml` / `.json` contenant `"openapi"` | OpenAPI 3.x / Swagger 2.0 | `--spec ./openapi.yaml` |
+| `.json` contenant `"_postman_schema"` | Postman v2.1 | `--spec ./collection.json` |
+| `.json` contenant `"__export_format": 4` | Insomnia v4 | `--spec ./insomnia.json` |
+| `.har` ou JSON contenant `"log"."entries"` | HAR (HTTP Archive) | `--spec ./capture.har` |
+
+### Exemples
+
+```bash
+# Depuis une collection Postman exportée
+nevelio scan --target https://api.example.com \
+             --spec ./postman-collection.json \
+             --accept-legal
+
+# Depuis un export Insomnia
+nevelio scan --target https://api.example.com \
+             --spec ./insomnia-export.json \
+             --accept-legal
+
+# Depuis un fichier HAR capturé via Burp Suite / navigateur
+nevelio scan --target https://api.example.com \
+             --spec ./burp-traffic.har \
+             --accept-legal
+```
+
+### Variables Postman
+
+Les variables `{{base_url}}` et `{{ base_url }}` sont résolues automatiquement
+à partir du bloc `variable` de la collection. Si `--target` est fourni, il écrase
+la valeur résolue.
+
+### Dossiers imbriqués Postman
+
+Les dossiers Postman imbriqués (plusieurs niveaux) sont parcourus récursivement —
+tous les endpoints sont extraits quel que soit leur profondeur d'imbrication.
+
+### Filtrage HAR
+
+Les ressources statiques sont exclues automatiquement (`.css`, `.js`, `.png`, `.jpg`,
+`.woff`, `.svg`, `.ico`, `.map`) pour ne conserver que les appels API significatifs.
+
+---
+
+## 18. Commande `diff` — Comparaison de scans
+
+```
+nevelio diff <before.json> <after.json> [OPTIONS]
+```
+
+Compare deux fichiers `findings.json` produits par Nevelio et affiche
+les **nouvelles vulnérabilités**, les **vulnérabilités résolues** et les **régresions**.
+
+### Usage
+
+```bash
+# Scan de référence (avant déploiement)
+nevelio scan --target https://staging.api.example.com \
+             --out-dir ./baseline \
+             --accept-legal
+
+# Scan post-déploiement
+nevelio scan --target https://staging.api.example.com \
+             --out-dir ./after-deploy \
+             --accept-legal
+
+# Comparer les deux
+nevelio diff ./baseline/findings.json ./after-deploy/findings.json
+```
+
+### Sortie
+
+```
+  ✅ Résolues (2)
+     - JWT Algorithm None Accepted  [CRITICAL]
+     - CORS Misconfiguration        [HIGH]
+
+  🆕 Nouvelles (1)
+     + SQLi détecté sur /api/search  [CRITICAL]
+
+  ━━ Inchangées (4)
+```
+
+### Flag `--fail-on`
+
+Retourne un code de sortie non-zéro si des nouvelles vulnérabilités d'une
+certaine sévérité ont été introduites — idéal pour bloquer les déploiements CI.
+
+```bash
+nevelio diff baseline/findings.json current/findings.json --fail-on high
+# Exit code 0 → aucune nouvelle HIGH/CRITICAL
+# Exit code 1 → nouvelles vulnérabilités détectées
+# Exit code 2 → erreur de lecture des fichiers
+```
+
+---
+
+## 19. Commande `watch` — Scan périodique
+
+```
+nevelio watch --url <URL> --interval <INTERVAL> [OPTIONS]
+```
+
+Lance des scans répétés à intervalles réguliers et envoie une notification
+webhook si de nouveaux findings apparaissent entre deux scans.
+
+### Usage
+
+```bash
+# Scan toutes les 6 heures, notification Slack sur changement
+nevelio watch \
+  --url https://api.example.com \
+  --interval 6h \
+  --webhook https://hooks.slack.com/services/T.../B.../... \
+  --accept-legal
+
+# Scan quotidien, seuil minimum MEDIUM pour notifier
+nevelio watch \
+  --url https://api.example.com \
+  --interval 24h \
+  --min-severity medium \
+  --accept-legal
+```
+
+### Intervalles supportés
+
+| Format | Exemple | Description |
+|---|---|---|
+| `Xm` | `30m` | Toutes les X minutes |
+| `Xh` | `6h` | Toutes les X heures |
+| `Xd` | `1d` | Tous les X jours |
+
+### Comportement
+
+1. Nevelio lance un premier scan immédiatement au démarrage.
+2. Stocke les findings dans `<out-dir>/watch_baseline.json`.
+3. À chaque intervalle, relance un scan et compare au baseline.
+4. Si de nouveaux findings HIGH/CRITICAL apparaissent → envoie la notification webhook.
+5. Met à jour le baseline avec les résultats du dernier scan.
+
+---
+
+## 20. Commande `shell` — REPL interactif
+
+```
+nevelio shell [--url <URL>] [OPTIONS]
+```
+
+REPL interactif pour explorer et tester une API manuellement, sans relancer
+une commande complète à chaque fois.
+
+### Démarrage
+
+```bash
+nevelio shell --url https://api.example.com
+# nevelio shell> _
+```
+
+### Commandes REPL disponibles
+
+| Commande | Description |
+|---|---|
+| `target <URL>` | Changer l'URL cible |
+| `spec <path>` | Charger une spec OpenAPI/Postman/HAR |
+| `token <TOKEN>` | Définir le token d'authentification |
+| `scan [<module>...]` | Lancer un scan (tous les modules ou sélection) |
+| `list` | Lister les endpoints découverts |
+| `show <N>` | Afficher le détail du Nème endpoint |
+| `findings` | Afficher les findings du dernier scan |
+| `replay <N>` | Rejouer la Nème requête du scan |
+| `export <format>` | Exporter les findings (`json`/`html`/`sarif`) |
+| `help` | Afficher l'aide |
+| `exit` / `quit` | Quitter le REPL |
+
+### Exemple de session
+
+```
+nevelio shell --url https://api.example.com
+nevelio shell> spec ./openapi.yaml
+  ✓ 23 endpoints chargés
+nevelio shell> token "Bearer eyJhbGciOiJIUzI1NiJ9..."
+  ✓ Token défini
+nevelio shell> scan auth injection
+  ► auth...  2 findings
+  ► injection...  1 finding
+nevelio shell> findings
+  [CRITICAL] JWT Algorithm None Accepted — POST /api/auth/token
+  [HIGH]     SQLi détecté — GET /api/search
+  [HIGH]     Missing Authentication — GET /api/users
+nevelio shell> export html
+  ✓ report.html généré
+nevelio shell> exit
+```
+
+---
+
+## 21. Commande `serve` — Dashboard web
+
+```
+nevelio serve [--port <PORT>] [OPTIONS]
+```
+
+Lance un serveur HTTP local qui sert le dernier rapport HTML généré
+et ouvre automatiquement le navigateur.
+
+### Usage
+
+```bash
+# Après un scan (report.html présent)
+nevelio serve
+# → Ouverture de http://127.0.0.1:3000 dans le navigateur
+
+# Port personnalisé
+nevelio serve --port 4000
+# → Ouverture de http://127.0.0.1:4000
+
+# Depuis un répertoire de résultats spécifique
+nevelio serve --out-dir ./results/2026-06-27
+```
+
+### Fonctionnement
+
+1. Charge `<out-dir>/report.html` s'il existe.
+2. Sinon, régénère le rapport depuis `<out-dir>/findings.json` à la volée.
+3. Ouvre le navigateur automatiquement (`open` macOS, `xdg-open` Linux, `cmd start` Windows).
+4. Le serveur reste actif jusqu'à `Ctrl+C`.
+
+> Le rapport HTML est interactif : filtre par sévérité, thème clair/sombre,
+> accordéon par finding, recherche instantanée.
+
+---
+
+## 22. Commande `notify` — Alertes Slack/Teams
+
+```
+nevelio notify [--slack <URL>] [--teams <URL>] [--webhook <URL>] [OPTIONS]
+```
+
+Envoie les findings du dernier scan vers un ou plusieurs canaux de notification.
+
+### Usage
+
+```bash
+# Notification Slack
+nevelio notify \
+  --slack https://hooks.slack.com/services/T.../B.../... \
+  --min-severity high
+
+# Notification Teams
+nevelio notify \
+  --teams https://outlook.office.com/webhook/...
+
+# Les deux + webhook générique JSON
+nevelio notify \
+  --slack https://hooks.slack.com/... \
+  --teams https://outlook.office.com/webhook/... \
+  --webhook https://my-alerting-system.example.com/hooks/nevelio \
+  --min-severity medium
+
+# Depuis un fichier findings spécifique
+nevelio notify \
+  --input ./results/findings.json \
+  --slack https://hooks.slack.com/...
+```
+
+### Options
+
+| Flag | Description |
+|---|---|
+| `--slack URL` | Incoming Webhook Slack |
+| `--teams URL` | Incoming Webhook Teams (MessageCard) |
+| `--webhook URL` | Webhook générique JSON (POST) |
+| `--min-severity SEV` | Sévérité minimale à notifier (`low`/`medium`/`high`/`critical`) |
+| `--input FILE` | Fichier findings.json source (défaut : `./findings.json`) |
+
+### Format Slack
+
+Le message Slack inclut un `attachment` coloré par sévérité (rouge = CRITICAL,
+orange = HIGH, jaune = MEDIUM, vert = LOW) avec la liste des findings.
+
+---
+
+## 23. Commande `issue` — Tickets GitHub/Jira
+
+```
+nevelio issue github --repo <owner/repo> [OPTIONS]
+nevelio issue jira --jira-url <URL> --project <KEY> [OPTIONS]
+```
+
+Crée automatiquement des issues/tickets pour chaque finding du dernier scan.
+La **déduplication** est intégrée : si un ticket avec le même titre existe déjà
+(label `nevelio`), il n'est pas recréé.
+
+### GitHub Issues
+
+```bash
+# Créer des issues dans un dépôt GitHub
+GITHUB_TOKEN=ghp_... nevelio issue github \
+  --repo monorg/mon-api \
+  --min-severity high
+
+# Labels ajoutés automatiquement : security, nevelio, severity:critical (etc.)
+```
+
+Variables d'environnement :
+
+| Variable | Description |
+|---|---|
+| `GITHUB_TOKEN` | Personal Access Token avec scope `repo` |
+
+Chaque issue créée reçoit les labels `security`, `nevelio` et `severity:<sev>`.
+La déduplication cherche les issues ouvertes avec le label `nevelio` et le même titre.
+
+### Jira Cloud
+
+```bash
+# Créer des tickets Jira
+nevelio issue jira \
+  --jira-url https://monorg.atlassian.net \
+  --project SEC \
+  --min-severity medium
+```
+
+Variables d'environnement :
+
+| Variable | Description |
+|---|---|
+| `JIRA_EMAIL` | Email du compte Jira (utilisé pour l'auth Basic) |
+| `JIRA_API_TOKEN` | Token API Jira Cloud |
+
+La description des tickets est formatée en **ADF** (Atlassian Document Format).
+La priorité est mappée automatiquement :
+
+| Sévérité Nevelio | Priorité Jira |
+|---|---|
+| Critical | Highest |
+| High | High |
+| Medium | Medium |
+| Low | Low |
+| Informative | Lowest |
+
+---
+
+## 24. Suppressions de faux positifs
+
+Les règles `[[suppress]]` dans `.nevelio.toml` filtrent les findings
+**après le scan**, avant l'écriture des rapports.
+
+### Syntaxe
+
+```toml
+[[suppress]]
+# Tous les critères sont optionnels et combinés en logique AND.
+# Un finding est supprimé si TOUS les critères présents correspondent.
+title_contains = "JWT alg:none"      # le titre contient cette chaîne
+module = "auth"                       # le module est exactement "auth"
+severity = "high"                     # la sévérité en minuscules
+endpoint_prefix = "/public/"          # l'URL commence par ce préfixe
+reason = "Commentaire libre"          # ignoré par le moteur de suppression
+```
+
+### Exemple complet
+
+```toml
+# .nevelio.toml
+
+target = "https://api.example.com"
+profile = "normal"
+
+# Supprimer les findings infra informatifs (monitoring accepté)
+[[suppress]]
+module = "infra"
+severity = "informative"
+reason = "endpoints /health et /metrics acceptés par la politique"
+
+# Supprimer les warnings JWT sur les endpoints publics (pas d'auth requise)
+[[suppress]]
+title_contains = "JWT"
+endpoint_prefix = "/public/"
+reason = "endpoints publics — authentification non requise"
+
+# Supprimer un finding très spécifique
+[[suppress]]
+title_contains = "CORS Misconfiguration"
+endpoint_prefix = "/internal/healthz"
+reason = "CORS permissif intentionnel pour le monitoring interne"
+```
+
+### Comptage
+
+Après le scan, Nevelio affiche le nombre de findings supprimés :
+
+```
+  ↩ 3 finding(s) supprimé(s).
+```
+
+---
+
+## 25. Scripting Rhai (`--script`)
+
+> Voir aussi §4.9 pour la référence rapide des flags.
+
+Le scripting Rhai permet un filtrage **programmatique** des findings,
+complémentaire aux règles `[[suppress]]` déclaratives.
+
+### Différence avec `[[suppress]]`
+
+| | `[[suppress]]` | `--script` |
+|---|---|---|
+| Format | TOML déclaratif | Script Rhai |
+| Logique | AND simple | Arbitrairement complexe |
+| Variables | 4 champs fixes | 7 variables + expressions |
+| Cas d'usage | Suppressions simples et lisibles | Filtres conditionnels, scores CVSS, regex |
+
+### Exemple avancé
+
+```rhai
+// Conserver uniquement les findings CRITICAL et HIGH
+// OU les findings MEDIUM avec CVSS > 6.5
+if severity == "Critical" || severity == "High" {
+    true
+} else if severity == "Medium" && cvss > 6.5 {
+    true
+} else {
+    false
+}
+```
+
+```rhai
+// Exclure les endpoints de monitoring
+!endpoint.contains("/health") && !endpoint.contains("/metrics") && !endpoint.contains("/actuator")
+```
+
+### Chargement de scripts
+
+Les scripts sont lus depuis le disque à l'initialisation du scan.
+Un chemin invalide provoque une erreur avant le démarrage du scan.
+
+```bash
+nevelio scan --target https://api.example.com \
+             --script ./filtres/seuil-cvss.rhai \
+             --script ./filtres/no-monitoring.rhai \
+             --accept-legal
+```
+
+Les scripts sont appliqués dans l'ordre spécifié. Pour qu'un finding soit conservé,
+il doit passer **tous** les scripts (logique AND entre scripts).
+
+---
+
+*Généré pour Nevelio v0.6 — Scanner d'API de sécurité*
