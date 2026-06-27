@@ -11,19 +11,21 @@
 |---|---|---|---|---|
 | **v0.1.0** | ✅ Livrée | 6 | auth, injection, access-control, business-logic, graphql, infra | `git tag v0.1.0` |
 | **v0.2.0** | ✅ Livrée | +4 | +XXE, +SSRF, +OAuth2, +Prototype Pollution | `git tag v0.2.0` |
-| **v0.3.0** | 📋 Planifiée | — | Postman/HAR import, crawling JS | — |
+| **v0.3.0** | ✅ Livrée | — | Postman/HAR/Insomnia import, crawling JS | `git tag v0.3.0` |
 | **v0.4.0** | 📋 Planifiée | — | Watch mode, diff scan, REPL | — |
 | **v0.5.0** | 📋 Planifiée | — | GitHub App, Jira, dashboard web | — |
 | **v0.6.0** | 📋 Planifiée | — | Plugins WASM, scripting | — |
 | **v0.7.0** | 📋 Planifiée | — | gRPC, WebSocket, SOAP | — |
 
-### Progression globale v0.2
+### Progression globale v0.3
 
 ```
 Modules sécurité   ████████████████████  9/9  modules implémentés ✅
+Sources d'entrée   ████████████████████  4/4  OpenAPI/Postman/Insomnia/HAR ✅
 Distribution       ████████████████████  5/5  gestionnaires de paquets ✅
 Reporting          ████████████████████  5/5  formats (JSON/HTML/MD/JUnit/SARIF) ✅
 i18n               ████████████████████  3/3  langues (fr/en/es) ✅
+Crawling           ████████████████░░░░  4/5  (suivi liens JSON: todo)
 ```
 
 ---
@@ -64,9 +66,37 @@ i18n               ████████████████████ 
 - ✅ Suggestions IA (Claude via `ANTHROPIC_API_KEY`)
 - ✅ Distribution : Homebrew, winget, curl/sh, PowerShell, Docker, apt, yum, cargo
 
+### v0.3.0 — Sources d'entrée & DX (livrée)
+
+**Sources d'entrée**
+- ✅ `recon/postman.rs` — collections Postman v2.1 (JSON, dossiers imbriqués, variables `{{base_url}}`)
+- ✅ `recon/postman.rs` — exports Insomnia v4 (auto-détecté, variables `{{ base_url }}`)
+- ✅ `recon/har.rs` — fichiers HAR Chrome DevTools / Burp (déduplication, normalisation des IDs)
+- ✅ Détection automatique du format dans `--spec` (extension + content sniffing)
+
+**Crawling amélioré**
+- ✅ Extraction d'URLs depuis les fichiers JavaScript (`fetch()`, `axios.*()`, string literals)
+- ✅ Respect de `robots.txt` en mode `--profile stealth`
+- ✅ Expansion automatique des variantes de versioning (`/v1/` → `/v2/`, `/v3/`, `/v4/`)
+
 ---
 
-## v0.2 — Couverture sécurité étendue 🚧
+### v0.2.0 — Couverture sécurité étendue (livrée)
+
+**Nouveaux modules**
+- ✅ `ssrf` — Probes IMDS cloud (AWS, Azure, GCP, Alibaba), localhost, SSH, SSRF via headers HTTP
+- ✅ `oauth2` — redirect_uri, state/CSRF, PKCE bypass, introspection non protégée, token GET, JWKS privé
+- ✅ `prototype-pollution` — Détection Node.js/Express, `__proto__` JSON body + query string
+- ✅ `xxe` — File disclosure, SSRF via entité XML, blind XXE
+
+**Renforcement modules existants**
+- ✅ `injection` — +XSS réfléchi, +LDAP, +XPath, +CSV formula injection, +SSTI dans headers HTTP
+- ✅ `access-control` — +BOLA (cross-verb), +admin endpoints sans token, +HTTP method override
+- ✅ `auth` — +JWT expired, +algo confusion RS256→HS256, +kid injection, +jku SSRF
+
+---
+
+## v0.2 — Couverture sécurité étendue ✅
 
 ### 🔴 Module OAuth2 / OpenID Connect 🚧
 
@@ -136,28 +166,28 @@ i18n               ████████████████████ 
 
 ---
 
-## v0.3 — Sources d'entrée & DX 📋
+## v0.3 — Sources d'entrée & DX ✅
 
 ### 🔴 Import Postman / Insomnia
 
-- [ ] Parser les collections Postman v2.1 (`collection.json`)
-- [ ] Parser les collections Insomnia v4 (`.yaml` / `.json`)
-- [ ] Extraction automatique des variables d'environnement (`{{base_url}}`, `{{token}}`)
-- [ ] Conversion interne vers le modèle `Endpoint` de Nevelio
-- [ ] Flag CLI : `--spec collection.postman.json`
+- [x] Parser les collections Postman v2.1 (`collection.json`)
+- [x] Parser les collections Insomnia v4 (`.yaml` / `.json`)
+- [x] Extraction automatique des variables d'environnement (`{{base_url}}`, `{{token}}`)
+- [x] Conversion interne vers le modèle `Endpoint` de Nevelio
+- [x] Flag CLI : `--spec collection.postman.json` (auto-détection de format)
 
 ### 🟡 Import HAR (HTTP Archive)
 
-- [ ] Parser les fichiers `.har` exportés depuis Chrome DevTools / Burp
-- [ ] Reconstruire les endpoints et paramètres depuis les entrées HAR
-- [ ] Déduplication des requêtes similaires
+- [x] Parser les fichiers `.har` exportés depuis Chrome DevTools / Burp
+- [x] Reconstruire les endpoints et paramètres depuis les entrées HAR
+- [x] Déduplication des requêtes similaires (normalisation des IDs numériques et UUIDs)
 
 ### 🟡 Crawling amélioré
 
-- [ ] Découverte d'endpoints par analyse JS (parsing de `fetch()`, `axios`, `$.ajax`)
+- [x] Découverte d'endpoints par analyse JS (parsing de `fetch()`, `axios.*()`, et string literals)
 - [ ] Suivi des redirections et liens dans les réponses JSON
-- [ ] Respect de `robots.txt` en mode stealth
-- [ ] Détection de versioning API (`/v1/`, `/v2/`, `/api/v3/`)
+- [x] Respect de `robots.txt` en mode stealth
+- [x] Détection de versioning API (`/v1/` → `/v2/`, `/v3/`)
 
 ### 🟢 Support AsyncAPI
 
@@ -321,15 +351,15 @@ i18n               ████████████████████ 
 
 ## Prochaine release
 
-v0.2.0 est complète. Pour publier :
+v0.3.0 est complète. Pour publier :
 
 ```bash
 git add -A
-git commit -m "feat(v0.2): XSS, LDAP, XPath, CSV, SSTI headers, BOLA, method override, JWT advanced, SSRF headers, Prototype Pollution"
-git tag v0.2.0
+git commit -m "feat(v0.3): Postman/Insomnia/HAR import, JS crawling, robots.txt stealth, versioning detection"
+git tag v0.3.0
 git push && git push --tags
 ```
 
 ---
 
-*Dernière mise à jour : 2026-06-27 — v0.2.0 ✅ complète*
+*Dernière mise à jour : 2026-06-27 — v0.3.0 ✅ livrée — prochaine : v0.4.0 (watch mode, diff scan, REPL)*

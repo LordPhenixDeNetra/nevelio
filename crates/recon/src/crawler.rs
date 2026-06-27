@@ -1,5 +1,6 @@
 use anyhow::Result;
 use nevelio_core::types::Endpoint;
+use std::collections::HashSet;
 
 /// Common API paths to probe during discovery (path, method).
 const WORDLIST: &[(&str, &str)] = &[
@@ -79,37 +80,355 @@ const WORDLIST: &[(&str, &str)] = &[
 
 /// Probe common API paths and return those that respond (non-404 status).
 ///
-/// Phase 2: basic discovery. Phase 3 will add JS analysis and recursive crawl.
+/// When `stealth` is true (ScanProfile::Stealth), paths listed in `robots.txt`
+/// are skipped. Additionally, JS files are crawled to discover extra API paths,
+/// and versioned path variants are automatically probed.
 pub async fn discover_endpoints(
     base_url: &str,
     client: &reqwest::Client,
+    stealth: bool,
 ) -> Result<Vec<Endpoint>> {
     let base = base_url.trim_end_matches('/');
     tracing::info!("Crawling {} common paths on {}", WORDLIST.len(), base);
 
-    let mut found = Vec::new();
-    let mut tasks = Vec::new();
+    // In stealth mode, respect robots.txt
+    let disallowed = if stealth {
+        load_robots_disallowed(base, client).await
+    } else {
+        HashSet::new()
+    };
 
+    // Phase 1: wordlist probing
+    let mut tasks = Vec::new();
     for &(path, method) in WORDLIST {
+        if stealth && is_disallowed(path, &disallowed) {
+            tracing::debug!("[crawler] Skipping {} (robots.txt)", path);
+            continue;
+        }
         let url = format!("{}{}", base, path);
         let client = client.clone();
         let path = path.to_string();
         let method = method.to_string();
-
-        tasks.push(tokio::spawn(async move {
-            probe_path(client, url.clone(), path, method).await
-        }));
+        tasks.push(tokio::spawn(
+            async move { probe_path(client, url, path, method).await },
+        ));
     }
 
+    let mut found: Vec<Endpoint> = Vec::new();
     for task in tasks {
-        if let Ok(Some(endpoint)) = task.await {
-            found.push(endpoint);
+        if let Ok(Some(ep)) = task.await {
+            found.push(ep);
+        }
+    }
+
+    // Phase 2: detect API versioning and expand versioned paths
+    let discovered_paths: Vec<String> = found.iter().map(|e| e.path.clone()).collect();
+    let extra_paths = expand_versioned_paths(&discovered_paths);
+
+    let mut version_tasks = Vec::new();
+    for path in extra_paths {
+        if stealth && is_disallowed(&path, &disallowed) {
+            continue;
+        }
+        let url = format!("{}{}", base, path);
+        let client = client.clone();
+        let method = "GET".to_string();
+        version_tasks.push(tokio::spawn(async move {
+            probe_path(client, url, path, method).await
+        }));
+    }
+    for task in version_tasks {
+        if let Ok(Some(ep)) = task.await {
+            if !found.iter().any(|e| e.path == ep.path && e.method == ep.method) {
+                found.push(ep);
+            }
+        }
+    }
+
+    // Phase 3: extract URLs from JavaScript
+    let js_paths = extract_js_urls(base, client).await;
+    let mut js_tasks = Vec::new();
+    for path in js_paths {
+        if stealth && is_disallowed(&path, &disallowed) {
+            continue;
+        }
+        let url = format!("{}{}", base, path);
+        let client = client.clone();
+        let method = "GET".to_string();
+        js_tasks.push(tokio::spawn(async move {
+            probe_path(client, url, path, method).await
+        }));
+    }
+    for task in js_tasks {
+        if let Ok(Some(ep)) = task.await {
+            if !found.iter().any(|e| e.path == ep.path && e.method == ep.method) {
+                found.push(ep);
+            }
         }
     }
 
     tracing::info!("Crawler found {} reachable endpoint(s)", found.len());
     Ok(found)
 }
+
+// ── robots.txt ────────────────────────────────────────────────────────────────
+
+async fn load_robots_disallowed(base: &str, client: &reqwest::Client) -> HashSet<String> {
+    let url = format!("{}/robots.txt", base);
+    let mut disallowed = HashSet::new();
+
+    let text = match client
+        .get(&url)
+        .timeout(std::time::Duration::from_secs(5))
+        .send()
+        .await
+    {
+        Ok(r) if r.status().is_success() => r.text().await.unwrap_or_default(),
+        _ => return disallowed,
+    };
+
+    for line in text.lines() {
+        let line = line.trim();
+        if let Some(path) = line.strip_prefix("Disallow:") {
+            let path = path.split_whitespace().next().unwrap_or("").trim();
+            if !path.is_empty() {
+                disallowed.insert(path.to_string());
+            }
+        }
+    }
+
+    tracing::debug!("[crawler] robots.txt: {} disallowed paths", disallowed.len());
+    disallowed
+}
+
+fn is_disallowed(path: &str, disallowed: &HashSet<String>) -> bool {
+    disallowed.iter().any(|d| {
+        if d.ends_with('/') {
+            path.starts_with(d.as_str())
+        } else {
+            path == d.as_str() || path.starts_with(&format!("{}/", d))
+        }
+    })
+}
+
+// ── API versioning ────────────────────────────────────────────────────────────
+
+/// If `/api/v1/...` was found, generate variants for v2–v4.
+fn expand_versioned_paths(paths: &[String]) -> Vec<String> {
+    let mut extra = Vec::new();
+    for path in paths {
+        if path.contains("/v1") {
+            for v in &["2", "3", "4"] {
+                let candidate = path.replacen("/v1", &format!("/v{}", v), 1);
+                if !paths.contains(&candidate) && !extra.contains(&candidate) {
+                    extra.push(candidate);
+                }
+            }
+        }
+    }
+    extra
+}
+
+// ── JavaScript URL extraction ─────────────────────────────────────────────────
+
+/// Fetch the root page, find `<script src>` tags, download local JS files,
+/// and extract API-looking paths from `fetch()`, `axios.*()`, and string literals.
+async fn extract_js_urls(base: &str, client: &reqwest::Client) -> Vec<String> {
+    let html = match client
+        .get(base)
+        .timeout(std::time::Duration::from_secs(5))
+        .send()
+        .await
+    {
+        Ok(r) => r.text().await.unwrap_or_default(),
+        Err(_) => return vec![],
+    };
+
+    let script_srcs = extract_script_srcs(&html);
+    let mut api_paths: Vec<String> = Vec::new();
+
+    for src in script_srcs.iter().take(10) {
+        if src.starts_with("http://") || src.starts_with("https://") {
+            continue; // skip CDN scripts
+        }
+        let js_url = format!("{}/{}", base, src.trim_start_matches('/'));
+
+        let content = match client
+            .get(&js_url)
+            .timeout(std::time::Duration::from_secs(5))
+            .send()
+            .await
+        {
+            Ok(r) if r.status().is_success() => r.text().await.unwrap_or_default(),
+            _ => continue,
+        };
+
+        api_paths.extend(extract_api_paths_from_js(&content));
+    }
+
+    api_paths.sort();
+    api_paths.dedup();
+    api_paths
+}
+
+/// Extract `src` attribute values from `<script>` tags.
+fn extract_script_srcs(html: &str) -> Vec<String> {
+    let mut srcs = Vec::new();
+    let mut search = html;
+
+    while let Some(tag_pos) = search.to_lowercase().find("<script") {
+        let after = &search[tag_pos..];
+        let tag_end = after.find('>').unwrap_or(after.len());
+        let tag_content = &after[..tag_end];
+
+        if let Some(src) = extract_attr(tag_content, "src") {
+            if !src.is_empty() {
+                srcs.push(src);
+            }
+        }
+
+        search = &search[tag_pos + 7..]; // advance past "<script"
+    }
+
+    srcs
+}
+
+/// Extract an HTML attribute value (single or double quotes).
+fn extract_attr(tag: &str, attr: &str) -> Option<String> {
+    let search_dq = format!("{}=\"", attr);
+    let search_sq = format!("{}='", attr);
+
+    if let Some(pos) = tag.to_lowercase().find(&search_dq) {
+        let after = &tag[pos + search_dq.len()..];
+        let end = after.find('"').unwrap_or(after.len());
+        return Some(after[..end].to_string());
+    }
+    if let Some(pos) = tag.to_lowercase().find(&search_sq) {
+        let after = &tag[pos + search_sq.len()..];
+        let end = after.find('\'').unwrap_or(after.len());
+        return Some(after[..end].to_string());
+    }
+
+    None
+}
+
+/// Extract API-looking paths from JS source code.
+pub(crate) fn extract_api_paths_from_js(js: &str) -> Vec<String> {
+    let mut paths = Vec::new();
+
+    // Patterns: fetch("PATH"), axios.METHOD("PATH")
+    let call_prefixes: &[&str] = &[
+        "fetch(\"",
+        "fetch('",
+        "axios.get(\"",
+        "axios.post(\"",
+        "axios.put(\"",
+        "axios.delete(\"",
+        "axios.patch(\"",
+        "axios.get('",
+        "axios.post('",
+        "axios.put('",
+        "axios.delete('",
+        "axios.patch('",
+    ];
+
+    for &prefix in call_prefixes {
+        let quote = if prefix.ends_with('"') { '"' } else { '\'' };
+        let mut search = js;
+        while let Some(pos) = search.find(prefix) {
+            search = &search[pos + prefix.len()..];
+            if let Some(end) = search.find(quote) {
+                let candidate = &search[..end];
+                if is_api_path_candidate(candidate) {
+                    paths.push(candidate.to_string());
+                }
+                search = &search[end..];
+            }
+        }
+    }
+
+    // String literals: "/api/...", "/v1/...", "/v2/..."
+    let path_prefixes: &[(&str, char)] = &[
+        ("\"/api/", '"'),
+        ("'/api/", '\''),
+        ("\"/v1/", '"'),
+        ("'/v1/", '\''),
+        ("\"/v2/", '"'),
+        ("'/v2/", '\''),
+        ("\"/v3/", '"'),
+        ("'/v3/", '\''),
+    ];
+
+    for &(prefix, quote) in path_prefixes {
+        let mut search = js;
+        while let Some(pos) = search.find(prefix) {
+            // The path starts after the opening quote
+            search = &search[pos + 1..];
+            if let Some(end) = search.find(quote) {
+                let candidate = &search[..end];
+                if is_api_path_candidate(candidate) {
+                    paths.push(candidate.to_string());
+                }
+                search = &search[end + 1..];
+            }
+        }
+    }
+
+    paths.sort();
+    paths.dedup();
+    paths
+}
+
+fn is_api_path_candidate(s: &str) -> bool {
+    s.starts_with('/')
+        && s.len() > 2
+        && !s.contains(' ')
+        && !s.contains('\n')
+        && !s.ends_with(".js")
+        && !s.ends_with(".css")
+        && !s.ends_with(".html")
+}
+
+// ── Low-level probe ───────────────────────────────────────────────────────────
+
+async fn probe_path(
+    client: reqwest::Client,
+    url: String,
+    path: String,
+    method: String,
+) -> Option<Endpoint> {
+    let req = match method.as_str() {
+        "POST" => client.post(&url),
+        _ => client.get(&url),
+    }
+    .timeout(std::time::Duration::from_secs(5))
+    .build()
+    .ok()?;
+
+    match client.execute(req).await {
+        Ok(resp) => {
+            let status = resp.status().as_u16();
+            if status != 404 && status != 410 {
+                tracing::debug!("[crawler] {} {} → {}", method, url, status);
+                Some(Endpoint {
+                    method: method.clone(),
+                    path: path.clone(),
+                    full_url: url,
+                    parameters: vec![],
+                    auth_required: status == 401 || status == 403,
+                })
+            } else {
+                None
+            }
+        }
+        Err(e) => {
+            tracing::debug!("[crawler] {} {} → error: {}", method, url, e);
+            None
+        }
+    }
+}
+
+// ── Tests ─────────────────────────────────────────────────────────────────────
 
 #[cfg(test)]
 mod tests {
@@ -159,42 +478,75 @@ mod tests {
         let url = format!("{}{}", base.trim_end_matches('/'), path);
         assert_eq!(url, "https://api.example.com/health");
     }
-}
 
-async fn probe_path(
-    client: reqwest::Client,
-    url: String,
-    path: String,
-    method: String,
-) -> Option<Endpoint> {
-    let req = match method.as_str() {
-        "POST" => client.post(&url),
-        _ => client.get(&url),
+    #[test]
+    fn expand_versioned_v1_paths() {
+        let paths = vec!["/api/v1/users".to_string(), "/api/v1".to_string()];
+        let extra = expand_versioned_paths(&paths);
+        assert!(extra.contains(&"/api/v2/users".to_string()));
+        assert!(extra.contains(&"/api/v3/users".to_string()));
+        assert!(extra.contains(&"/api/v2".to_string()));
     }
-    .timeout(std::time::Duration::from_secs(5))
-    .build()
-    .ok()?;
 
-    match client.execute(req).await {
-        Ok(resp) => {
-            let status = resp.status().as_u16();
-            // Consider anything that is not 404 or 410 as "found"
-            if status != 404 && status != 410 {
-                tracing::debug!("[crawler] {} {} → {}", method, url, status);
-                Some(Endpoint {
-                    method: method.clone(),
-                    path: path.clone(),
-                    full_url: url,
-                    parameters: vec![],
-                    auth_required: status == 401 || status == 403,
-                })
-            } else {
-                None
-            }
-        }
-        Err(e) => {
-            tracing::debug!("[crawler] {} {} → error: {}", method, url, e);
-            None
-        }
+    #[test]
+    fn expand_versioned_no_duplicates() {
+        let paths = vec![
+            "/api/v1/users".to_string(),
+            "/api/v2/users".to_string(),
+        ];
+        let extra = expand_versioned_paths(&paths);
+        assert!(!extra.contains(&"/api/v2/users".to_string()));
+    }
+
+    #[test]
+    fn extract_api_paths_from_js_detects_fetch() {
+        let js = r#"fetch("/api/users").then(r => r.json())"#;
+        let paths = extract_api_paths_from_js(js);
+        assert!(paths.contains(&"/api/users".to_string()), "paths: {:?}", paths);
+    }
+
+    #[test]
+    fn extract_api_paths_from_js_detects_axios() {
+        let js = r#"axios.get("/v1/products").then(cb)"#;
+        let paths = extract_api_paths_from_js(js);
+        assert!(paths.contains(&"/v1/products".to_string()), "paths: {:?}", paths);
+    }
+
+    #[test]
+    fn extract_api_paths_from_js_detects_string_literals() {
+        let js = r#"const BASE = "/api/orders"; return fetch(BASE);"#;
+        let paths = extract_api_paths_from_js(js);
+        assert!(paths.contains(&"/api/orders".to_string()), "paths: {:?}", paths);
+    }
+
+    #[test]
+    fn extract_api_paths_ignores_static() {
+        let js = r#"import "/api/v1/styles.css";"#;
+        let paths = extract_api_paths_from_js(js);
+        assert!(!paths.contains(&"/api/v1/styles.css".to_string()));
+    }
+
+    #[test]
+    fn is_disallowed_prefix_match() {
+        let mut set = HashSet::new();
+        set.insert("/admin/".to_string());
+        assert!(is_disallowed("/admin/users", &set));
+        assert!(!is_disallowed("/api/users", &set));
+    }
+
+    #[test]
+    fn is_disallowed_exact_match() {
+        let mut set = HashSet::new();
+        set.insert("/private".to_string());
+        assert!(is_disallowed("/private", &set));
+        assert!(!is_disallowed("/private2", &set));
+    }
+
+    #[test]
+    fn extract_script_srcs_finds_src() {
+        let html = r#"<html><script src="/js/app.js"></script><script src='bundle.js'></script></html>"#;
+        let srcs = extract_script_srcs(html);
+        assert!(srcs.contains(&"/js/app.js".to_string()), "srcs: {:?}", srcs);
+        assert!(srcs.contains(&"bundle.js".to_string()), "srcs: {:?}", srcs);
     }
 }

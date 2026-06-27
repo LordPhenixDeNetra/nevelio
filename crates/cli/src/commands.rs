@@ -222,11 +222,20 @@ async fn handle_scan(args: crate::args::ScanArgs, verbose: bool) -> Result<()> {
     // --- Recon ---
     let endpoints = if !config.dry_run {
         if let Some(ref spec_path) = args.spec {
-            nevelio_recon::openapi::parse_spec(spec_path, &target, &raw_client)
-                .await
-                .context(t!("error.spec_read").to_string())?
+            match detect_spec_format(spec_path) {
+                SpecFormat::Har => nevelio_recon::parse_har(spec_path)
+                    .context("Erreur lecture fichier HAR")?,
+                SpecFormat::Postman => nevelio_recon::parse_postman(spec_path)
+                    .context("Erreur lecture collection Postman/Insomnia")?,
+                SpecFormat::OpenApi => {
+                    nevelio_recon::openapi::parse_spec(spec_path, &target, &raw_client)
+                        .await
+                        .context(t!("error.spec_read").to_string())?
+                }
+            }
         } else {
-            nevelio_recon::discover_endpoints(&target, &raw_client)
+            let stealth = matches!(config.profile, ScanProfile::Stealth);
+            nevelio_recon::discover_endpoints(&target, &raw_client, stealth)
                 .await
                 .context(t!("error.discovery").to_string())?
         }
@@ -629,4 +638,35 @@ fn parse_output_format(s: Option<&str>) -> Option<OutputFormat> {
         "sarif" => Some(OutputFormat::Sarif),
         _ => None,
     }
+}
+
+// ---------------------------------------------------------------------------
+// Spec format detection
+// ---------------------------------------------------------------------------
+
+enum SpecFormat {
+    OpenApi,
+    Postman,
+    Har,
+}
+
+/// Detect the spec format from file extension or content.
+/// Remote URLs always route to OpenAPI (only local files for Postman/HAR).
+fn detect_spec_format(path: &str) -> SpecFormat {
+    if path.starts_with("http://") || path.starts_with("https://") {
+        return SpecFormat::OpenApi;
+    }
+    if path.ends_with(".har") {
+        return SpecFormat::Har;
+    }
+    if let Ok(content) = std::fs::read_to_string(path) {
+        let head = &content[..content.len().min(512)];
+        if head.contains("_postman_schema") || head.contains("__export_format") {
+            return SpecFormat::Postman;
+        }
+        if head.contains("\"log\"") && head.contains("\"entries\"") {
+            return SpecFormat::Har;
+        }
+    }
+    SpecFormat::OpenApi
 }
