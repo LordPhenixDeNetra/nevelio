@@ -1,0 +1,16 @@
+[package]
+name              = "nevelio-module-prototype-pollution"
+version.workspace     = true
+edition.workspace     = true
+authors.workspace     = true
+license.workspace     = true
+
+[dependencies]
+nevelio-core = { path = "../../core", version = "0.1" }
+async-trait.workspace = true
+anyhow.workspace      = true
+tracing.workspace     = true
+tokio.workspace       = true
+reqwest.workspace     = true
+serde.workspace       = true
+serde_json.workspace  = true

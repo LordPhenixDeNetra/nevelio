@@ -10,8 +10,21 @@ use nevelio_core::{AttackModule, HttpClient, ScanSession};
 
 const IDOR_PAYLOADS: &str = include_str!("../../../../payloads/idor.yaml");
 
-// HTTP methods to probe for BFLA
+// HTTP methods to probe for BFLA / BOLA
 const ALL_METHODS: &[&str] = &["GET", "POST", "PUT", "PATCH", "DELETE"];
+
+// Method override headers
+const METHOD_OVERRIDE_HEADERS: &[(&str, &str)] = &[
+    ("X-HTTP-Method-Override", "DELETE"),
+    ("X-HTTP-Method", "DELETE"),
+    ("X-Method-Override", "DELETE"),
+];
+
+// Responses that are clearly "method not supported" (not a bypass)
+const METHOD_BLOCKED_INDICATORS: &[&str] = &[
+    "not allowed", "method not supported", "not implemented", "not permitted",
+    "invalid method", "method not found", "unsupported",
+];
 
 // UUID nil value
 const NIL_UUID: &str = "00000000-0000-0000-0000-000000000000";
@@ -90,6 +103,12 @@ impl AttackModule for AccessControlModule {
                 findings.extend(check_bfla(client, ep, auth_token).await);
             }
 
+            // BOLA: cross-resource access across all verbs
+            findings.extend(check_bola(client, ep, auth_token).await);
+
+            // HTTP method override bypass
+            findings.extend(check_method_override(client, ep, auth_token).await);
+
             // Mass Assignment: POST/PUT/PATCH body injection
             if matches!(ep.method.as_str(), "POST" | "PUT" | "PATCH") {
                 findings.extend(
@@ -105,6 +124,11 @@ impl AttackModule for AccessControlModule {
                 check_vertical_privesc(client, base_target, auth_token, &file.admin_paths).await,
             );
         }
+
+        // Unprotected admin endpoints (no token required)
+        findings.extend(
+            check_admin_endpoints_unauth(client, base_target, &file.admin_paths).await,
+        );
 
         findings
     }
@@ -531,6 +555,191 @@ async fn check_vertical_privesc(
     }
 
     findings
+}
+
+// ---------------------------------------------------------------------------
+// Check: HTTP Method Override (X-HTTP-Method-Override bypass)
+// ---------------------------------------------------------------------------
+
+async fn check_method_override(
+    client: &HttpClient,
+    ep: &Endpoint,
+    token: &str,
+) -> Vec<Finding> {
+    // Only probe GET endpoints (we override to DELETE via header)
+    if ep.method != "GET" {
+        return vec![];
+    }
+
+    for (header_name, override_method) in METHOD_OVERRIDE_HEADERS {
+        let mut builder = client
+            .inner()
+            .request(reqwest::Method::GET, &ep.full_url)
+            .header(*header_name, *override_method);
+        if !token.is_empty() {
+            builder = builder.header("Authorization", format!("Bearer {}", token));
+        }
+        let Ok(req) = builder.build() else { continue };
+        let Ok(resp) = client.send(req).await else { continue };
+
+        let status = resp.status().as_u16();
+        let body = resp.bytes().await.unwrap_or_default();
+        let body_lower = String::from_utf8_lossy(&body).to_lowercase();
+
+        let is_blocked = METHOD_BLOCKED_INDICATORS.iter().any(|kw| body_lower.contains(kw));
+
+        if matches!(status, 200 | 204) && !is_blocked {
+            let mut f = Finding::new(
+                format!("HTTP Method Override — {} accepté via `{}`", override_method, header_name),
+                Severity::High,
+                7.5,
+                "access-control".to_string(),
+                ep.full_url.clone(),
+                "GET".to_string(),
+            );
+            f.description = format!(
+                "L'endpoint {} accepte la méthode {} via le header `{}`. \
+                 Un attaquant peut effectuer des actions destructrices (DELETE, PUT) \
+                 en contournant les protections de méthode HTTP.",
+                ep.full_url, override_method, header_name
+            );
+            f.proof = format!(
+                "GET {} avec header `{}: {}` → HTTP {} (attendu 405 ou 403)",
+                ep.full_url, header_name, override_method, status
+            );
+            f.recommendation =
+                "Ignorer les headers de surcharge de méthode HTTP en production. \
+                 Si nécessaire, n'autoriser que pour des clients authentifiés et tracer les usages."
+                    .to_string();
+            f.cwe = Some("CWE-650".to_string());
+            f.references = vec![
+                "https://portswigger.net/web-security/request-smuggling".to_string(),
+            ];
+            return vec![f];
+        }
+    }
+    vec![]
+}
+
+// ---------------------------------------------------------------------------
+// Check: Unprotected admin endpoints (no authentication required)
+// ---------------------------------------------------------------------------
+
+async fn check_admin_endpoints_unauth(
+    client: &HttpClient,
+    base_target: &str,
+    admin_paths: &[String],
+) -> Vec<Finding> {
+    let mut findings = Vec::new();
+    let base = base_target.trim_end_matches('/');
+
+    for path in admin_paths {
+        let url = format!("{}{}", base, path);
+        let Ok(req) = client.inner().get(&url).build() else { continue };
+        let Ok(resp) = client.send(req).await else { continue };
+
+        let status = resp.status().as_u16();
+
+        if matches!(status, 200..=299) {
+            let mut f = Finding::new(
+                format!("Endpoint admin non protégé — {}", path),
+                Severity::High,
+                7.5,
+                "access-control".to_string(),
+                url.clone(),
+                "GET".to_string(),
+            );
+            f.description = format!(
+                "L'endpoint d'administration {} est accessible sans aucune authentification \
+                 (HTTP {}). N'importe qui peut y accéder depuis internet.",
+                url, status
+            );
+            f.proof = format!("GET {} sans Authorization → HTTP {}", url, status);
+            f.recommendation =
+                "Protéger tous les endpoints d'administration par une authentification forte. \
+                 Restreindre l'accès par IP (allowlist réseau). \
+                 Ne pas exposer les endpoints de monitoring/debug sur des ports publics."
+                    .to_string();
+            f.cwe = Some("CWE-284".to_string());
+            f.references = vec![
+                "https://owasp.org/API-Security/editions/2023/en/0xa5-broken-function-level-authorization/".to_string(),
+            ];
+            findings.push(f);
+        }
+    }
+    findings
+}
+
+// ---------------------------------------------------------------------------
+// Check: BOLA — Broken Object Level Authorization (cross-verb)
+// ---------------------------------------------------------------------------
+
+async fn check_bola(
+    client: &HttpClient,
+    ep: &Endpoint,
+    token: &str,
+) -> Vec<Finding> {
+    // Only endpoints that have a resource ID in the path
+    let Some((prefix, id, suffix)) = extract_numeric_id(&ep.full_url) else {
+        return vec![];
+    };
+
+    // Baseline: own resource with GET
+    let own_url = &ep.full_url;
+    let Some((baseline_status, baseline_body)) =
+        get_with_token(client, own_url, "GET", token).await
+    else {
+        return vec![];
+    };
+
+    if !matches!(baseline_status, 200..=299) {
+        return vec![];
+    }
+
+    // Try a different ID with each verb to detect cross-user access
+    let other_id = if id == 1 { 2u64 } else { 1u64 };
+    let other_url = format!("{}/{}{}", prefix, other_id, suffix);
+
+    for method in ALL_METHODS {
+        let Some((status, body)) = get_with_token(client, &other_url, method, token).await else {
+            continue;
+        };
+
+        if matches!(status, 200..=299) && body != baseline_body && !body.is_empty() {
+            let body_lower = String::from_utf8_lossy(&body).to_lowercase();
+            let is_error = BFLA_ERROR_INDICATORS.iter().any(|kw| body_lower.contains(kw));
+            if is_error { continue; }
+
+            let mut f = Finding::new(
+                format!("BOLA — {} /{}/ via {}", ep.path, other_id, method),
+                Severity::High,
+                8.1,
+                "access-control".to_string(),
+                other_url.clone(),
+                method.to_string(),
+            );
+            f.description = format!(
+                "L'endpoint {} accepte la méthode {} sur l'ID {} (autre que l'ID propriétaire {}) \
+                 et retourne HTTP {}. Un attaquant peut accéder ou modifier les ressources d'autres utilisateurs.",
+                ep.full_url, method, other_id, id, status
+            );
+            f.proof = format!(
+                "{} {} → HTTP {} ({} octets) — ID substitué : {} → {}",
+                method, other_url, status, body.len(), id, other_id
+            );
+            f.recommendation =
+                "Vérifier côté serveur que la ressource demandée appartient à l'utilisateur \
+                 authentifié pour chaque méthode HTTP. Implémenter un middleware de contrôle d'accès \
+                 centralisé basé sur le token."
+                    .to_string();
+            f.cwe = Some("CWE-639".to_string());
+            f.references = vec![
+                "https://owasp.org/API-Security/editions/2023/en/0xa1-broken-object-level-authorization/".to_string(),
+            ];
+            return vec![f];
+        }
+    }
+    vec![]
 }
 
 // ---------------------------------------------------------------------------

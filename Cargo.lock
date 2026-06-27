@@ -1374,6 +1374,7 @@ dependencies = [
  "nevelio-module-infra",
  "nevelio-module-injection",
  "nevelio-module-oauth2",
+ "nevelio-module-prototype-pollution",
  "nevelio-module-ssrf",
  "nevelio-recon",
  "nevelio-reporting",
@@ -1494,6 +1495,20 @@ dependencies = [
 
 [[package]]
 name = "nevelio-module-oauth2"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "nevelio-core",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "nevelio-module-prototype-pollution"
 version = "0.1.0"
 dependencies = [
  "anyhow",

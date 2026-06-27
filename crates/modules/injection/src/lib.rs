@@ -11,6 +11,24 @@ use nevelio_core::{AttackModule, HttpClient, ScanSession};
 
 const SQLI_PAYLOADS: &str = include_str!("../../../../payloads/sqli.yaml");
 const XXE_PAYLOADS: &str  = include_str!("../../../../payloads/xxe.yaml");
+const XSS_PAYLOADS: &str  = include_str!("../../../../payloads/xss.yaml");
+
+// LDAP error substrings
+const LDAP_ERRORS: &[&str] = &[
+    "ldap error", "invalid filter syntax", "bad search filter", "ldaperror",
+    "ldap_search", "javax.naming.directory", "com.sun.jndi", "0x57",
+    "NamingException", "InvalidSearchFilterException",
+];
+
+// XPath error substrings
+const XPATH_ERRORS: &[&str] = &[
+    "xpathexception", "invalid xpath", "xpath syntax error", "xmlxpathexception",
+    "org.xml.sax", "javax.xml.xpath", "xsltransformexception", "xpath expression",
+    "invalid token", "unexpected token",
+];
+
+// HTTP headers to test for SSTI
+const SSTI_HEADERS: &[&str] = &["User-Agent", "X-Forwarded-For", "Referer", "X-Custom-Name"];
 
 // SQL error substrings that indicate a reflected database error
 const SQL_ERRORS: &[&str] = &[
@@ -53,6 +71,23 @@ struct InjectionPayloadFile {
     ssti_payloads: Vec<SstiEntry>,
     #[serde(default)]
     cmdi_payloads: Vec<CmdiEntry>,
+    #[serde(default)]
+    ldap_payloads: Vec<SimpleEntry>,
+    #[serde(default)]
+    xpath_payloads: Vec<SimpleEntry>,
+    #[serde(default)]
+    csv_payloads: Vec<SimpleEntry>,
+}
+
+#[derive(Debug, Deserialize)]
+struct XssPayloadFile {
+    #[serde(default)]
+    payloads: Vec<SimpleEntry>,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+struct SimpleEntry {
+    value: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -105,7 +140,7 @@ impl AttackModule for InjectionModule {
     }
 
     fn description(&self) -> &str {
-        "Tests SQLi, NoSQLi, SSTI, Command Injection et XXE"
+        "Tests SQLi, NoSQLi, SSTI, CMDi, XXE, XSS, LDAP, XPath et CSV injection"
     }
 
     async fn run(
@@ -120,10 +155,16 @@ impl AttackModule for InjectionModule {
                 nosql_payloads: vec![],
                 ssti_payloads: vec![],
                 cmdi_payloads: vec![],
+                ldap_payloads: vec![],
+                xpath_payloads: vec![],
+                csv_payloads: vec![],
             });
 
         let xxe_file: XxePayloadFile =
             serde_yaml::from_str(XXE_PAYLOADS).unwrap_or(XxePayloadFile { payloads: vec![] });
+
+        let xss_file: XssPayloadFile =
+            serde_yaml::from_str(XSS_PAYLOADS).unwrap_or(XssPayloadFile { payloads: vec![] });
 
         let mut findings = Vec::new();
 
@@ -149,7 +190,22 @@ impl AttackModule for InjectionModule {
                 findings.extend(check_nosqli(client, ep, param, &sqli_file.nosql_payloads).await);
                 findings.extend(check_ssti(client, ep, param, &sqli_file.ssti_payloads).await);
                 findings.extend(check_cmdi(client, ep, param, &sqli_file.cmdi_payloads).await);
+                findings.extend(check_xss(client, ep, param, &xss_file.payloads).await);
+                findings.extend(check_ldap(client, ep, param, &sqli_file.ldap_payloads).await);
+                findings.extend(check_xpath(client, ep, param, &sqli_file.xpath_payloads).await);
             }
+
+            // CSV injection: only on export-like endpoints
+            if is_export_endpoint(ep) {
+                for param in &param_names {
+                    findings.extend(
+                        check_csv_injection(client, ep, param, &sqli_file.csv_payloads).await,
+                    );
+                }
+            }
+
+            // SSTI in HTTP headers
+            findings.extend(check_ssti_headers(client, ep, &sqli_file.ssti_payloads).await);
 
             // XXE : testé sur les endpoints POST/PUT/PATCH acceptant XML
             findings.extend(check_xxe(client, ep, &xxe_file.payloads).await);
@@ -643,6 +699,319 @@ async fn check_cmdi(
         }
     }
 
+    vec![]
+}
+
+// ---------------------------------------------------------------------------
+// Check: XSS — Cross-Site Scripting (reflected)
+// ---------------------------------------------------------------------------
+
+async fn check_xss(
+    client: &HttpClient,
+    ep: &Endpoint,
+    param: &str,
+    payloads: &[SimpleEntry],
+) -> Vec<Finding> {
+    for entry in payloads {
+        let url = inject_query(&ep.full_url, param, &entry.value);
+        let method: reqwest::Method = ep.method.parse().unwrap_or(reqwest::Method::GET);
+
+        let resp = if matches!(ep.method.as_str(), "GET" | "HEAD" | "DELETE") {
+            let Ok(req) = client.inner().request(method, &url).build() else { continue };
+            match client.send(req).await { Ok(r) => r, Err(_) => continue }
+        } else {
+            let body = serde_json::json!({ param: entry.value });
+            let Ok(req) = client
+                .inner()
+                .request(method, &ep.full_url)
+                .header("Content-Type", "application/json")
+                .body(body.to_string())
+                .build()
+            else { continue };
+            match client.send(req).await { Ok(r) => r, Err(_) => continue }
+        };
+
+        let body = resp.text().await.unwrap_or_default();
+
+        if body.contains(entry.value.as_str()) {
+            let mut f = Finding::new(
+                format!("XSS réfléchi — paramètre `{}`", param),
+                Severity::Medium,
+                6.1,
+                "injection".to_string(),
+                ep.full_url.clone(),
+                ep.method.clone(),
+            );
+            f.description = format!(
+                "Le paramètre `{}` de l'endpoint {} réfléchit le payload XSS sans encodage. \
+                 Un attaquant peut exécuter du JavaScript dans le navigateur de la victime.",
+                param, ep.full_url
+            );
+            f.proof = format!("Payload: {:?} → retrouvé non encodé dans la réponse", entry.value);
+            f.recommendation =
+                "Encoder toutes les sorties HTML (htmlspecialchars, DOMPurify). \
+                 Ajouter un Content-Security-Policy strict. \
+                 Valider les entrées côté serveur."
+                    .to_string();
+            f.cwe = Some("CWE-79".to_string());
+            f.references = vec![
+                "https://owasp.org/www-community/attacks/xss/".to_string(),
+                "https://cheatsheetseries.owasp.org/cheatsheets/Cross_Site_Scripting_Prevention_Cheat_Sheet.html".to_string(),
+            ];
+            return vec![f];
+        }
+    }
+    vec![]
+}
+
+// ---------------------------------------------------------------------------
+// Check: LDAP Injection
+// ---------------------------------------------------------------------------
+
+async fn check_ldap(
+    client: &HttpClient,
+    ep: &Endpoint,
+    param: &str,
+    payloads: &[SimpleEntry],
+) -> Vec<Finding> {
+    let Some((baseline_status, baseline_len)) = get_baseline(client, ep).await else {
+        return vec![];
+    };
+
+    for entry in payloads {
+        let url = inject_query(&ep.full_url, param, &entry.value);
+        let method: reqwest::Method = ep.method.parse().unwrap_or(reqwest::Method::GET);
+        let Ok(req) = client.inner().request(method.clone(), &url).build() else { continue };
+        let Ok(resp) = client.send(req).await else { continue };
+
+        let status = resp.status().as_u16();
+        let body = resp.text().await.unwrap_or_default();
+        let body_lower = body.to_lowercase();
+        let body_len = body.len();
+
+        let has_ldap_error = LDAP_ERRORS.iter().any(|e| body_lower.contains(&e.to_lowercase()));
+        let boolean_change = baseline_len > 0
+            && (body_len as isize - baseline_len as isize).unsigned_abs() * 100 / baseline_len > 30;
+        let status_flip = baseline_status != 200 && status == 200;
+
+        if has_ldap_error || boolean_change || status_flip {
+            let proof_detail = if has_ldap_error {
+                format!("Erreur LDAP dans la réponse HTTP {}", status)
+            } else {
+                format!("Réponse anormale : {} octets vs {} baseline (HTTP {})", body_len, baseline_len, status)
+            };
+
+            let mut f = Finding::new(
+                format!("LDAP Injection — paramètre `{}`", param),
+                Severity::High,
+                7.5,
+                "injection".to_string(),
+                ep.full_url.clone(),
+                ep.method.clone(),
+            );
+            f.description = format!(
+                "Le paramètre `{}` de l'endpoint {} semble vulnérable à une injection LDAP. \
+                 Un attaquant peut manipuler les filtres de recherche LDAP pour contourner \
+                 l'authentification ou exfiltrer des informations d'annuaire.",
+                param, ep.full_url
+            );
+            f.proof = format!("Payload: {:?}\n{}", entry.value, proof_detail);
+            f.recommendation =
+                "Utiliser une API LDAP avec requêtes paramétrées. Encoder les caractères spéciaux \
+                 LDAP (*, (, ), \\, \\0). Valider les entrées via une allowlist stricte."
+                    .to_string();
+            f.cwe = Some("CWE-90".to_string());
+            f.references = vec![
+                "https://owasp.org/www-community/attacks/LDAP_Injection".to_string(),
+                "https://cheatsheetseries.owasp.org/cheatsheets/LDAP_Injection_Prevention_Cheat_Sheet.html".to_string(),
+            ];
+            return vec![f];
+        }
+    }
+    vec![]
+}
+
+// ---------------------------------------------------------------------------
+// Check: XPath Injection
+// ---------------------------------------------------------------------------
+
+async fn check_xpath(
+    client: &HttpClient,
+    ep: &Endpoint,
+    param: &str,
+    payloads: &[SimpleEntry],
+) -> Vec<Finding> {
+    let Some((baseline_status, baseline_len)) = get_baseline(client, ep).await else {
+        return vec![];
+    };
+
+    for entry in payloads {
+        let url = inject_query(&ep.full_url, param, &entry.value);
+        let method: reqwest::Method = ep.method.parse().unwrap_or(reqwest::Method::GET);
+        let Ok(req) = client.inner().request(method, &url).build() else { continue };
+        let Ok(resp) = client.send(req).await else { continue };
+
+        let status = resp.status().as_u16();
+        let body = resp.text().await.unwrap_or_default();
+        let body_lower = body.to_lowercase();
+        let body_len = body.len();
+
+        let has_xpath_error = XPATH_ERRORS.iter().any(|e| body_lower.contains(&e.to_lowercase()));
+        let boolean_change = baseline_len > 0
+            && (body_len as isize - baseline_len as isize).unsigned_abs() * 100 / baseline_len > 30;
+        let status_flip = baseline_status != 200 && status == 200;
+
+        if has_xpath_error || boolean_change || status_flip {
+            let proof_detail = if has_xpath_error {
+                format!("Erreur XPath dans la réponse HTTP {}", status)
+            } else {
+                format!("Réponse anormale : {} octets vs {} baseline (HTTP {})", body_len, baseline_len, status)
+            };
+
+            let mut f = Finding::new(
+                format!("XPath Injection — paramètre `{}`", param),
+                Severity::High,
+                7.5,
+                "injection".to_string(),
+                ep.full_url.clone(),
+                ep.method.clone(),
+            );
+            f.description = format!(
+                "Le paramètre `{}` de l'endpoint {} semble vulnérable à une injection XPath. \
+                 Un attaquant peut manipuler des requêtes XPath pour lire du contenu XML arbitraire \
+                 ou contourner des contrôles d'accès basés sur XML.",
+                param, ep.full_url
+            );
+            f.proof = format!("Payload: {:?}\n{}", entry.value, proof_detail);
+            f.recommendation =
+                "Utiliser des requêtes XPath paramétrées. Encoder les entrées utilisateur \
+                 avant de les inclure dans des expressions XPath. Valider via une allowlist."
+                    .to_string();
+            f.cwe = Some("CWE-643".to_string());
+            f.references = vec![
+                "https://owasp.org/www-community/attacks/XPATH_Injection".to_string(),
+            ];
+            return vec![f];
+        }
+    }
+    vec![]
+}
+
+// ---------------------------------------------------------------------------
+// Check: CSV / Formula Injection
+// ---------------------------------------------------------------------------
+
+fn is_export_endpoint(ep: &Endpoint) -> bool {
+    let path = ep.path.to_lowercase();
+    let url = ep.full_url.to_lowercase();
+    ["export", "download", "csv", "report", "xls", "xlsx"]
+        .iter()
+        .any(|kw| path.contains(kw) || url.contains(kw))
+}
+
+async fn check_csv_injection(
+    client: &HttpClient,
+    ep: &Endpoint,
+    param: &str,
+    payloads: &[SimpleEntry],
+) -> Vec<Finding> {
+    for entry in payloads {
+        let url = inject_query(&ep.full_url, param, &entry.value);
+        let method: reqwest::Method = ep.method.parse().unwrap_or(reqwest::Method::GET);
+        let Ok(req) = client.inner().request(method, &url).build() else { continue };
+        let Ok(resp) = client.send(req).await else { continue };
+
+        let status = resp.status().as_u16();
+        let body = resp.text().await.unwrap_or_default();
+
+        // Unescaped formula in CSV response is the indicator
+        if matches!(status, 200..=299) && body.contains(entry.value.as_str()) {
+            let mut f = Finding::new(
+                format!("CSV/Formula Injection — paramètre `{}`", param),
+                Severity::Medium,
+                5.0,
+                "injection".to_string(),
+                ep.full_url.clone(),
+                ep.method.clone(),
+            );
+            f.description = format!(
+                "L'endpoint {} retourne une formule non échappée dans un export CSV/Excel. \
+                 Un attaquant peut injecter des formules malveillantes qui s'exécutent \
+                 lorsqu'un utilisateur ouvre le fichier dans un tableur.",
+                ep.full_url
+            );
+            f.proof = format!(
+                "Payload: {:?} → retrouvé non échappé dans la réponse CSV (HTTP {})",
+                entry.value, status
+            );
+            f.recommendation =
+                "Préfixer les valeurs commençant par =, +, -, @ avec un apostrophe dans les exports CSV. \
+                 Utiliser une bibliothèque de génération CSV qui gère automatiquement l'échappement."
+                    .to_string();
+            f.cwe = Some("CWE-1236".to_string());
+            f.references = vec![
+                "https://owasp.org/www-community/attacks/CSV_Injection".to_string(),
+            ];
+            return vec![f];
+        }
+    }
+    vec![]
+}
+
+// ---------------------------------------------------------------------------
+// Check: SSTI dans les headers HTTP
+// ---------------------------------------------------------------------------
+
+async fn check_ssti_headers(
+    client: &HttpClient,
+    ep: &Endpoint,
+    payloads: &[SstiEntry],
+) -> Vec<Finding> {
+    for header_name in SSTI_HEADERS {
+        for entry in payloads {
+            let method: reqwest::Method = ep.method.parse().unwrap_or(reqwest::Method::GET);
+            let Ok(req) = client
+                .inner()
+                .request(method, &ep.full_url)
+                .header(*header_name, &entry.value)
+                .build()
+            else {
+                continue;
+            };
+            let Ok(resp) = client.send(req).await else { continue };
+            let body = resp.text().await.unwrap_or_default();
+
+            if body.contains(&entry.expect) {
+                let mut f = Finding::new(
+                    format!("SSTI via header `{}` — {}", header_name, ep.full_url),
+                    Severity::Critical,
+                    9.8,
+                    "injection".to_string(),
+                    ep.full_url.clone(),
+                    ep.method.clone(),
+                );
+                f.description = format!(
+                    "Le header HTTP `{}` est évalué par un moteur de templates côté serveur. \
+                     L'expression {:?} a produit {:?} dans la réponse. \
+                     Un attaquant peut exécuter du code arbitraire sur le serveur.",
+                    header_name, entry.value, entry.expect
+                );
+                f.proof = format!(
+                    "Header: {} = {:?} → résultat {:?} trouvé dans la réponse",
+                    header_name, entry.value, entry.expect
+                );
+                f.recommendation =
+                    "Ne jamais rendre des headers HTTP dans un contexte de template. \
+                     Utiliser un sandboxing du moteur de templates ou des fonctions d'échappement."
+                        .to_string();
+                f.cwe = Some("CWE-94".to_string());
+                f.references = vec![
+                    "https://portswigger.net/web-security/server-side-template-injection".to_string(),
+                ];
+                return vec![f];
+            }
+        }
+    }
     vec![]
 }
 

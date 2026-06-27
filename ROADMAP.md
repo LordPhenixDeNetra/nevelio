@@ -10,7 +10,7 @@
 | Version | Statut | Modules | Checks | Release |
 |---|---|---|---|---|
 | **v0.1.0** | ✅ Livrée | 6 | auth, injection, access-control, business-logic, graphql, infra | `git tag v0.1.0` |
-| **v0.2.0** | 🚧 En cours | +3 | +XXE, +SSRF, +OAuth2 | `git tag v0.2.0` |
+| **v0.2.0** | ✅ Livrée | +4 | +XXE, +SSRF, +OAuth2, +Prototype Pollution | `git tag v0.2.0` |
 | **v0.3.0** | 📋 Planifiée | — | Postman/HAR import, crawling JS | — |
 | **v0.4.0** | 📋 Planifiée | — | Watch mode, diff scan, REPL | — |
 | **v0.5.0** | 📋 Planifiée | — | GitHub App, Jira, dashboard web | — |
@@ -20,10 +20,10 @@
 ### Progression globale v0.2
 
 ```
-Modules sécurité   ████████░░░░░░░░░░░░  3/9  checks planifiés
-Distribution       ████████████████████  5/5  gestionnaires de paquets
-Reporting          ████████████████████  5/5  formats (JSON/HTML/MD/JUnit/SARIF)
-i18n               ████████████████████  3/3  langues (fr/en/es)
+Modules sécurité   ████████████████████  9/9  modules implémentés ✅
+Distribution       ████████████████████  5/5  gestionnaires de paquets ✅
+Reporting          ████████████████████  5/5  formats (JSON/HTML/MD/JUnit/SARIF) ✅
+i18n               ████████████████████  3/3  langues (fr/en/es) ✅
 ```
 
 ---
@@ -84,15 +84,15 @@ i18n               ████████████████████ 
 - [ ] Test `kid` (Key ID) injection dans le header JWT
 - [ ] Test `jku` / `x5u` SSRF (JWT header pointant vers clé distante)
 
-### 🔴 Module SSRF (Server-Side Request Forgery) 🚧
+### 🔴 Module SSRF (Server-Side Request Forgery) ✅
 
 - [x] Détection des paramètres candidats (30 noms : `url=`, `redirect=`, `webhook=`…)
 - [x] Probes AWS IMDS (`169.254.169.254`), Azure, GCP, Alibaba Cloud
 - [x] Payloads vers `http://localhost` / `http://127.0.0.1:22`
 - [x] Détection par indicateurs spécifiques à chaque cloud provider
+- [x] SSRF via en-têtes HTTP (`X-Forwarded-Host`, `X-Forwarded-For`, `X-Real-IP`, `True-Client-IP`)
 - [ ] Intégration OAST (out-of-band) via `interactsh` pour détection aveugle
 - [ ] Bypass filtres : encodage d'URL, représentation IPv6, redirections DNS
-- [ ] SSRF via en-têtes HTTP (`X-Forwarded-Host`, `Host`, `X-Real-IP`)
 
 ### 🔴 Module XXE (XML External Entity) 🚧
 
@@ -103,36 +103,36 @@ i18n               ████████████████████ 
 - [ ] XXE via SVG / DOCX / format dérivé XML
 - [ ] Billion laughs (DoS par entités récursives) — hors scope par défaut
 
-### 🟡 Module Prototype Pollution
+### 🟡 Module Prototype Pollution ✅
 
-- [ ] Détection des APIs Node.js / Express (header `X-Powered-By`, stack traces)
-- [ ] Test via paramètres JSON : `__proto__`, `constructor.prototype`
-- [ ] Test via paramètres query string : `?__proto__[admin]=true`
-- [ ] Détection des effets de bord (comportement modifié de la réponse)
+- [x] Détection des APIs Node.js / Express (header `X-Powered-By`, stack traces)
+- [x] Test via paramètres JSON : `__proto__`, `constructor.prototype`
+- [x] Test via paramètres query string : `?__proto__[admin]=true`
+- [x] Détection des effets de bord (comportement modifié de la réponse)
 
-### 🟡 Renforcement module `auth`
+### 🟡 Renforcement module `auth` 🚧
 
-- [ ] Tests JWT : token expiré accepté
-- [ ] Tests JWT : algorithme ES256/RS256 → downgrade HS256 avec clé publique comme secret
+- [x] Tests JWT : token expiré accepté (`check_jwt_expired`)
+- [x] Tests JWT : algorithme RS256 → downgrade HS256 avec clé publique comme secret
+- [x] Test `kid` (Key ID) injection dans le header JWT (path traversal + SQLi)
+- [x] Test `jku` / `x5u` SSRF (JWT header pointant vers ressource interne)
 - [ ] Attaque refresh token : rejeu, rotation non invalidée
-- [ ] Test `kid` (Key ID) injection dans le header JWT
-- [ ] Test `jku` / `x5u` SSRF (JWT header pointant vers clé distante)
 - [ ] Bruteforce Basic Auth multithread avec wordlist configurable
 
-### 🟡 Renforcement module `injection`
+### 🟡 Renforcement module `injection` ✅
 
-- [ ] Détection de SSTI dans les headers (User-Agent, X-Forwarded-For)
-- [ ] XSS stocké et réfléchi sur les endpoints REST
-- [ ] Injection CSV / formule Excel dans les exports
-- [ ] LDAP injection
-- [ ] XPath injection
+- [x] Détection de SSTI dans les headers (`User-Agent`, `X-Forwarded-For`, `Referer`)
+- [x] XSS stocké et réfléchi sur les endpoints REST
+- [x] Injection CSV / formule Excel dans les exports (endpoints export/download)
+- [x] LDAP injection
+- [x] XPath injection
 
-### 🟡 Renforcement module `access-control`
+### 🟡 Renforcement module `access-control` ✅
 
+- [x] BOLA (BFLA élargi) : tester toutes les combinaisons verbe × ressource × ID
+- [x] Détection d'endpoints admin non protégés sans token (`/admin`, `/internal`, etc.)
+- [x] HTTP method override (`X-HTTP-Method-Override: DELETE`, `X-HTTP-Method`)
 - [ ] Test de mass assignment sur tous les champs de la spec OpenAPI
-- [ ] BOLA (BFLA élargi) : tester toutes les combinaisons verbe × ressource × rôle
-- [ ] Détection d'endpoints admin non protégés (`/admin`, `/internal`, `/manage`)
-- [ ] HTTP method override (`X-HTTP-Method-Override: DELETE`)
 
 ---
 
@@ -321,15 +321,15 @@ i18n               ████████████████████ 
 
 ## Prochaine release
 
-Pour publier la v0.2.0 avec les modules XXE, SSRF et OAuth2 :
+v0.2.0 est complète. Pour publier :
 
 ```bash
 git add -A
-git commit -m "feat(v0.2): add XXE, SSRF and OAuth2 modules"
+git commit -m "feat(v0.2): XSS, LDAP, XPath, CSV, SSTI headers, BOLA, method override, JWT advanced, SSRF headers, Prototype Pollution"
 git tag v0.2.0
 git push && git push --tags
 ```
 
 ---
 
-*Dernière mise à jour : 2026-06-27 — v0.2.0 en cours*
+*Dernière mise à jour : 2026-06-27 — v0.2.0 ✅ complète*

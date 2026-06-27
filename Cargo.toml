@@ -10,6 +10,7 @@ members = [
     "crates/modules/infra",
     "crates/modules/ssrf",
     "crates/modules/oauth2",
+    "crates/modules/prototype-pollution",
     "crates/recon",
     "crates/reporting",
 ]

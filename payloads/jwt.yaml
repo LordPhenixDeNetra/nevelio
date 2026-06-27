@@ -25,3 +25,17 @@ claims_to_test:
     values: [true, 1]
   - field: "user_id"
     values: [1, 0, -1]
+
+jwt_kid_payloads:
+  - "../../dev/null"
+  - "/dev/null"
+  - "' OR '1'='1'--"
+  - "1 UNION SELECT null--"
+  - "nonexistent_key_id"
+
+jwks_paths:
+  - "/.well-known/jwks.json"
+  - "/oauth/jwks"
+  - "/.well-known/openid-configuration"
+  - "/api/jwks"
+  - "/auth/jwks"

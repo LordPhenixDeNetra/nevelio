@@ -33,6 +33,23 @@ admin_paths:
   - "/console"
   - "/actuator"
   - "/actuator/env"
+  - "/administrator"
+  - "/manage"
+  - "/debug"
+  - "/config"
+  - "/settings"
+  - "/dashboard"
+  - "/api/internal"
+  - "/healthz"
+  - "/_internal"
+  - "/metrics"
+  - "/status"
+  - "/env"
+  - "/info"
+  - "/trace"
+  - "/actuator/health"
+  - "/actuator/info"
+  - "/actuator/metrics"
 
 # Champs extra à injecter pour le mass assignment
 mass_assignment_fields:
