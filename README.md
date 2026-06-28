@@ -428,6 +428,3 @@ nevelio/
 
 **Références légales :** CFAA (US), Computer Misuse Act (UK), Directive NIS2 (EU), LCEN (FR).
 
-
-
-Mettez à jour les elements du dossier "docs" pour saligner avec les fonctionnalité dejas developper dans ROADMAP.md
