@@ -48,6 +48,15 @@ impl AttackModule for WebSocketModule {
             }
         }
 
+        // Rate limiting on common WS paths
+        for path in &WS_PATHS[..3] {
+            let url = format!("{}{}", ws_base, path);
+            if let Some(f) = check_ws_rate_limit(&url).await {
+                findings.push(f);
+                break;
+            }
+        }
+
         // Probe endpoints that look like WebSocket upgrade points
         for ep in endpoints {
             let path_lower = ep.path.to_lowercase();
@@ -57,6 +66,9 @@ impl AttackModule for WebSocketModule {
                     findings.push(f);
                 }
                 if let Some(f) = check_ws_injection(&ws_url).await {
+                    findings.push(f);
+                }
+                if let Some(f) = check_ws_rate_limit(&ws_url).await {
                     findings.push(f);
                 }
             }
@@ -197,6 +209,52 @@ async fn check_ws_injection(url: &str) -> Option<Finding> {
                 return Some(f);
             }
         }
+    }
+
+    None
+}
+
+async fn check_ws_rate_limit(url: &str) -> Option<Finding> {
+    // Open N connections rapidly; if all succeed, no rate limiting is in place.
+    const PROBE_COUNT: usize = 10;
+    let timeout = std::time::Duration::from_secs(3);
+    let mut accepted = 0usize;
+
+    for _ in 0..PROBE_COUNT {
+        if let Ok(Ok(_)) = tokio::time::timeout(timeout, tokio_tungstenite::connect_async(url)).await {
+            accepted += 1;
+        } else {
+            // Server started rejecting — rate limiting likely in place
+            return None;
+        }
+    }
+
+    if accepted >= PROBE_COUNT {
+        let mut f = Finding::new(
+            format!("WebSocket — Absence de rate limiting sur les connexions — {}", url),
+            Severity::Medium,
+            5.3,
+            "websocket",
+            url,
+            "WS-CONNECT",
+        );
+        f.description = format!(
+            "Le serveur WebSocket a accepté {} connexions consécutives sans rejeter aucune. \
+             L'absence de rate limiting expose le service à des attaques par épuisement de \
+             connexions (resource exhaustion) ou à du brute force via WebSocket.",
+            PROBE_COUNT
+        );
+        f.proof = format!("{} connexions ouvertes sans aucun refus (HTTP 429 ou fermeture).", PROBE_COUNT);
+        f.recommendation =
+            "Implémenter un rate limit sur les connexions WebSocket (ex. max 5 connexions/seconde \
+             par IP). Utiliser un reverse proxy (nginx, HAProxy) avec `limit_conn` ou un middleware \
+             applicatif."
+                .to_string();
+        f.cwe = Some("CWE-770".to_string());
+        f.references = vec![
+            "https://owasp.org/www-community/attacks/Denial_of_Service".to_string(),
+        ];
+        return Some(f);
     }
 
     None

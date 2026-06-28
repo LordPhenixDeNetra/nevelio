@@ -24,6 +24,15 @@ use crate::output;
 use crate::tui::{self, ScanEvent};
 
 pub async fn run() -> Result<()> {
+    // Handle --generate-completion early, before any other dispatch
+    {
+        use clap::Parser as _;
+        let cli = crate::args::Cli::parse();
+        if let Some(ref shell) = cli.generate_completion {
+            generate_completion(shell);
+            return Ok(());
+        }
+    }
     let cli = Cli::parse();
 
     // Detect and apply locale before any user-facing output
@@ -248,6 +257,28 @@ async fn handle_scan(args: crate::args::ScanArgs, verbose: bool) -> Result<()> {
         }]
     };
 
+    // Augment endpoints with gRPC services discovered from .proto file
+    let mut endpoints = endpoints;
+    if let Some(ref proto_path) = args.proto {
+        let proto_str = proto_path.to_string_lossy();
+        match nevelio_recon::parse_proto(&proto_str) {
+            Ok(services) => {
+                let grpc_eps = nevelio_recon::services_to_endpoints(&target, &services);
+                let grpc_count = grpc_eps.len();
+                endpoints.extend(grpc_eps);
+                if !use_tui {
+                    println!(
+                        "  {} Proto: {} service(s) → {} endpoint(s) gRPC ajoutés",
+                        "✓".green(),
+                        services.len(),
+                        grpc_count
+                    );
+                }
+            }
+            Err(e) => eprintln!("  ⚠ Erreur lecture .proto : {}", e),
+        }
+    }
+
     if !use_tui {
         println!("{}", t!("scan.endpoints_found", count = endpoints.len()));
     }
@@ -278,6 +309,24 @@ async fn handle_scan(args: crate::args::ScanArgs, verbose: bool) -> Result<()> {
                     e
                 );
             }
+        }
+    }
+
+    // Load plugins from registry (~/.config/nevelio/plugins.toml or ./nevelio-plugins.toml)
+    for plugin_path in load_plugin_registry() {
+        let path_str = plugin_path.to_string_lossy();
+        match nevelio_core::WasmAttackModule::load(&path_str) {
+            Ok(wasm_mod) => {
+                if !use_tui {
+                    println!(
+                        "  {} Plugin registry WASM : {}",
+                        "✓".green(),
+                        wasm_mod.name().cyan()
+                    );
+                }
+                all_modules.push(Box::new(wasm_mod));
+            }
+            Err(e) => tracing::debug!("Registry plugin '{}' failed: {}", path_str, e),
         }
     }
 
@@ -723,4 +772,87 @@ pub(crate) fn detect_spec_format(path: &str) -> SpecFormat {
         }
     }
     SpecFormat::OpenApi
+}
+
+// ---------------------------------------------------------------------------
+// Plugin registry loader
+// ---------------------------------------------------------------------------
+
+/// Load WASM plugin paths from the registry files:
+///  1. ~/.config/nevelio/plugins.toml
+///  2. ./nevelio-plugins.toml (project-local)
+///
+/// Registry format (TOML):
+/// ```toml
+/// [[plugins]]
+/// path = "/path/to/plugin.wasm"
+/// name = "my-plugin"          # optional label
+/// enabled = true              # optional, default true
+/// ```
+fn load_plugin_registry() -> Vec<PathBuf> {
+    let mut paths = Vec::new();
+
+    let candidates: Vec<PathBuf> = [
+        dirs_home().map(|h| h.join(".config").join("nevelio").join("plugins.toml")),
+        Some(PathBuf::from("./nevelio-plugins.toml")),
+    ]
+    .into_iter()
+    .flatten()
+    .filter(|p| p.exists())
+    .collect();
+
+    for registry_path in candidates {
+        let Ok(content) = std::fs::read_to_string(&registry_path) else { continue };
+        let Ok(table) = content.parse::<toml::Value>() else { continue };
+
+        if let Some(plugins) = table.get("plugins").and_then(|p| p.as_array()) {
+            for plugin in plugins {
+                let enabled = plugin.get("enabled").and_then(|e| e.as_bool()).unwrap_or(true);
+                if !enabled {
+                    continue;
+                }
+                if let Some(path_str) = plugin.get("path").and_then(|p| p.as_str()) {
+                    let p = PathBuf::from(path_str);
+                    if p.exists() {
+                        paths.push(p);
+                    } else {
+                        tracing::warn!("Registry plugin path not found: {}", path_str);
+                    }
+                }
+            }
+        }
+    }
+
+    paths
+}
+
+fn dirs_home() -> Option<PathBuf> {
+    std::env::var("HOME").ok().map(PathBuf::from)
+        .or_else(|| std::env::var("USERPROFILE").ok().map(PathBuf::from))
+}
+
+// ---------------------------------------------------------------------------
+// Shell completion generator
+// ---------------------------------------------------------------------------
+
+/// Generate shell completion script and print to stdout.
+/// Call with: `nevelio --generate-completion <shell>`
+pub fn generate_completion(shell: &str) {
+    use clap::CommandFactory;
+    use std::io;
+
+    let mut cmd = crate::args::Cli::command();
+    let shell_enum = match shell.to_lowercase().as_str() {
+        "bash"       => clap_complete::Shell::Bash,
+        "zsh"        => clap_complete::Shell::Zsh,
+        "fish"       => clap_complete::Shell::Fish,
+        "powershell" => clap_complete::Shell::PowerShell,
+        "elvish"     => clap_complete::Shell::Elvish,
+        other => {
+            eprintln!("Shell non supporté : '{}'. Shells disponibles : bash, zsh, fish, powershell, elvish", other);
+            return;
+        }
+    };
+
+    clap_complete::generate(shell_enum, &mut cmd, "nevelio", &mut io::stdout());
 }

@@ -20,6 +20,12 @@ pub async fn handle_watch(args: WatchArgs, verbose: bool) -> Result<()> {
         .unwrap_or_else(|| PathBuf::from("./nevelio-watch"));
     std::fs::create_dir_all(&out_dir)?;
 
+    // Daemon mode: fork the process and write a PID file
+    if args.daemon {
+        daemonize(&out_dir)?;
+        // After daemonize(), only the child process continues past this point
+    }
+
     let target = args.url.clone();
     let profile = args
         .profile
@@ -226,6 +232,60 @@ async fn send_webhook(
         .await
         .context("Webhook POST failed")?;
     Ok(())
+}
+
+// ── Daemon mode ───────────────────────────────────────────────────────────────
+
+fn daemonize(out_dir: &std::path::Path) -> Result<()> {
+    #[cfg(unix)]
+    {
+        use std::io::Write;
+
+        // Fork: parent exits, child continues
+        let pid = unsafe { libc::fork() };
+        match pid {
+            -1 => anyhow::bail!("fork() failed"),
+            0 => {
+                // Child process: create new session, detach from terminal
+                unsafe { libc::setsid() };
+                // Redirect stdin/stdout/stderr to /dev/null
+                unsafe {
+                    let dev_null = libc::open(
+                        b"/dev/null\0".as_ptr() as *const libc::c_char,
+                        libc::O_RDWR,
+                    );
+                    if dev_null >= 0 {
+                        libc::dup2(dev_null, 0);
+                        libc::dup2(dev_null, 1);
+                        libc::dup2(dev_null, 2);
+                        libc::close(dev_null);
+                    }
+                };
+                // Write PID file
+                let pid_path = out_dir.join("nevelio-watch.pid");
+                if let Ok(mut f) = std::fs::File::create(&pid_path) {
+                    let _ = writeln!(f, "{}", unsafe { libc::getpid() });
+                }
+                // Child continues with watch loop
+                Ok(())
+            }
+            parent_pid => {
+                // Parent process: print PID and exit
+                let pid_path = out_dir.join("nevelio-watch.pid");
+                println!("  Daemon démarré (PID: {})", parent_pid);
+                println!("  PID écrit dans : {}", pid_path.display());
+                println!("  Logs : {}/watch.log", out_dir.display());
+                std::process::exit(0);
+            }
+        }
+    }
+    #[cfg(not(unix))]
+    {
+        // On non-Unix systems, just warn and continue in foreground
+        eprintln!("  ⚠ Mode daemon non supporté sur cette plateforme. Démarrage en mode foreground.");
+        let _ = out_dir;
+        Ok(())
+    }
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────────────

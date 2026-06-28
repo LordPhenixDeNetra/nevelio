@@ -4,6 +4,7 @@ use std::path::PathBuf;
 #[derive(Debug, Parser)]
 #[command(
     name = "nevelio",
+    after_help = "COMPLETION : nevelio --generate-completion bash > ~/.bash_completion.d/nevelio",
     version = env!("CARGO_PKG_VERSION"),
     about = "Nevelio — API Penetration Testing Tool",
     after_help = "\
@@ -55,6 +56,10 @@ pub struct Cli {
     /// Interface language: fr | en | es (auto-detected from $LANG if absent)
     #[arg(long, value_name = "LANG", global = true)]
     pub lang: Option<String>,
+
+    /// Generate shell completion script and print to stdout
+    #[arg(long, value_name = "SHELL")]
+    pub generate_completion: Option<String>,
 }
 
 #[derive(Debug, Subcommand)]
@@ -159,9 +164,13 @@ pub struct ScanArgs {
     #[arg(long, value_name = "SCRIPT")]
     pub scripts: Vec<String>,
 
-    /// WASM plugin paths to load as additional attack modules
+        /// WASM plugin paths to load as additional attack modules
     #[arg(long, value_name = "FILE")]
     pub plugin: Vec<PathBuf>,
+
+    /// Protobuf (.proto) file for gRPC service discovery
+    #[arg(long, value_name = "FILE")]
+    pub proto: Option<PathBuf>,
 }
 
 #[derive(Debug, clap::Args)]
@@ -301,6 +310,10 @@ pub struct WatchArgs {
     /// Directory to store watch state and reports
     #[arg(long, value_name = "PATH")]
     pub out_dir: Option<PathBuf>,
+
+    /// Run as a background daemon (writes PID to <out-dir>/nevelio-watch.pid)
+    #[arg(long)]
+    pub daemon: bool,
 }
 
 // ── Shell ─────────────────────────────────────────────────────────────────────
@@ -381,6 +394,30 @@ pub struct NotifyArgs {
     #[arg(long, value_name = "URL")]
     pub webhook: Option<String>,
 
+    /// PagerDuty Events API v2 integration key
+    #[arg(long, value_name = "KEY")]
+    pub pagerduty: Option<String>,
+
+    /// SMTP server for email notifications (e.g. smtp.gmail.com:587)
+    #[arg(long, value_name = "HOST:PORT")]
+    pub smtp: Option<String>,
+
+    /// SMTP username (or set SMTP_USER env var)
+    #[arg(long, value_name = "USER")]
+    pub smtp_user: Option<String>,
+
+    /// SMTP password (or set SMTP_PASS env var)
+    #[arg(long, value_name = "PASS")]
+    pub smtp_pass: Option<String>,
+
+    /// Email recipient address
+    #[arg(long, value_name = "EMAIL")]
+    pub email_to: Option<String>,
+
+    /// Email sender address (default: nevelio@localhost)
+    #[arg(long, value_name = "EMAIL", default_value = "nevelio@localhost")]
+    pub email_from: String,
+
     /// Minimum severity to include in the notification
     #[arg(long, value_name = "SEVERITY", default_value = "medium")]
     pub min_severity: FailOnArg,
@@ -408,6 +445,8 @@ pub enum IssueProvider {
     Github(GithubIssueArgs),
     /// Create Jira Cloud tickets for each finding
     Jira(JiraIssueArgs),
+    /// Create Linear issues for each finding
+    Linear(LinearIssueArgs),
 }
 
 #[derive(Debug, clap::Args)]
@@ -448,6 +487,29 @@ pub struct JiraIssueArgs {
     pub email: Option<String>,
 
     /// Minimum severity to create tickets for
+    #[arg(long, value_name = "SEVERITY", default_value = "medium")]
+    pub min_severity: FailOnArg,
+}
+
+#[derive(Debug, clap::Args)]
+pub struct LinearIssueArgs {
+    /// Linear API key (or set LINEAR_API_KEY env var)
+    #[arg(long, value_name = "KEY")]
+    pub token: Option<String>,
+
+    /// Linear team ID to create issues in
+    #[arg(long, value_name = "TEAM_ID")]
+    pub team: String,
+
+    /// Linear label to add (e.g. "security")
+    #[arg(long, value_name = "LABEL")]
+    pub label: Option<String>,
+
+    /// Linear project ID to associate issues with
+    #[arg(long, value_name = "PROJECT_ID")]
+    pub project: Option<String>,
+
+    /// Minimum severity to create issues for
     #[arg(long, value_name = "SEVERITY", default_value = "medium")]
     pub min_severity: FailOnArg,
 }

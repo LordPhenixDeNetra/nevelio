@@ -15,12 +15,41 @@ use nevelio_core::{AttackModule, HttpClient, ScanSession};
 const JWT_PAYLOADS: &str = include_str!("../../../../payloads/jwt.yaml");
 
 const COMMON_BASIC_CREDS: &[(&str, &str)] = &[
+    // Default/factory credentials
     ("admin", "admin"),
     ("admin", "password"),
-    ("root", "root"),
+    ("admin", "password123"),
+    ("admin", "admin123"),
     ("admin", "123456"),
+    ("admin", "letmein"),
+    ("admin", "qwerty"),
+    ("admin", "welcome"),
+    ("admin", ""),
+    // Root variants
+    ("root", "root"),
+    ("root", "toor"),
+    ("root", "password"),
+    ("root", "123456"),
+    ("root", ""),
+    // Common service accounts
     ("test", "test"),
+    ("test", "test123"),
     ("user", "user"),
+    ("user", "password"),
+    ("guest", "guest"),
+    ("guest", ""),
+    ("operator", "operator"),
+    ("support", "support"),
+    ("demo", "demo"),
+    ("demo", "password"),
+    // Application-specific defaults
+    ("api", "api"),
+    ("service", "service"),
+    ("superuser", "superuser"),
+    ("administrator", "administrator"),
+    ("administrator", "password"),
+    ("sa", ""),
+    ("sa", "sa"),
 ];
 
 #[derive(Debug, Deserialize)]

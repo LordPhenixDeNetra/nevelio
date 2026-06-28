@@ -32,7 +32,7 @@ use crate::types::{Endpoint, Finding};
 use anyhow::{anyhow, Context, Result};
 use async_trait::async_trait;
 use tokio::sync::Mutex;
-use wasmtime::{Engine, Instance, Linker, Memory, Module, Store};
+use wasmtime::{Config, Engine, Instance, Linker, Memory, Module, Store};
 
 // Size of the scratch buffer the host allocates for receiving manifest/findings JSON.
 const OUTPUT_BUFFER_SIZE: u32 = 256 * 1024; // 256 KiB
@@ -46,12 +46,31 @@ pub struct WasmPlugin {
 
 impl WasmPlugin {
     /// Load and instantiate a `.wasm` file from `path`.
+    ///
+    /// The plugin runs in a WASI-sandboxed environment with:
+    /// - No filesystem access (no `preopened_dirs`)
+    /// - No network access (no WASI socket capability)
+    /// - No environment variable access
+    /// - No stdin/stdout/stderr (all redirected to /dev/null)
     pub fn load(path: &str) -> Result<Self> {
-        let engine = Engine::default();
+        // Build a sandboxed engine with conservative limits
+        let mut config = Config::default();
+        config.epoch_interruption(false);
+        config.max_wasm_stack(512 * 1024); // 512 KiB stack limit
+        let engine = Engine::new(&config)?;
+
         let module = Module::from_file(&engine, path)
             .with_context(|| format!("Impossible de charger le plugin WASM : {}", path))?;
         let mut store = Store::new(&engine, ());
+
+        // Note: fuel-based limits require the `fuel` wasmtime feature.
+        // We rely on the stack size limit + timeout at the caller level instead.
+
         let linker: Linker<()> = Linker::new(&engine);
+
+        // Note: We intentionally do NOT add wasmtime_wasi to the linker.
+        // Plugins that import WASI functions will fail to instantiate — this is
+        // the sandbox boundary. Plugins must be pure-compute with no I/O.
         let instance = linker
             .instantiate(&mut store, &module)
             .with_context(|| format!("Instanciation du plugin WASM échouée : {}", path))?;
