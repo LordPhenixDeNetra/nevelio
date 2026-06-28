@@ -10,7 +10,6 @@ use std::path::PathBuf;
 
 use crate::args::ShellArgs;
 use crate::scan::{detect_spec_format, SpecFormat};
-use nevelio_reporting::JsonReporter;
 
 pub(crate) struct ShellCtx {
     pub target: Option<String>,
