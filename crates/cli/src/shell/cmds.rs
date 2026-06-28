@@ -3,7 +3,6 @@ use colored::Colorize;
 use nevelio_core::types::{ScanConfig, ScanProfile};
 use nevelio_core::HttpClient;
 use nevelio_reporting::JsonReporter;
-use std::io;
 
 use super::ShellCtx;
 

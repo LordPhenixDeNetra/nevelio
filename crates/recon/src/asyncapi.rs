@@ -1,7 +1,6 @@
 use anyhow::{Context, Result};
 use nevelio_core::types::{Endpoint, Parameter, ParameterLocation};
-use serde::Deserialize;
-use std::collections::HashMap;
+
 
 // ---------------------------------------------------------------------------
 // AsyncAPI 2.x / 3.x spec parser

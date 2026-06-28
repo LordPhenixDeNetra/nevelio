@@ -57,7 +57,7 @@ pub(super) async fn send_email(
     let (host, port_str) = smtp_addr.rsplit_once(':').unwrap_or((smtp_addr, "587"));
     let port: u16 = port_str.parse().unwrap_or(587);
 
-    use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+    use tokio::io::{AsyncWriteExt, BufReader};
     use tokio::net::TcpStream;
 
     let stream = tokio::time::timeout(

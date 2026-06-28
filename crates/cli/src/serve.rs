@@ -1,6 +1,6 @@
 use anyhow::{Context, Result};
 use colored::Colorize;
-use nevelio_reporting::{HtmlReporter, JsonReporter, ScanReport};
+use nevelio_reporting::{HtmlReporter, ScanReport};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};

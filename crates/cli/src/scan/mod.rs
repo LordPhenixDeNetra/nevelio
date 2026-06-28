@@ -2,19 +2,16 @@ mod exec;
 
 use anyhow::{Context, Result};
 use colored::Colorize;
-use indicatif::{ProgressBar, ProgressStyle};
 use rust_i18n::t;
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
-use std::sync::mpsc as std_mpsc;
 
 use nevelio_core::types::{Endpoint, ScanConfig, ScanProfile};
 use nevelio_core::{AttackModule, HttpClient, ScanSession};
-use nevelio_reporting::{JsonReporter, ScanReport};
+use nevelio_reporting::ScanReport;
 
 use crate::args::{OutputFormat, ScanArgs};
 use crate::config::NevelioConfig;
-use crate::tui::{self, ScanEvent};
 
 // ---------------------------------------------------------------------------
 // Spec format detection (also used by shell.rs)
