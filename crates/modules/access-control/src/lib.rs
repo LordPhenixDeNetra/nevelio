@@ -1,8 +1,15 @@
 use async_trait::async_trait;
 use serde::Deserialize;
 
-use nevelio_core::types::{Endpoint, Finding, Severity};
+use nevelio_core::types::{Endpoint, Finding};
 use nevelio_core::{AttackModule, HttpClient, ScanSession};
+
+mod admin;
+mod bfla;
+mod bola;
+mod idor;
+mod mass_assignment;
+mod method;
 
 // ---------------------------------------------------------------------------
 // Payload file (embedded)
@@ -93,27 +100,32 @@ impl AttackModule for AccessControlModule {
 
         for ep in endpoints {
             // IDOR: numeric IDs in path
-            findings.extend(check_idor_numeric(client, ep, auth_token).await);
+            findings.extend(idor::check_idor_numeric(client, ep, auth_token).await);
 
             // IDOR: UUIDs in path
-            findings.extend(check_idor_uuid(client, ep, auth_token).await);
+            findings.extend(idor::check_idor_uuid(client, ep, auth_token).await);
 
             // BFLA: undocumented HTTP methods (deduplicate by path)
             if checked_bfla.insert(ep.path.clone()) {
-                findings.extend(check_bfla(client, ep, auth_token).await);
+                findings.extend(bfla::check_bfla(client, ep, auth_token).await);
             }
 
             // BOLA: cross-resource access across all verbs
-            findings.extend(check_bola(client, ep, auth_token).await);
+            findings.extend(bola::check_bola(client, ep, auth_token).await);
 
             // HTTP method override bypass
-            findings.extend(check_method_override(client, ep, auth_token).await);
+            findings.extend(method::check_method_override(client, ep, auth_token).await);
 
             // Mass Assignment: POST/PUT/PATCH body injection
             if matches!(ep.method.as_str(), "POST" | "PUT" | "PATCH") {
                 findings.extend(
-                    check_mass_assignment(client, ep, auth_token, &file.mass_assignment_fields)
-                        .await,
+                    mass_assignment::check_mass_assignment(
+                        client,
+                        ep,
+                        auth_token,
+                        &file.mass_assignment_fields,
+                    )
+                    .await,
                 );
             }
         }
@@ -121,91 +133,17 @@ impl AttackModule for AccessControlModule {
         // Vertical privilege escalation: probe admin paths with current token
         if !auth_token.is_empty() {
             findings.extend(
-                check_vertical_privesc(client, base_target, auth_token, &file.admin_paths).await,
+                bfla::check_vertical_privesc(client, base_target, auth_token, &file.admin_paths)
+                    .await,
             );
         }
 
         // Unprotected admin endpoints (no token required)
         findings.extend(
-            check_admin_endpoints_unauth(client, base_target, &file.admin_paths).await,
+            admin::check_admin_endpoints_unauth(client, base_target, &file.admin_paths).await,
         );
 
         findings
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn extract_numeric_id_finds_id_in_path() {
-        let (prefix, id, suffix) =
-            extract_numeric_id("https://api.example.com/users/42/profile").unwrap();
-        assert_eq!(id, 42);
-        assert!(prefix.ends_with("/users"), "prefix: {}", prefix);
-        assert_eq!(suffix, "/profile");
-    }
-
-    #[test]
-    fn extract_numeric_id_root_id() {
-        let (_, id, suffix) =
-            extract_numeric_id("https://api.example.com/items/123").unwrap();
-        assert_eq!(id, 123);
-        assert!(suffix.is_empty());
-    }
-
-    #[test]
-    fn extract_numeric_id_returns_none_without_id() {
-        assert!(extract_numeric_id("https://api.example.com/users").is_none());
-        assert!(extract_numeric_id("https://api.example.com/").is_none());
-    }
-
-    #[test]
-    fn is_uuid_valid() {
-        assert!(is_uuid("a1b2c3d4-e5f6-7890-abcd-ef1234567890"));
-        assert!(is_uuid("00000000-0000-0000-0000-000000000000"));
-    }
-
-    #[test]
-    fn is_uuid_invalid() {
-        assert!(!is_uuid("not-a-uuid"));
-        assert!(!is_uuid("123"));
-        assert!(!is_uuid("a1b2c3d4-e5f6-7890-abcd-ef123456789")); // too short
-        assert!(!is_uuid(""));
-    }
-
-    #[test]
-    fn extract_uuid_finds_uuid_in_url() {
-        let url = "https://api.example.com/resources/a1b2c3d4-e5f6-7890-abcd-ef1234567890/details";
-        let (_, uuid, suffix) = extract_uuid(url).unwrap();
-        assert_eq!(uuid, "a1b2c3d4-e5f6-7890-abcd-ef1234567890");
-        assert_eq!(suffix, "/details");
-    }
-
-    #[test]
-    fn extract_uuid_returns_none_without_uuid() {
-        assert!(extract_uuid("https://api.example.com/users/123").is_none());
-    }
-
-    #[test]
-    fn bfla_error_indicator_detects_false_positive() {
-        let body = b"HTTP 200 OK: method not allowed for this endpoint";
-        let body_lower = String::from_utf8_lossy(body).to_lowercase();
-        let is_real_error = BFLA_ERROR_INDICATORS
-            .iter()
-            .any(|kw| body_lower.contains(kw));
-        assert!(is_real_error, "should detect 'not allowed' as error indicator");
-    }
-
-    #[test]
-    fn bfla_error_indicator_passes_real_success() {
-        let body = b"{\"id\":1,\"name\":\"resource\",\"status\":\"active\"}";
-        let body_lower = String::from_utf8_lossy(body).to_lowercase();
-        let is_real_error = BFLA_ERROR_INDICATORS
-            .iter()
-            .any(|kw| body_lower.contains(kw));
-        assert!(!is_real_error, "clean JSON body should not be flagged");
     }
 }
 
@@ -296,562 +234,80 @@ async fn get_with_token(
 }
 
 // ---------------------------------------------------------------------------
-// Check: IDOR — numeric IDs
+// Tests
 // ---------------------------------------------------------------------------
 
-async fn check_idor_numeric(
-    client: &HttpClient,
-    ep: &Endpoint,
-    token: &str,
-) -> Vec<Finding> {
-    let Some((prefix, id, suffix)) = extract_numeric_id(&ep.full_url) else {
-        return vec![];
-    };
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-    // Baseline
-    let Some((baseline_status, baseline_body)) =
-        get_with_token(client, &ep.full_url, &ep.method, token).await
-    else {
-        return vec![];
-    };
-
-    if !matches!(baseline_status, 200..=299) {
-        return vec![];
+    #[test]
+    fn extract_numeric_id_finds_id_in_path() {
+        let (prefix, id, suffix) =
+            extract_numeric_id("https://api.example.com/users/42/profile").unwrap();
+        assert_eq!(id, 42);
+        assert!(prefix.ends_with("/users"), "prefix: {}", prefix);
+        assert_eq!(suffix, "/profile");
     }
 
-    // Deltas from idor.yaml: [1, -1, 2, -2, 10, 100] + common [1,2,3,100,999]
-    let mut candidates: Vec<u64> = vec![];
-    for delta in &[1i64, -1, 2, -2, 10, 100] {
-        let candidate = id as i64 + delta;
-        if candidate > 0 && candidate as u64 != id {
-            candidates.push(candidate as u64);
-        }
-    }
-    for &common in &[1u64, 2, 3, 100, 999, 1000] {
-        if common != id {
-            candidates.push(common);
-        }
-    }
-    candidates.dedup();
-
-    for candidate in candidates {
-        let url = format!("{}/{}{}", prefix, candidate, suffix);
-        let Some((status, body)) = get_with_token(client, &url, &ep.method, token).await else {
-            continue;
-        };
-
-        if matches!(status, 200..=299) && body != baseline_body {
-            let mut f = Finding::new(
-                format!("IDOR — ID numérique `{}` → `{}`", id, candidate),
-                Severity::High,
-                8.1,
-                "access-control".to_string(),
-                ep.full_url.clone(),
-                ep.method.clone(),
-            );
-            f.description = format!(
-                "L'endpoint {} retourne une ressource différente pour l'ID {} alors que \
-                 l'authentification est faite avec le token de l'ID {}. \
-                 Un attaquant peut accéder aux données d'autres utilisateurs.",
-                ep.full_url, candidate, id
-            );
-            f.proof = format!(
-                "GET {} → HTTP {} ({} octets) ≠ baseline GET {} → HTTP {} ({} octets)",
-                url, status, body.len(),
-                ep.full_url, baseline_status, baseline_body.len()
-            );
-            f.recommendation =
-                "Vérifier que chaque ressource accédée appartient bien à l'utilisateur \
-                 authentifié. Utiliser des identifiants non-prévisibles (UUID v4) et \
-                 valider la propriété côté serveur."
-                    .to_string();
-            f.cwe = Some("CWE-639".to_string());
-            f.references = vec![
-                "https://owasp.org/API-Security/editions/2023/en/0xa1-broken-object-level-authorization/".to_string(),
-            ];
-            return vec![f];
-        }
+    #[test]
+    fn extract_numeric_id_root_id() {
+        let (_, id, suffix) =
+            extract_numeric_id("https://api.example.com/items/123").unwrap();
+        assert_eq!(id, 123);
+        assert!(suffix.is_empty());
     }
 
-    vec![]
-}
-
-// ---------------------------------------------------------------------------
-// Check: IDOR — UUID
-// ---------------------------------------------------------------------------
-
-async fn check_idor_uuid(
-    client: &HttpClient,
-    ep: &Endpoint,
-    token: &str,
-) -> Vec<Finding> {
-    let Some((prefix, original_uuid, suffix)) = extract_uuid(&ep.full_url) else {
-        return vec![];
-    };
-
-    let Some((baseline_status, _)) =
-        get_with_token(client, &ep.full_url, &ep.method, token).await
-    else {
-        return vec![];
-    };
-
-    // Try nil UUID and a freshly generated random UUID
-    let candidates = [
-        NIL_UUID.to_string(),
-        uuid::Uuid::new_v4().to_string(),
-    ];
-
-    for candidate in &candidates {
-        if candidate == &original_uuid {
-            continue;
-        }
-        let url = format!("{}/{}{}", prefix, candidate, suffix);
-        let Some((status, body)) = get_with_token(client, &url, &ep.method, token).await else {
-            continue;
-        };
-
-        // Suspicious: got 200 when baseline was also 200 with a different UUID,
-        // OR got 200 when baseline was 403 (broken access)
-        if matches!(status, 200..=299)
-            && (baseline_status != 200 || !body.is_empty())
-        {
-            let mut f = Finding::new(
-                format!("IDOR — UUID substitution `{}`", &original_uuid[..8]),
-                Severity::High,
-                8.1,
-                "access-control".to_string(),
-                ep.full_url.clone(),
-                ep.method.clone(),
-            );
-            f.description = format!(
-                "L'endpoint {} retourne HTTP {} lorsqu'on substitue l'UUID {} par {}. \
-                 Le contrôle d'accès basé sur l'UUID est potentiellement absent.",
-                ep.full_url, status, original_uuid, candidate
-            );
-            f.proof = format!(
-                "UUID original: {} | UUID testé: {} → HTTP {}",
-                original_uuid, candidate, status
-            );
-            f.recommendation =
-                "Les UUIDs ne sont pas secrets. Vérifier la propriété de la ressource \
-                 via le token d'authentification, pas uniquement via l'identifiant."
-                    .to_string();
-            f.cwe = Some("CWE-639".to_string());
-            f.references = vec![
-                "https://owasp.org/API-Security/editions/2023/en/0xa1-broken-object-level-authorization/".to_string(),
-            ];
-            return vec![f];
-        }
+    #[test]
+    fn extract_numeric_id_returns_none_without_id() {
+        assert!(extract_numeric_id("https://api.example.com/users").is_none());
+        assert!(extract_numeric_id("https://api.example.com/").is_none());
     }
 
-    vec![]
-}
-
-// ---------------------------------------------------------------------------
-// Check: BFLA — Broken Function Level Authorization
-// ---------------------------------------------------------------------------
-
-async fn check_bfla(
-    client: &HttpClient,
-    ep: &Endpoint,
-    token: &str,
-) -> Vec<Finding> {
-    let mut findings = Vec::new();
-
-    for method in ALL_METHODS {
-        if method.eq_ignore_ascii_case(&ep.method) {
-            continue; // skip the documented method
-        }
-
-        let Some((status, body)) = get_with_token(client, &ep.full_url, method, token).await else {
-            continue;
-        };
-
-        if matches!(status, 200..=299) {
-            let body_lower = String::from_utf8_lossy(&body).to_lowercase();
-            let is_real_error = BFLA_ERROR_INDICATORS
-                .iter()
-                .any(|kw| body_lower.contains(kw));
-            if is_real_error {
-                continue;
-            }
-
-            let mut f = Finding::new(
-                format!("BFLA — méthode {} non documentée acceptée", method),
-                Severity::High,
-                7.5,
-                "access-control".to_string(),
-                ep.full_url.clone(),
-                method.to_string(),
-            );
-            f.description = format!(
-                "L'endpoint {} n'est documenté que pour {} mais accepte la méthode {} \
-                 avec un HTTP {}. Un attaquant peut effectuer des actions non autorisées.",
-                ep.full_url, ep.method, method, status
-            );
-            f.proof = format!(
-                "{} {} → HTTP {} (endpoint documenté comme {} uniquement)",
-                method, ep.full_url, status, ep.method
-            );
-            f.recommendation =
-                "Configurer une allowlist stricte des méthodes HTTP autorisées sur chaque \
-                 endpoint. Retourner 405 Method Not Allowed pour toute méthode non prévue."
-                    .to_string();
-            f.cwe = Some("CWE-285".to_string());
-            f.references = vec![
-                "https://owasp.org/API-Security/editions/2023/en/0xa5-broken-function-level-authorization/".to_string(),
-            ];
-            findings.push(f);
-        }
+    #[test]
+    fn is_uuid_valid() {
+        assert!(is_uuid("a1b2c3d4-e5f6-7890-abcd-ef1234567890"));
+        assert!(is_uuid("00000000-0000-0000-0000-000000000000"));
     }
 
-    findings
-}
-
-// ---------------------------------------------------------------------------
-// Check: Vertical Privilege Escalation (admin paths)
-// ---------------------------------------------------------------------------
-
-async fn check_vertical_privesc(
-    client: &HttpClient,
-    base_target: &str,
-    token: &str,
-    admin_paths: &[String],
-) -> Vec<Finding> {
-    let mut findings = Vec::new();
-    let base = base_target.trim_end_matches('/');
-
-    for path in admin_paths {
-        let url = format!("{}{}", base, path);
-        let Some((status, _)) = get_with_token(client, &url, "GET", token).await else {
-            continue;
-        };
-
-        if matches!(status, 200..=299) {
-            let mut f = Finding::new(
-                format!("Privilege Escalation Verticale — {}", path),
-                Severity::Critical,
-                9.1,
-                "access-control".to_string(),
-                url.clone(),
-                "GET".to_string(),
-            );
-            f.description = format!(
-                "L'endpoint d'administration {} est accessible avec un token utilisateur standard \
-                 (HTTP {}). Un utilisateur non-admin peut accéder à des fonctions privilégiées.",
-                url, status
-            );
-            f.proof = format!("GET {} avec token fourni → HTTP {}", url, status);
-            f.recommendation =
-                "Implémenter un contrôle de rôle côté serveur sur tous les endpoints admin. \
-                 Ne pas se fier uniquement à l'obscurité des URLs."
-                    .to_string();
-            f.cwe = Some("CWE-269".to_string());
-            f.references = vec![
-                "https://owasp.org/API-Security/editions/2023/en/0xa5-broken-function-level-authorization/".to_string(),
-            ];
-            findings.push(f);
-        }
+    #[test]
+    fn is_uuid_invalid() {
+        assert!(!is_uuid("not-a-uuid"));
+        assert!(!is_uuid("123"));
+        assert!(!is_uuid("a1b2c3d4-e5f6-7890-abcd-ef123456789")); // too short
+        assert!(!is_uuid(""));
     }
 
-    findings
-}
-
-// ---------------------------------------------------------------------------
-// Check: HTTP Method Override (X-HTTP-Method-Override bypass)
-// ---------------------------------------------------------------------------
-
-async fn check_method_override(
-    client: &HttpClient,
-    ep: &Endpoint,
-    token: &str,
-) -> Vec<Finding> {
-    // Only probe GET endpoints (we override to DELETE via header)
-    if ep.method != "GET" {
-        return vec![];
+    #[test]
+    fn extract_uuid_finds_uuid_in_url() {
+        let url = "https://api.example.com/resources/a1b2c3d4-e5f6-7890-abcd-ef1234567890/details";
+        let (_, uuid, suffix) = extract_uuid(url).unwrap();
+        assert_eq!(uuid, "a1b2c3d4-e5f6-7890-abcd-ef1234567890");
+        assert_eq!(suffix, "/details");
     }
 
-    for (header_name, override_method) in METHOD_OVERRIDE_HEADERS {
-        let mut builder = client
-            .inner()
-            .request(reqwest::Method::GET, &ep.full_url)
-            .header(*header_name, *override_method);
-        if !token.is_empty() {
-            builder = builder.header("Authorization", format!("Bearer {}", token));
-        }
-        let Ok(req) = builder.build() else { continue };
-        let Ok(resp) = client.send(req).await else { continue };
-
-        let status = resp.status().as_u16();
-        let body = resp.bytes().await.unwrap_or_default();
-        let body_lower = String::from_utf8_lossy(&body).to_lowercase();
-
-        let is_blocked = METHOD_BLOCKED_INDICATORS.iter().any(|kw| body_lower.contains(kw));
-
-        if matches!(status, 200 | 204) && !is_blocked {
-            let mut f = Finding::new(
-                format!("HTTP Method Override — {} accepté via `{}`", override_method, header_name),
-                Severity::High,
-                7.5,
-                "access-control".to_string(),
-                ep.full_url.clone(),
-                "GET".to_string(),
-            );
-            f.description = format!(
-                "L'endpoint {} accepte la méthode {} via le header `{}`. \
-                 Un attaquant peut effectuer des actions destructrices (DELETE, PUT) \
-                 en contournant les protections de méthode HTTP.",
-                ep.full_url, override_method, header_name
-            );
-            f.proof = format!(
-                "GET {} avec header `{}: {}` → HTTP {} (attendu 405 ou 403)",
-                ep.full_url, header_name, override_method, status
-            );
-            f.recommendation =
-                "Ignorer les headers de surcharge de méthode HTTP en production. \
-                 Si nécessaire, n'autoriser que pour des clients authentifiés et tracer les usages."
-                    .to_string();
-            f.cwe = Some("CWE-650".to_string());
-            f.references = vec![
-                "https://portswigger.net/web-security/request-smuggling".to_string(),
-            ];
-            return vec![f];
-        }
-    }
-    vec![]
-}
-
-// ---------------------------------------------------------------------------
-// Check: Unprotected admin endpoints (no authentication required)
-// ---------------------------------------------------------------------------
-
-async fn check_admin_endpoints_unauth(
-    client: &HttpClient,
-    base_target: &str,
-    admin_paths: &[String],
-) -> Vec<Finding> {
-    let mut findings = Vec::new();
-    let base = base_target.trim_end_matches('/');
-
-    for path in admin_paths {
-        let url = format!("{}{}", base, path);
-        let Ok(req) = client.inner().get(&url).build() else { continue };
-        let Ok(resp) = client.send(req).await else { continue };
-
-        let status = resp.status().as_u16();
-
-        if matches!(status, 200..=299) {
-            let mut f = Finding::new(
-                format!("Endpoint admin non protégé — {}", path),
-                Severity::High,
-                7.5,
-                "access-control".to_string(),
-                url.clone(),
-                "GET".to_string(),
-            );
-            f.description = format!(
-                "L'endpoint d'administration {} est accessible sans aucune authentification \
-                 (HTTP {}). N'importe qui peut y accéder depuis internet.",
-                url, status
-            );
-            f.proof = format!("GET {} sans Authorization → HTTP {}", url, status);
-            f.recommendation =
-                "Protéger tous les endpoints d'administration par une authentification forte. \
-                 Restreindre l'accès par IP (allowlist réseau). \
-                 Ne pas exposer les endpoints de monitoring/debug sur des ports publics."
-                    .to_string();
-            f.cwe = Some("CWE-284".to_string());
-            f.references = vec![
-                "https://owasp.org/API-Security/editions/2023/en/0xa5-broken-function-level-authorization/".to_string(),
-            ];
-            findings.push(f);
-        }
-    }
-    findings
-}
-
-// ---------------------------------------------------------------------------
-// Check: BOLA — Broken Object Level Authorization (cross-verb)
-// ---------------------------------------------------------------------------
-
-async fn check_bola(
-    client: &HttpClient,
-    ep: &Endpoint,
-    token: &str,
-) -> Vec<Finding> {
-    // Only endpoints that have a resource ID in the path
-    let Some((prefix, id, suffix)) = extract_numeric_id(&ep.full_url) else {
-        return vec![];
-    };
-
-    // Baseline: own resource with GET
-    let own_url = &ep.full_url;
-    let Some((baseline_status, baseline_body)) =
-        get_with_token(client, own_url, "GET", token).await
-    else {
-        return vec![];
-    };
-
-    if !matches!(baseline_status, 200..=299) {
-        return vec![];
+    #[test]
+    fn extract_uuid_returns_none_without_uuid() {
+        assert!(extract_uuid("https://api.example.com/users/123").is_none());
     }
 
-    // Try a different ID with each verb to detect cross-user access
-    let other_id = if id == 1 { 2u64 } else { 1u64 };
-    let other_url = format!("{}/{}{}", prefix, other_id, suffix);
-
-    for method in ALL_METHODS {
-        let Some((status, body)) = get_with_token(client, &other_url, method, token).await else {
-            continue;
-        };
-
-        if matches!(status, 200..=299) && body != baseline_body && !body.is_empty() {
-            let body_lower = String::from_utf8_lossy(&body).to_lowercase();
-            let is_error = BFLA_ERROR_INDICATORS.iter().any(|kw| body_lower.contains(kw));
-            if is_error { continue; }
-
-            let mut f = Finding::new(
-                format!("BOLA — {} /{}/ via {}", ep.path, other_id, method),
-                Severity::High,
-                8.1,
-                "access-control".to_string(),
-                other_url.clone(),
-                method.to_string(),
-            );
-            f.description = format!(
-                "L'endpoint {} accepte la méthode {} sur l'ID {} (autre que l'ID propriétaire {}) \
-                 et retourne HTTP {}. Un attaquant peut accéder ou modifier les ressources d'autres utilisateurs.",
-                ep.full_url, method, other_id, id, status
-            );
-            f.proof = format!(
-                "{} {} → HTTP {} ({} octets) — ID substitué : {} → {}",
-                method, other_url, status, body.len(), id, other_id
-            );
-            f.recommendation =
-                "Vérifier côté serveur que la ressource demandée appartient à l'utilisateur \
-                 authentifié pour chaque méthode HTTP. Implémenter un middleware de contrôle d'accès \
-                 centralisé basé sur le token."
-                    .to_string();
-            f.cwe = Some("CWE-639".to_string());
-            f.references = vec![
-                "https://owasp.org/API-Security/editions/2023/en/0xa1-broken-object-level-authorization/".to_string(),
-            ];
-            return vec![f];
-        }
-    }
-    vec![]
-}
-
-// ---------------------------------------------------------------------------
-// Check: Mass Assignment
-// ---------------------------------------------------------------------------
-
-async fn check_mass_assignment(
-    client: &HttpClient,
-    ep: &Endpoint,
-    token: &str,
-    fields: &[MassField],
-) -> Vec<Finding> {
-    // Build body from hardcoded sensitive fields + any body/query parameters from the OpenAPI spec
-    // that are NOT in the documented parameter list (i.e., extra fields the spec doesn't accept).
-    let mut body = serde_json::Map::new();
-
-    // 1. Hardcoded sensitive fields (isAdmin, role, permissions, etc.)
-    for f in fields {
-        body.insert(f.field.clone(), f.value.clone());
+    #[test]
+    fn bfla_error_indicator_detects_false_positive() {
+        let body = b"HTTP 200 OK: method not allowed for this endpoint";
+        let body_lower = String::from_utf8_lossy(body).to_lowercase();
+        let is_real_error = BFLA_ERROR_INDICATORS
+            .iter()
+            .any(|kw| body_lower.contains(kw));
+        assert!(is_real_error, "should detect 'not allowed' as error indicator");
     }
 
-    // 2. Spec parameters augmented with privilege-escalation values
-    // We inject each spec field with a value that could trigger privilege escalation.
-    let spec_param_names: Vec<String> = ep.parameters.iter()
-        .filter(|p| matches!(p.location, nevelio_core::types::ParameterLocation::Body | nevelio_core::types::ParameterLocation::Query))
-        .map(|p| p.name.clone())
-        .collect();
-
-    for param in &spec_param_names {
-        let param_lower = param.to_lowercase();
-        // Only inject spec params that look privilege-sensitive and aren't already in the body
-        let is_priv_sensitive = ["role", "permission", "admin", "level", "group",
-                                  "verified", "premium", "scope", "grant", "access"]
-            .iter().any(|kw| param_lower.contains(kw));
-        if is_priv_sensitive && !body.contains_key(param) {
-            body.insert(param.clone(), serde_json::json!("admin"));
-        }
+    #[test]
+    fn bfla_error_indicator_passes_real_success() {
+        let body = b"{\"id\":1,\"name\":\"resource\",\"status\":\"active\"}";
+        let body_lower = String::from_utf8_lossy(body).to_lowercase();
+        let is_real_error = BFLA_ERROR_INDICATORS
+            .iter()
+            .any(|kw| body_lower.contains(kw));
+        assert!(!is_real_error, "clean JSON body should not be flagged");
     }
-
-    if body.is_empty() {
-        return vec![];
-    }
-
-    let body_str = serde_json::Value::Object(body.clone()).to_string();
-
-    let mut req_builder = client
-        .inner()
-        .request(ep.method.parse().unwrap_or(reqwest::Method::POST), &ep.full_url)
-        .header("Content-Type", "application/json")
-        .body(body_str.clone());
-    if !token.is_empty() {
-        req_builder = req_builder.header("Authorization", format!("Bearer {}", token));
-    }
-
-    let req = match req_builder.build() {
-        Ok(r) => r,
-        Err(_) => return vec![],
-    };
-
-    let Ok(resp) = client.send(req).await else {
-        return vec![];
-    };
-
-    let status = resp.status().as_u16();
-    let resp_body = resp.text().await.unwrap_or_default().to_lowercase();
-
-    // Detection: server accepted the request AND reflects one of the injected fields
-    let all_injected_keys: Vec<String> = body.keys().cloned().collect();
-    let reflected_keys: Vec<String> = all_injected_keys
-        .iter()
-        .filter(|k| resp_body.contains(&k.to_lowercase()))
-        .cloned()
-        .collect();
-
-    if matches!(status, 200..=299) && !reflected_keys.is_empty() {
-        let source = if reflected_keys.iter().any(|k| fields.iter().any(|f| f.field == *k)) {
-            "champs privilégiés hardcodés"
-        } else {
-            "champs de la spec OpenAPI"
-        };
-
-        let mut finding = Finding::new(
-            "Mass Assignment — champs privilégiés acceptés".to_string(),
-            Severity::High,
-            8.8,
-            "access-control".to_string(),
-            ep.full_url.clone(),
-            ep.method.clone(),
-        );
-        finding.description = format!(
-            "L'endpoint {} {} accepte et reflète des champs sensibles ({}) : {}. \
-             Un attaquant peut s'octroyer des droits admin ou modifier des attributs protégés.",
-            ep.method, ep.full_url, source,
-            reflected_keys.join(", ")
-        );
-        finding.proof = format!(
-            "Body envoyé: {} champs\nChamps reflétés dans la réponse (HTTP {}): {}",
-            all_injected_keys.len(),
-            status,
-            reflected_keys.join(", ")
-        );
-        finding.recommendation =
-            "Utiliser une allowlist des champs acceptés (DTO / schema validation). \
-             Ne jamais binder directement le body de la requête sur un modèle de données."
-                .to_string();
-        finding.cwe = Some("CWE-915".to_string());
-        finding.references = vec![
-            "https://owasp.org/API-Security/editions/2023/en/0xa3-broken-object-property-level-authorization/".to_string(),
-            "https://cheatsheetseries.owasp.org/cheatsheets/Mass_Assignment_Cheat_Sheet.html".to_string(),
-        ];
-        return vec![finding];
-    }
-
-    vec![]
 }

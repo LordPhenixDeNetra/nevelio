@@ -7,7 +7,7 @@ use std::path::PathBuf;
 use std::time::Duration;
 
 use crate::args::WatchArgs;
-use crate::commands::{detect_spec_format, SpecFormat};
+use crate::scan::{detect_spec_format, SpecFormat};
 
 /// Monitor an API at regular intervals and alert when new findings appear.
 pub async fn handle_watch(args: WatchArgs, verbose: bool) -> Result<()> {

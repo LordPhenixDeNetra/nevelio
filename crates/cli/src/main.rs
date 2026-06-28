@@ -13,6 +13,7 @@ mod locale;
 mod modules;
 mod notify;
 mod output;
+mod scan;
 mod serve;
 mod script;
 mod shell;
