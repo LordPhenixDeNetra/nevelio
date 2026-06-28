@@ -158,6 +158,10 @@ pub struct ScanArgs {
     /// Rhai scripts to run after scan — return false to suppress a finding
     #[arg(long, value_name = "SCRIPT")]
     pub scripts: Vec<String>,
+
+    /// WASM plugin paths to load as additional attack modules
+    #[arg(long, value_name = "FILE")]
+    pub plugin: Vec<PathBuf>,
 }
 
 #[derive(Debug, clap::Args)]

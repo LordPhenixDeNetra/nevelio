@@ -11,6 +11,9 @@ members = [
     "crates/modules/ssrf",
     "crates/modules/oauth2",
     "crates/modules/prototype-pollution",
+    "crates/modules/websocket",
+    "crates/modules/soap",
+    "crates/modules/grpc",
     "crates/recon",
     "crates/reporting",
 ]
@@ -68,3 +71,4 @@ ratatui            = "0.29"
 crossterm          = { version = "0.28", features = ["event-stream"] }
 rust-i18n          = "3"
 rhai               = { version = "1", features = ["sync"] }
+wasmtime           = { version = "28", default-features = false, features = ["cranelift", "runtime"] }

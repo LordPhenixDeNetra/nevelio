@@ -1,0 +1,15 @@
+[package]
+name              = "nevelio-module-websocket"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+nevelio-core          = { path = "../../core",  version = "0.1" }
+async-trait.workspace = true
+anyhow.workspace      = true
+tracing.workspace     = true
+tokio.workspace       = true
+serde.workspace       = true
+serde_json.workspace  = true
+tokio-tungstenite     = { version = "0.26", features = ["rustls-tls-webpki-roots"] }
+futures-util          = "0.3"

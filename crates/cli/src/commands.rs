@@ -254,7 +254,33 @@ async fn handle_scan(args: crate::args::ScanArgs, verbose: bool) -> Result<()> {
 
     let mut session = ScanSession::new(config);
 
-    let all_modules = crate::modules::build_all_modules();
+    let mut all_modules = crate::modules::build_all_modules();
+
+    // Load WASM plugins passed via --plugin
+    for plugin_path in &args.plugin {
+        let path_str = plugin_path.to_string_lossy();
+        match nevelio_core::WasmAttackModule::load(&path_str) {
+            Ok(wasm_mod) => {
+                if !use_tui {
+                    println!(
+                        "  {} Plugin WASM chargé : {}",
+                        "✓".green(),
+                        wasm_mod.name().cyan()
+                    );
+                }
+                all_modules.push(Box::new(wasm_mod));
+            }
+            Err(e) => {
+                eprintln!(
+                    "  {} Impossible de charger le plugin WASM '{}' : {}",
+                    "✗".red(),
+                    path_str,
+                    e
+                );
+            }
+        }
+    }
+
     let module_names: Vec<String> = all_modules.iter().map(|m| m.name().to_string()).collect();
 
     // Resume: load previous findings and completed modules from <out_dir>

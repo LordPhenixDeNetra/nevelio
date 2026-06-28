@@ -15,17 +15,18 @@
 | **v0.4.0** | ✅ Livrée | — | Watch mode, diff scan, REPL interactif | `git tag v0.4.0` |
 | **v0.5.0** | ✅ Livrée | — | serve, notify (Slack/Teams), issue (GitHub/Jira) | `git tag v0.5.0` |
 | **v0.6.0** | ✅ Livrée | — | Scripting Rhai, suppressions faux positifs, ABI plugin | `git tag v0.6.0` |
-| **v0.7.0** | 📋 Planifiée | — | gRPC, WebSocket, SOAP | — |
+| **v0.7.0** | ✅ Livrée | +3 | +gRPC, +WebSocket, +SOAP/WSDL + runtime WASM | `git tag v0.7.0` |
 
-### Progression globale v0.3
+### Progression globale v0.7
 
 ```
-Modules sécurité   ████████████████████  9/9  modules implémentés ✅
-Sources d'entrée   ████████████████████  4/4  OpenAPI/Postman/Insomnia/HAR ✅
-Distribution       ████████████████████  5/5  gestionnaires de paquets ✅
-Reporting          ████████████████████  5/5  formats (JSON/HTML/MD/JUnit/SARIF) ✅
-i18n               ████████████████████  3/3  langues (fr/en/es) ✅
-Crawling           ████████████████░░░░  4/5  (suivi liens JSON: todo)
+Modules sécurité   ████████████████████  12/12 modules implémentés ✅
+Sources d'entrée   ████████████████████   4/4  OpenAPI/Postman/Insomnia/HAR ✅
+Distribution       ████████████████████   5/5  gestionnaires de paquets ✅
+Reporting          ████████████████████   5/5  formats (JSON/HTML/MD/JUnit/SARIF) ✅
+i18n               ████████████████████   3/3  langues (fr/en/es) ✅
+Runtime WASM       ████████████████████   1/1  chargement dynamique --plugin ✅
+Crawling           ████████████████░░░░   4/5  (suivi liens JSON: todo)
 ```
 
 ---
@@ -310,9 +311,9 @@ Crawling           ████████████████░░░░ 
 
 - [x] Interface de plugin via ABI stable définie dans `crates/core/src/plugin.rs`
 - [x] `PluginManifest` sérialisable (JSON), `NevelioPlugin` trait, `PLUGIN_ABI_VERSION`
-- [ ] Chargement dynamique : `nevelio --plugin ./mon-module.wasm scan ...` (runtime v0.7)
+- [x] Chargement dynamique : `nevelio scan --plugin ./mon-module.wasm` (runtime v0.7 ✅)
 - [ ] Registry de plugins (v0.8)
-- [ ] Sandbox sécurisée (v0.7)
+- [ ] Sandbox sécurisée avec restrictions WASI (v0.8)
 
 ### 🟡 Configuration déclarative (`.nevelio.toml`)
 
@@ -332,26 +333,38 @@ Crawling           ████████████████░░░░ 
 
 ---
 
-## v0.7 — Protocoles additionnels 📋
+## v0.7 — Protocoles additionnels ✅
 
 ### 🟡 gRPC / Protobuf
 
-- [ ] Parser les fichiers `.proto` pour découvrir les services et méthodes
-- [ ] Injection dans les champs protobuf (string, bytes, int)
-- [ ] Test d'authentification gRPC (metadata headers)
-- [ ] Réflexion gRPC (équivalent introspection GraphQL)
+- [x] Détection gRPC plaintext sans TLS (`CWE-319`)
+- [x] Réflexion gRPC activée sans auth — équivalent introspection GraphQL (`CWE-200`)
+- [x] Health check gRPC accessible sans authentification (`CWE-200`)
+- [x] Appels RPC sans vérification d'authentification sur les metadata headers (`CWE-306`)
+- [ ] Parser les fichiers `.proto` pour découvrir les services et méthodes (v0.8)
 
 ### 🟢 WebSocket
 
-- [ ] Test d'authentification sur le handshake (Origin, token)
-- [ ] Injection dans les messages WS (JSON, texte brut)
-- [ ] Test de rate limiting sur les connexions WS
+- [x] Validation d'Origin manquante — connexion depuis evil.example.com acceptée (`CWE-346`)
+- [x] Handshake WebSocket sans authentification (pas d'`Authorization` requis) (`CWE-306`)
+- [x] Injection dans les messages WS — XSS, SQLi, SSTI (`CWE-79`)
+- [ ] Test de rate limiting sur les connexions WS (v0.8)
 
 ### 🟢 SOAP / WSDL
 
-- [ ] Parser les fichiers WSDL pour extraire les opérations
-- [ ] XXE via payloads SOAP
-- [ ] Injection dans les paramètres SOAP
+- [x] WSDL exposé publiquement sans authentification (`CWE-200`)
+- [x] XXE (XML External Entity) via payload SOAP — exfiltration `/etc/passwd` (`CWE-611`)
+- [x] Injection SQL dans les paramètres SOAP (`CWE-89`)
+- [x] Service SOAP sans WS-Security (UsernameToken, SAML) (`CWE-306`)
+
+### 🟡 Runtime WASM plugins
+
+- [x] `WasmPlugin` — chargement et instanciation `.wasm` via wasmtime
+- [x] ABI JSON over linear memory : `nevelio_alloc`, `nevelio_manifest`, `nevelio_run`
+- [x] `WasmAttackModule` — wrapper implémentant `AttackModule` + intégration dans le scan
+- [x] Flag CLI : `nevelio scan --plugin ./mon-module.wasm`
+- [ ] Registry de plugins (v0.8)
+- [ ] Sandbox sécurisée avec restrictions WASI (v0.8)
 
 ---
 
@@ -401,15 +414,18 @@ Crawling           ████████████████░░░░ 
 
 ## Prochaine release
 
-v0.6.0 est complète. Pour publier :
+v0.7.0 est complète. Pour publier :
 
 ```bash
-git add -A
-git commit -m "feat(v0.6): scripting Rhai (--script), suppressions [[suppress]], ABI plugin WASM skeleton"
-git tag v0.6.0
+git add crates/modules/websocket crates/modules/soap crates/modules/grpc
+git add crates/core/src/wasm_loader.rs crates/core/src/lib.rs crates/core/Cargo.toml
+git add crates/cli/src/modules.rs crates/cli/src/args.rs crates/cli/src/commands.rs crates/cli/Cargo.toml
+git add Cargo.toml ROADMAP.md
+git commit -m "feat(v0.7): WebSocket, SOAP/WSDL, gRPC modules + runtime WASM --plugin"
+git tag v0.7.0
 git push && git push --tags
 ```
 
 ---
 
-*Dernière mise à jour : 2026-06-27 — v0.6.0 ✅ livrée — prochaine : v0.7.0 (gRPC, WebSocket, SOAP + runtime WASM)*
+*Dernière mise à jour : 2026-06-28 — v0.7.0 ✅ livrée — prochaine : v0.8.0 (registry plugins, sandbox WASI, proto parsing)*

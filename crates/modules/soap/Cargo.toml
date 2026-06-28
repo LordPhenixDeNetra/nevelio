@@ -1,0 +1,15 @@
+[package]
+name              = "nevelio-module-soap"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+nevelio-core          = { path = "../../core",  version = "0.1" }
+async-trait.workspace = true
+anyhow.workspace      = true
+tracing.workspace     = true
+tokio.workspace       = true
+reqwest.workspace     = true
+serde.workspace       = true
+serde_json.workspace  = true
+quick-xml             = { version = "0.37" }
