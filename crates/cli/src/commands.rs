@@ -348,24 +348,47 @@ async fn handle_scan(args: crate::args::ScanArgs, verbose: bool) -> Result<()> {
     };
 
     if !session.config.dry_run {
-        for module in &active_modules {
-            tracing::info!("Running module: {}", module.name());
-            if let Some(ref tx) = tui_tx {
-                let _ = tx.send(ScanEvent::ModuleStarted { name: module.name().to_string() });
-            }
-            let findings = module.run(&session, &http_client, &endpoints).await;
-            for f in findings {
+        // TUI mode: sequential for real-time per-module progress updates.
+        // Non-TUI mode: parallel execution with join_all for faster CI/CD scans.
+        if tui_tx.is_some() {
+            for module in &active_modules {
+                tracing::info!("Running module: {}", module.name());
                 if let Some(ref tx) = tui_tx {
-                    let _ = tx.send(ScanEvent::FindingFound(Box::new(f.clone())));
-                } else {
-                    output::print_finding(&f);
+                    let _ = tx.send(ScanEvent::ModuleStarted { name: module.name().to_string() });
                 }
-                session.add_finding(f);
+                let findings = module.run(&session, &http_client, &endpoints).await;
+                for f in findings {
+                    if let Some(ref tx) = tui_tx {
+                        let _ = tx.send(ScanEvent::FindingFound(Box::new(f.clone())));
+                    }
+                    session.add_finding(f);
+                }
+                completed_modules.push(module.name().to_string());
+                if let Some(ref tx) = tui_tx {
+                    let _ = tx.send(ScanEvent::ModuleFinished { name: module.name().to_string() });
+                }
+                save_progress(&out_dir, &completed_modules, &session.config.target);
+                let checkpoint = JsonReporter::generate(&session);
+                let _ = JsonReporter::write_to_file(&checkpoint, &out_dir.join("findings.json"));
             }
-            completed_modules.push(module.name().to_string());
-            if let Some(ref tx) = tui_tx {
-                let _ = tx.send(ScanEvent::ModuleFinished { name: module.name().to_string() });
+        } else {
+            // Parallel execution: all modules run concurrently (I/O-bound HTTP requests).
+            tracing::info!("Running {} modules in parallel", active_modules.len());
+            let futures: Vec<_> = active_modules
+                .iter()
+                .map(|m| m.run(&session, &http_client, &endpoints))
+                .collect();
+
+            let all_results = futures_util::future::join_all(futures).await;
+
+            for (module, findings) in active_modules.iter().zip(all_results) {
+                for f in findings {
+                    output::print_finding(&f);
+                    session.add_finding(f);
+                }
+                completed_modules.push(module.name().to_string());
             }
+
             save_progress(&out_dir, &completed_modules, &session.config.target);
             let checkpoint = JsonReporter::generate(&session);
             let _ = JsonReporter::write_to_file(&checkpoint, &out_dir.join("findings.json"));

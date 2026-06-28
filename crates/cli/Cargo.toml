@@ -48,6 +48,7 @@ crossterm.workspace          = true
 reqwest.workspace            = true
 rust-i18n.workspace          = true
 rhai.workspace               = true
+futures-util.workspace       = true
 
 [package.metadata.deb]
 name                 = "nevelio"

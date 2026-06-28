@@ -16,6 +16,7 @@
 | **v0.5.0** | ✅ Livrée | — | serve, notify (Slack/Teams), issue (GitHub/Jira) | `git tag v0.5.0` |
 | **v0.6.0** | ✅ Livrée | — | Scripting Rhai, suppressions faux positifs, ABI plugin | `git tag v0.6.0` |
 | **v0.7.0** | ✅ Livrée | +3 | +gRPC, +WebSocket, +SOAP/WSDL + runtime WASM | `git tag v0.7.0` |
+| **v0.8.0** | ✅ Livrée | — | SSRF bypasses, OAuth2 +3 checks, auth refresh replay, mass assignment spec, parallel execution, CVSS score | `git tag v0.8.0` |
 
 ### Progression globale v0.7
 
@@ -205,7 +206,7 @@ Crawling           ████████████████░░░░ 
 - [x] BOLA (BFLA élargi) : tester toutes les combinaisons verbe × ressource × ID
 - [x] Détection d'endpoints admin non protégés sans token (`/admin`, `/internal`, etc.)
 - [x] HTTP method override (`X-HTTP-Method-Override: DELETE`, `X-HTTP-Method`)
-- [ ] Test de mass assignment sur tous les champs de la spec OpenAPI
+- [x] Test de mass assignment sur tous les champs de la spec OpenAPI ✅ v0.8
 
 ---
 
@@ -376,13 +377,13 @@ Crawling           ████████████████░░░░ 
 - [ ] Rapport Word/DOCX (pour clients non-techniques)
 - [ ] Template de rapport personnalisable (Tera)
 - [ ] Graphiques dans le rapport HTML (courbe de sévérité, camembert par module)
-- [ ] Score de risque global calculé (agrégation CVSS pondérée)
+- [x] Score de risque global calculé (agrégation CVSS pondérée) ✅ v0.8
 
 ### Performance
 
 - [ ] Cache des réponses HTTP pour éviter les doublons
 - [ ] Détection automatique du throttling (429) et back-off adaptatif
-- [ ] Parallélisme inter-modules (modules tournant en parallèle sur le même endpoint)
+- [x] Parallélisme inter-modules (modules tournant en parallèle sur le même endpoint) ✅ v0.8
 
 ### Qualité & tests
 
@@ -412,20 +413,58 @@ Crawling           ████████████████░░░░ 
 
 ---
 
+## v0.8 — Renforcement & Performance ✅
+
+### SSRF — Bypass techniques
+
+- [x] Bypass IPv6 (`::1`, `::ffff:127.0.0.1`, `::ffff:7f00:1`) ✅
+- [x] Bypass IP décimale (2130706433 = 127.0.0.1) ✅
+- [x] Bypass IP octale (0177.0.0.1) ✅
+- [x] Bypass URL-encoded (`%31%32%37%2e%30%2e%30%2e%31`) ✅
+- [x] DNS rebinding via nip.io / localtest.me ✅
+
+### OAuth2 — Nouveaux checks
+
+- [x] Flux Implicit activé (`response_type=token` accepté) — CWE-200, CVSS 5.4 ✅
+- [x] Code d'autorisation rejouable (pas d'invalidation après usage) — CWE-294, CVSS 8.1 ✅
+- [x] Enumération de client_id prévisibles — CWE-203, CVSS 5.3 ✅
+
+### Auth — Refresh token
+
+- [x] Refresh token rejouable sans rotation détectée — CWE-294, CVSS 7.5 ✅
+
+### Access-control — Mass assignment
+
+- [x] Injection des champs sensibles de la spec OpenAPI (`ep.parameters`) ✅
+
+### Performance
+
+- [x] Exécution parallèle inter-modules via `futures_util::future::join_all` (mode CLI) ✅
+
+### Reporting
+
+- [x] `ReportSummary.risk_score` — moyenne CVSS pondérée (boost Critical/High) ✅
+- [x] `ReportSummary.risk_label` — label qualitatif (None/Low/Medium/High/Critical) ✅
+
+---
+
 ## Prochaine release
 
-v0.7.0 est complète. Pour publier :
+v0.8.0 est complète. Pour publier :
 
 ```bash
-git add crates/modules/websocket crates/modules/soap crates/modules/grpc
-git add crates/core/src/wasm_loader.rs crates/core/src/lib.rs crates/core/Cargo.toml
-git add crates/cli/src/modules.rs crates/cli/src/args.rs crates/cli/src/commands.rs crates/cli/Cargo.toml
+git add crates/modules/ssrf/src/lib.rs
+git add crates/modules/oauth2/src/lib.rs
+git add crates/modules/auth/src/lib.rs
+git add crates/modules/access-control/src/lib.rs
+git add crates/cli/src/commands.rs crates/cli/Cargo.toml
+git add crates/reporting/src/report_types.rs
 git add Cargo.toml ROADMAP.md
-git commit -m "feat(v0.7): WebSocket, SOAP/WSDL, gRPC modules + runtime WASM --plugin"
-git tag v0.7.0
+git commit -m "feat(v0.8): SSRF bypasses, OAuth2 new checks, refresh token replay, mass assignment spec, parallel execution, CVSS score"
+git tag v0.8.0
 git push && git push --tags
 ```
 
 ---
 
-*Dernière mise à jour : 2026-06-28 — v0.7.0 ✅ livrée — prochaine : v0.8.0 (registry plugins, sandbox WASI, proto parsing)*
+*Dernière mise à jour : 2026-06-28 — v0.8.0 ✅ livrée — prochaine : v0.9.0*

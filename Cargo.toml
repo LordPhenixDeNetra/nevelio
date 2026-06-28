@@ -72,3 +72,4 @@ crossterm          = { version = "0.28", features = ["event-stream"] }
 rust-i18n          = "3"
 rhai               = { version = "1", features = ["sync"] }
 wasmtime           = { version = "28", default-features = false, features = ["cranelift", "runtime"] }
+futures-util       = "0.3"
