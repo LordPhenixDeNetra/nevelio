@@ -1,4 +1,5 @@
 /target/
+hardware/target/
 **/*.rs.bk
 .rustc_info.json
 
