@@ -7,6 +7,7 @@ members = [
     "crates/hw-sidechannel",
     "crates/hw-jtag",
     "crates/hw-memory",
+    "crates/hw-dma-fpga",
     "crates/hw-cli",
 ]
 resolver = "2"

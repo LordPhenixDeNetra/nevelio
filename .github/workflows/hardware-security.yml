@@ -1,0 +1,155 @@
+name: Hardware Security CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'hardware/**'
+      - '.github/workflows/hardware-security.yml'
+  pull_request:
+    paths:
+      - 'hardware/**'
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  # ── Build + Tests (Linux x86_64) ──────────────────────────────────────────────
+  build-and-test:
+    name: Build & Test (ubuntu-latest / x86_64)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: hardware
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+
+      - name: Cache Cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: hardware
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+            dmidecode \
+            flashrom \
+            pciutils \
+            usbutils \
+            msr-tools \
+            openocd \
+            radare2 \
+            clang \
+            llvm \
+            libbpf-dev
+
+      # eBPF non disponible sur runner GitHub (kernel 5.15 standard, pas de CAP_BPF)
+      # On build sans la feature eBPF pour rester compatible CI
+      - name: Build (no eBPF)
+        run: cargo build --manifest-path Cargo.toml
+
+      - name: Run tests
+        run: cargo test --manifest-path Cargo.toml
+
+      - name: Clippy
+        run: cargo clippy --manifest-path Cargo.toml -- -D warnings
+
+      - name: Check formatting
+        run: cargo fmt --manifest-path Cargo.toml --check
+
+  # ── Cross-compilation ARM64 ────────────────────────────────────────────────────
+  cross-arm64:
+    name: Cross-compile (aarch64-unknown-linux-gnu)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: hardware
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain + ARM64 target
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-unknown-linux-gnu
+
+      - name: Cache Cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: hardware
+          key: arm64
+
+      - name: Install cross-compilation tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y gcc-aarch64-linux-gnu
+
+      - name: Cross-build ARM64
+        env:
+          CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER: aarch64-linux-gnu-gcc
+          CC_aarch64_unknown_linux_gnu: aarch64-linux-gnu-gcc
+        run: |
+          cargo build \
+            --manifest-path Cargo.toml \
+            --target aarch64-unknown-linux-gnu
+
+  # ── Build macOS (développement) ───────────────────────────────────────────────
+  build-macos:
+    name: Build (macOS — développement uniquement)
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: hardware
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: hardware
+          key: macos
+
+      - name: Build (macOS — sans eBPF ni modules kernel)
+        run: cargo build --manifest-path Cargo.toml
+
+      - name: Run tests (macOS)
+        run: cargo test --manifest-path Cargo.toml
+
+  # ── Python tools (lint) ───────────────────────────────────────────────────────
+  python-lint:
+    name: Python tools — lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install linters
+        run: pip install ruff
+
+      - name: Lint firmware_analyzer.py
+        run: ruff check hardware/python/firmware_analyzer.py --select E,F,W --ignore E501
+
+      - name: Lint volatility_runner.py
+        run: ruff check hardware/python/volatility_runner.py --select E,F,W --ignore E501
+
+      - name: Lint chipwhisperer_acq.py
+        run: ruff check hardware/python/chipwhisperer_acq.py --select E,F,W --ignore E501
+
+      - name: Lint cpa_analysis.py
+        run: ruff check hardware/python/cpa_analysis.py --select E,F,W --ignore E501

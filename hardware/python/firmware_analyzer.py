@@ -324,6 +324,126 @@ def analyze_elf_binaries(extract_dir: str, findings: list):
         ))
 
 
+# ── Analyse symbolique angr ───────────────────────────────────────────────────
+
+ANGR_DANGEROUS_FUNCS = [
+    ('strcpy',   'Buffer overflow potentiel via strcpy()',  'HIGH',    121, 7.8),
+    ('gets',     'Buffer overflow via gets() — CWE-120',   'CRITICAL', 120, 9.8),
+    ('sprintf',  'Format string ou overflow via sprintf()', 'HIGH',    134, 7.5),
+    ('strcat',   'Buffer overflow potentiel via strcat()',  'HIGH',    121, 7.2),
+    ('scanf',    'Entrée non bornée via scanf()',           'HIGH',    120, 7.2),
+    ('system',   'Exécution commande arbitraire via system()', 'HIGH', 78, 8.1),
+    ('popen',    'Exécution commande via popen()',          'HIGH',    78, 7.5),
+    ('printf',   'Format string potentiel via printf()',    'MEDIUM',  134, 5.5),
+    ('memcpy',   'Possible overflow mémoire non borné',    'LOW',     120, 4.3),
+]
+
+def analyze_with_angr(extract_dir: str, findings: list, max_binaries: int = 5):
+    """Analyse symbolique via angr : détection buffer overflows + fonctions dangereuses."""
+    try:
+        import angr
+    except ImportError:
+        findings.append(finding(
+            "angr non installé — analyse symbolique ignorée",
+            "angr (analyse symbolique) n'est pas installé. "
+            "Pour détecter les buffer overflows dans les binaires ARM/MIPS/x86 : "
+            "pip install angr (installation ~5 min, ~500MB)",
+            "INFORMATIVE",
+            remediation="pip install angr"
+        ))
+        return
+
+    # Collecter les ELF
+    elf_files = []
+    for root, _, files in os.walk(extract_dir):
+        for fname in files:
+            fpath = os.path.join(root, fname)
+            try:
+                with open(fpath, 'rb') as f:
+                    if f.read(4) == b'\x7fELF':
+                        elf_files.append(fpath)
+            except (IOError, PermissionError):
+                pass
+        if len(elf_files) >= max_binaries * 3:
+            break
+
+    if not elf_files:
+        return
+
+    analyzed    = 0
+    all_vulns   = []
+
+    for elf_path in elf_files[:max_binaries]:
+        try:
+            proj = angr.Project(
+                elf_path,
+                auto_load_libs=False,
+                load_options={'except_missing_libs': True}
+            )
+        except Exception:
+            continue
+
+        # 1. Détection par CFG des fonctions dangereuses importées
+        try:
+            cfg = proj.analyses.CFGFast(normalize=True, resolve_indirect_jumps=False)
+        except Exception:
+            continue
+
+        # Chercher les symboles PLT importés
+        dangereux_trouves = []
+        for sym_name, label, sev, cwe, cvss in ANGR_DANGEROUS_FUNCS:
+            sym = proj.loader.find_symbol(sym_name)
+            if sym is not None:
+                dangereux_trouves.append((sym_name, label, sev, cwe, cvss))
+
+        if dangereux_trouves:
+            # Choisir la sévérité la plus haute
+            sev_order = {'CRITICAL': 4, 'HIGH': 3, 'MEDIUM': 2, 'LOW': 1, 'INFORMATIVE': 0}
+            top = max(dangereux_trouves, key=lambda x: sev_order.get(x[2], 0))
+            names = ', '.join(f[0] for f in dangereux_trouves)
+            all_vulns.append((os.path.basename(elf_path), dangereux_trouves, top))
+
+        # 2. Vérification protection PIE (pour binaires critiques)
+        is_pie = proj.loader.main_object.pic
+        nx_stack = getattr(proj.loader.main_object, 'execstack', None)
+        if nx_stack:  # pile exécutable
+            findings.append(finding(
+                f"Pile exécutable dans {os.path.basename(elf_path)} — CWE-119",
+                "Le binaire a été compilé avec une pile exécutable (GNU_STACK RWX). "
+                "Un attaquant peut injecter et exécuter du shellcode directement sur la pile.",
+                "CRITICAL", 119, 9.3,
+                evidence=f"{elf_path}: execstack=RWX",
+                remediation="Recompiler avec : -Wl,-z,noexecstack"
+            ))
+
+        analyzed += 1
+
+    # Rapport consolidé des fonctions dangereuses
+    if all_vulns:
+        for bin_name, vulns, top in all_vulns:
+            names = ', '.join(v[0] for v in vulns)
+            findings.append(finding(
+                f"Fonctions dangereuses dans {bin_name} — {names}",
+                f"angr a détecté {len(vulns)} fonction(s) dangereuse(s) importée(s) dans "
+                f"{bin_name}. Ces fonctions sont connues pour être vulnérables aux buffer "
+                f"overflows et injections de commandes si les entrées ne sont pas validées.",
+                top[2], top[3], top[4],
+                evidence=', '.join(v[0] for v in vulns),
+                remediation="Remplacer par des alternatives sécurisées : "
+                            "strncpy/strlcpy, fgets, snprintf, strncat. "
+                            "Activer les sanitizers à la compilation : -fsanitize=address,undefined"
+            ))
+
+    if analyzed > 0:
+        findings.append(finding(
+            f"Analyse symbolique angr terminée ({analyzed} binaire(s))",
+            f"angr a analysé {analyzed} binaire(s) ELF. "
+            f"{len(all_vulns)} binaire(s) contiennent des fonctions potentiellement dangereuses.",
+            "INFORMATIVE",
+            evidence=f"{analyzed} binaires analysés via angr CFGFast"
+        ))
+
+
 # ── Informations générales sur le firmware ────────────────────────────────────
 
 def firmware_info(firmware_path: str, findings: list) -> dict:
@@ -376,6 +496,7 @@ def main():
     parser.add_argument('--no-r2',        action='store_true', help='Désactiver l'analyse radare2')
     parser.add_argument('--no-extract',   action='store_true', help='Ne pas extraire avec binwalk')
     parser.add_argument('--extract-dir',  default=None,   help='Répertoire d'extraction (défaut : tempdir)')
+    parser.add_argument('--no-angr',      action='store_true', help='Désactiver l'analyse symbolique angr')
     args = parser.parse_args()
 
     if not os.path.exists(args.firmware):
@@ -411,6 +532,10 @@ def main():
         # 5. Analyse ELF via r2pipe
         if not args.no_r2 and not args.no_extract:
             analyze_elf_binaries(extract_dir, findings)
+
+        # 6. Analyse symbolique angr
+        if not args.no_angr and not args.no_extract:
+            analyze_with_angr(extract_dir, findings)
 
         # Résultat final
         result = {

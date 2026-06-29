@@ -1,0 +1,19 @@
+[package]
+name        = "hw-dma-fpga"
+version     = "0.1.0"
+edition     = "2021"
+description = "Nevelio — PCIe DMA FPGA (leechcore FFI + PCILeech interface)"
+
+[dependencies]
+hw-core    = { path = "../hw-core" }
+serde      = { workspace = true }
+serde_json = { workspace = true }
+anyhow     = { workspace = true }
+
+[build-dependencies]
+# leechcore-sys sera ajouté quand la lib est disponible
+# cc = "1"
+
+[features]
+# Activer uniquement si leechcore est disponible sur le système
+leechcore = []
