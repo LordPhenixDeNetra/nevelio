@@ -514,6 +514,7 @@ name = "hw-memory"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "cc",
  "hw-core",
  "serde",
  "serde_json",

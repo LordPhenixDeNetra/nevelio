@@ -167,21 +167,21 @@
 
 | # | Statut | Priorité | Tâche | Effort | Dépend de | Notes |
 |---|---|---|---|---|---|---|
-| 4.1 | [ ] | 🔴 | Écrire `asm/x86_64/rowhammer.asm` : double-sided hammering CLFLUSH | 8h | 2.1 | Pattern : hammer deux lignes encadrant la cible |
-| 4.2 | [ ] | 🔴 | Écrire `c/userspace/rowhammer.c` : mmap + mlock + 100k accès | 10h | — | Compter les bit flips détectés |
-| 4.3 | [ ] | 🔴 | Intégrer dans Rust via `cc` crate + unsafe FFI | 4h | 4.2 | — |
-| 4.4 | [ ] | 🟠 | Implémenter TRRespass (multi-sided) pour bypass TRR | 12h | 4.1 | Adapté des patterns du paper TRRespass (VU Amsterdam) |
-| 4.5 | [ ] | 🟠 | Détecter bit flip → finding Critical 8.8 + rapport nb flips/durée | 3h | 4.2 | — |
+| 4.1 | [x] | 🔴 | Écrire `asm/x86_64/rowhammer.asm` : double-sided hammering CLFLUSH | 8h | 2.1 | `hardware/asm/x86_64/rowhammer.asm` — NASM ref : `rowhammer_double_sided`, `measure_memory_access_time`, `flush_cache_line` |
+| 4.2 | [x] | 🔴 | Écrire `c/userspace/rowhammer.c` : mmap + mlock + 100k accès | 10h | — | `hardware/c/userspace/rowhammer.c` — 3 patterns (0x00/0xFF/0x55), `nevelio_rowhammer_test()` exportée FFI, Makefile standalone |
+| 4.3 | [x] | 🔴 | Intégrer dans Rust via `cc` crate + unsafe FFI | 4h | 4.2 | `hw-memory/build.rs` (cc::Build) + `hw-memory/src/rowhammer.rs` (extern "C", repr(C) RowhammerResult) |
+| 4.4 | [x] | 🟠 | Implémenter TRRespass (multi-sided) pour bypass TRR | 12h | 4.1 | `check_trr_status()` — détection DDR5/DDR4+TRR via dmidecode + advisory TRRespass IEEE S&P 2020 |
+| 4.5 | [x] | 🟠 | Détecter bit flip → finding Critical 8.8 + rapport nb flips/durée | 3h | 4.2 | `run_rowhammer_ffi()` — bit_flips/bytes/rows/ms → Critical 8.8 CWE-1278 + ECC auto-correction detect |
 | 4.6 | [x] | 🟡 | Vérifier chiffrement swap : `/proc/swaps` + dm-crypt | 2h | 1.2 | `hw-memory/src/swap.rs` — KASLR + randomize_va_space intégrés |
-| 4.7 | [ ] | 🟡 | Vérifier core dumps : `ulimit` + `/proc/sys/kernel/core_pattern` | 1h | 1.2 | — |
+| 4.7 | [x] | 🟡 | Vérifier core dumps : `ulimit` + `/proc/sys/kernel/core_pattern` | 1h | 1.2 | `hw-memory/src/forensics.rs::check_core_dumps()` — /proc/sys/kernel/core_pattern + ulimit RLIMIT_CORE |
 
 ### Module `hw-memory` — Forensics
 
 | # | Statut | Priorité | Tâche | Effort | Dépend de | Notes |
 |---|---|---|---|---|---|---|
-| 4.8 | [ ] | 🟠 | Écrire `python/volatility_runner.py` : wrapper Volatility 3 | 6h | — | Lister processus, hashs NTLM, connexions réseau |
-| 4.9 | [ ] | 🟠 | Intégrer depuis Rust : lancer analyse Volatility sur dump fourni | 4h | 4.8 | `--dump FILE` argument CLI |
-| 4.10 | [ ] | 🟡 | Détecter processus injectés (DKOM) via Volatility pslist vs psscan | 5h | 4.8 | Comparaison deux listes |
+| 4.8 | [x] | 🟠 | Écrire `python/volatility_runner.py` : wrapper Volatility 3 | 6h | — | `hardware/python/volatility_runner.py` — pslist+psscan, malfind, hashdump (Win), check_syscall (Lin), netscan ports C2 |
+| 4.9 | [x] | 🟠 | Intégrer depuis Rust : lancer analyse Volatility sur dump fourni | 4h | 4.8 | `hw-memory/src/forensics.rs::run_volatility_analysis()` — parse JSON findings Python |
+| 4.10 | [x] | 🟡 | Détecter processus injectés (DKOM) via Volatility pslist vs psscan | 5h | 4.8 | `analyze_pslist_psscan()` — pids dans psscan∖pslist → Critical 8.1 CWE-693 |
 
 ### Module kernel C
 

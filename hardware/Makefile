@@ -247,6 +247,44 @@ ifeq ($(UNAME), Linux)
 endif
 
 # =============================================================================
+# Rowhammer (test actif — lab uniquement)
+# =============================================================================
+
+## Compiler le testeur rowhammer standalone (C)
+rowhammer-build:
+ifeq ($(UNAME), Linux)
+	$(MAKE) -C c/userspace/
+else
+	@echo "[!] rowhammer.c est Linux-only."
+endif
+
+## Lancer un test Rowhammer court (64MB, 100K iter, 5s) — DANGER
+rowhammer-test-safe: rowhammer-build
+ifeq ($(UNAME), Linux)
+	@echo "[!] ATTENTION : Test Rowhammer — uniquement sur machine de lab dédiée !"
+	@echo "    Faire un snapshot VM avant de continuer."
+	@read -p "    Continuer ? [y/N] " ans && [ "$$ans" = "y" ]
+	sudo c/userspace/rowhammer_test --size 64 --iters 100000 --time 5
+else
+	@echo "[!] Test Rowhammer disponible sur Linux uniquement."
+endif
+
+# =============================================================================
+# Forensics Volatility
+# =============================================================================
+
+## Analyser un dump mémoire avec Volatility 3
+## Usage : make run-forensics DUMP=/tmp/memory.lime [OS=linux|windows]
+run-forensics:
+	@if [ -z "$(DUMP)" ]; then \
+		echo ""; \
+		echo "  Usage : make run-forensics DUMP=/tmp/memory.lime [OS=linux]"; \
+		echo ""; \
+		exit 1; \
+	fi
+	python3 python/volatility_runner.py --dump $(DUMP) $$([ -n "$(OS)" ] && echo "--os $(OS)")
+
+# =============================================================================
 # Aide
 # =============================================================================
 
@@ -280,6 +318,13 @@ endif
 	@echo "  ── Modules ─────────────────────────────────────────────────────────"
 	@echo "  make modules              Lister les modules"
 	@echo "  make module-show MODULE=hw-cpu   Détail d'un module"
+	@echo ""
+	@echo "  ── Rowhammer (lab uniquement !) ───────────────────────────────────"
+	@echo "  make rowhammer-build      Compiler rowhammer_test (C standalone)"
+	@echo "  make rowhammer-test-safe  Test court 64MB/5s (lab dédié uniquement)"
+	@echo ""
+	@echo "  ── Forensics Volatility ────────────────────────────────────────────"
+	@echo "  make run-forensics DUMP=/tmp/memory.lime  Analyser un dump RAM"
 	@echo ""
 	@echo "  ── Analyse firmware (Python) ───────────────────────────────────────"
 	@echo "  make run-firmware FIRMWARE=/path/to/fw.bin"
