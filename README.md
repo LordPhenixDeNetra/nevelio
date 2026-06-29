@@ -24,6 +24,9 @@ and produces actionable reports in JSON, HTML, Markdown, JUnit XML and SARIF for
 | `business-logic` | Rate limit bypass (XFF/UA rotation), race conditions, negative values, price manipulation |
 | `infra` | CORS, HSTS, CSP, TLS, cookie flags, secrets in responses, stack traces, 20+ debug endpoints |
 
+Nevelio also ships **`nevelio-hw`**, a companion binary for hardware-layer security
+audits — see [Hardware Security Extension](#hardware-security-extension-nevelio-hw).
+
 ---
 
 ## Installation
@@ -376,6 +379,88 @@ nevelio --accept-legal scan \
 
 ---
 
+## Hardware Security Extension (`nevelio-hw`)
+
+`nevelio-hw` is a separate binary included in the `hardware/` workspace.
+It audits the **hardware and kernel security layer** of a Linux machine :
+CPU mitigations (Spectre/Meltdown/MDS), UEFI/Secure Boot, DMA/IOMMU/Thunderbolt,
+timing side-channels, eBPF syscall latency, and more.
+
+> **Requires Linux.** On macOS the binary compiles but most checks are silently skipped
+> (no `/sys`, `/proc` or eBPF available).
+
+### Modules
+
+| Module | Checks |
+|---|---|
+| `hw-cpu` | Spectre v1/v2, Meltdown, MDS, L1TF, Retbleed, ASLR, KASLR, microcode, NX/SMEP |
+| `hw-firmware` | UEFI Secure Boot, BIOS version/age, EFI Shell entries, flash SPI, fwupd updates |
+| `hw-dma` | IOMMU (on/off/passthrough/strict), Thunderbolt security level, PCIe BusMaster, kernel lockdown |
+| `hw-sidechannel` | Flush+Reload (CLFLUSH/RDTSC), HTTP timing oracle (CWE-208), perf_event_paranoid, ptrace_scope, eBPF latency |
+
+### Build et lancement (tout en une commande)
+
+```bash
+# 1. Dépendances système (Linux, une seule fois)
+cd hardware && make install-deps
+
+# 2. Build (compile le binaire + les programmes eBPF si clang est disponible)
+make
+
+# 3. Audit passif complet (sans root)
+make run
+
+# 4. Audit actif : flashrom + eBPF (root requis)
+sudo make run-active
+
+# 5. Rapport HTML
+make run-html REPORT=rapport.html
+
+# 6. Timing oracle sur une API distante
+make run-target TARGET_URL=https://api.example.com
+```
+
+### Cibles Makefile principales
+
+| Commande | Description |
+|---|---|
+| `make install-deps` | Installe dmidecode, clang, libbpf-dev, bpftool, checksec… |
+| `make` | Build release (active `--features ebpf` automatiquement sur Linux) |
+| `make run` | Audit passif — stdout texte coloré |
+| `make run-active` | Audit actif + eBPF (root requis) |
+| `make run-html REPORT=f.html` | Rapport HTML dark-mode |
+| `make run-json` | Rapport JSON → stdout |
+| `make run-target TARGET_URL=…` | Timing oracle HTTP |
+| `make test` | Tests unitaires |
+
+### Depuis les sources
+
+```bash
+# Build seul (sans Makefile)
+cd hardware
+cargo build --release                        # macOS / dev
+cargo build --release --features ebpf        # Linux avec eBPF
+./target/release/nevelio-hw --help
+```
+
+### eBPF (Linux ≥ 5.4, root requis)
+
+Les programmes eBPF (`syscall_latency`, `memory_access`) sont compilés
+automatiquement par `build.rs` lors du `cargo build --features ebpf`
+si `clang` est disponible. Ils sont **embarqués dans le binaire** via
+`include_bytes!` — aucun fichier externe nécessaire à l'exécution.
+
+```
+make install-deps   # installe clang + libbpf-dev
+make                # build + compile .bpf.c → .bpf.o → intégré dans nevelio-hw
+sudo make run-active
+```
+
+Si `clang` est absent, un avertissement est émis et les checks eBPF sont
+simplement désactivés — le reste de l'audit fonctionne normalement.
+
+---
+
 ## Développement
 
 ```bash
@@ -410,7 +495,22 @@ nevelio/
 │   │   └── infra/          # Headers, TLS, cookies, secrets, debug endpoints
 │   ├── recon/              # Parseur OpenAPI, crawleur d'endpoints
 │   └── reporting/          # Reporters JSON, HTML (Tera), Markdown, JUnit, SARIF
-├── docs/                   # Documentation web (index.html, style.css, script.js)
+├── hardware/               # Extension sécurité hardware (workspace Cargo séparé)
+│   ├── Makefile            # Point d'entrée unique : make / make run / make run-active
+│   ├── crates/
+│   │   ├── hw-core/        # Types HardwareFinding, HwModule, HwScanContext, HTML reporter
+│   │   ├── hw-cpu/         # Mitigations CPU, ASLR, microcode
+│   │   ├── hw-firmware/    # UEFI, Secure Boot, flash SPI
+│   │   ├── hw-dma/         # IOMMU, Thunderbolt, PCIe, kernel lockdown
+│   │   ├── hw-sidechannel/ # Flush+Reload, timing oracle, eBPF latence, checksec
+│   │   └── hw-cli/         # Binaire nevelio-hw (clap, scan, modules)
+│   ├── asm/
+│   │   ├── x86_64/         # timing.asm — CLFLUSH + RDTSC (référence NASM)
+│   │   └── aarch64/        # timing.asm — CNTVCT_EL0 + DC CIVAC (référence GAS)
+│   └── ebpf/
+│       ├── syscall_latency.bpf.c   # Tracer latence syscalls (ring buffer)
+│       └── memory_access.bpf.c     # Détection accès mémoire / rowhammer
+├── docs/                   # Documentation, cahier des charges, suivi des tâches
 └── payloads/               # Bibliothèques de payloads YAML (sqli, jwt, idor)
 ```
 

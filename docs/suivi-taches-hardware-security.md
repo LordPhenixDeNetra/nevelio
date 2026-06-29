@@ -99,7 +99,7 @@
 | # | Statut | Priorité | Tâche | Effort | Dépend de | Notes |
 |---|---|---|---|---|---|---|
 | 2.12 | [x] | 🟠 | Écrire `ebpf/syscall_latency.bpf.c` : tracer latence syscalls | 6h | — | Ring buffer + filtres pid/latence + tracepoints sys_enter/sys_exit |
-| 2.13 | [~] | 🟠 | Loader eBPF depuis Rust via `libbpf-rs` crate | 5h | 2.12 | Fichier .bpf.c prêt — loader Rust non implémenté (Phase 2+) |
+| 2.13 | [x] | 🟠 | Loader eBPF depuis Rust via `libbpf-rs` crate | 5h | 2.12 | `ebpf.rs` — include_bytes! + libbpf-rs + ring buffer — actif en mode `--active` |
 | 2.14 | [x] | 🟡 | Écrire `ebpf/memory_access.bpf.c` : détecter accès mémoire suspects | 8h | 2.12 | kprobe handle_mm_fault + compteur rowhammer par page (seuil 500k) |
 
 ### Tests Phase 2
@@ -285,9 +285,9 @@
 | Phase | Tâches | Terminées | Langages | Matériel requis |
 |---|---|---|---|---|
 | **1 — Fondations** | 23 | 23 ✅ | Rust, Shell | Machine Linux |
-| **2 — Timing/Side-channel** | 17 | 14 ✅ (1 en cours, 2 tests restants) | + Assembly x86_64+ARM64, eBPF | Machine Linux |
+| **2 — Timing/Side-channel** | 17 | 15 ✅ (2 tests terrain restants) | + Assembly x86_64+ARM64, eBPF | Machine Linux |
 | **3 — Firmware/JTAG** | 15 | 0 | + Python, Tcl | + Sonde JTAG, STM32 |
 | **4 — Rowhammer/Forensics** | 14 | 0 | + C | + PC dédié |
 | **5 — Power/DMA** | 8 | 0 | + Verilog | + ChipWhisperer, FPGA |
 | **Transversal** | 8 | 0 | — | — |
-| **TOTAL** | **85** | **37 / 85** | | |
+| **TOTAL** | **85** | **38 / 85** | | |

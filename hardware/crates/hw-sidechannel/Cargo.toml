@@ -3,9 +3,26 @@ name    = "hw-sidechannel"
 version = "0.1.0"
 edition = "2021"
 
+# ── Feature flags ─────────────────────────────────────────────────────────────
+#
+# ebpf : active le chargement des programmes eBPF compilés.
+#        Nécessite Linux + clang + libbpf-dev.
+#        Le Makefile passe --features ebpf automatiquement sur Linux.
+#
+[features]
+default = []
+ebpf    = ["dep:libbpf-rs"]
+
+# ── Dépendances ───────────────────────────────────────────────────────────────
+
 [dependencies]
 hw-core     = { path = "../hw-core" }
 serde       = { workspace = true }
 serde_json  = { workspace = true }
 anyhow      = { workspace = true }
 reqwest     = { version = "0.12", features = ["blocking"] }
+
+# Chargeur eBPF — uniquement activé avec --features ebpf (Linux)
+# libbpf-rs ventile libbpf depuis les sources C (pas besoin de libbpf.so)
+# mais nécessite linux/bpf.h → installer libbpf-dev
+libbpf-rs = { version = "0.23", optional = true }
