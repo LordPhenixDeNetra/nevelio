@@ -1,0 +1,10 @@
+[package]
+name    = "hw-memory"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+hw-core    = { path = "../hw-core" }
+serde      = { workspace = true }
+serde_json = { workspace = true }
+anyhow     = { workspace = true }

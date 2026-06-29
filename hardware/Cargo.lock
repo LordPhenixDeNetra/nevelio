@@ -457,6 +457,8 @@ dependencies = [
  "hw-cpu",
  "hw-dma",
  "hw-firmware",
+ "hw-jtag",
+ "hw-memory",
  "hw-sidechannel",
  "serde_json",
 ]
@@ -492,6 +494,26 @@ dependencies = [
 name = "hw-firmware"
 version = "0.1.0"
 dependencies = [
+ "hw-core",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "hw-jtag"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "hw-core",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "hw-memory"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
  "hw-core",
  "serde",
  "serde_json",

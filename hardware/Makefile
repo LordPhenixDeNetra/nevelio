@@ -28,7 +28,8 @@ else
 endif
 
 .PHONY: all build build-release install-deps run run-active \
-        run-html run-json run-target modules test check clean help
+        run-html run-json run-target run-firmware run-jtag \
+        modules test check clean kernel-modules kernel-clean help
 
 # =============================================================================
 # Cible par défaut
@@ -62,10 +63,17 @@ ifeq ($(UNAME), Linux)
 		pciutils \
 		clang llvm libbpf-dev bpftool \
 		checksec \
-		msr-tools
+		msr-tools \
+		usbutils \
+		openocd \
+		binwalk \
+		radare2 \
+		linux-headers-$$(uname -r) \
+		build-essential
+	@pip3 install --quiet r2pipe binwalk 2>/dev/null || true
 	@echo ""
 	@echo "[✓] Dépendances système installées."
-	@echo "[*] Pour Fedora/RHEL : sudo dnf install dmidecode mokutil efibootmgr fwupd flashrom pciutils clang llvm libbpf-devel bpftool checksec"
+	@echo "[*] Pour Fedora/RHEL : sudo dnf install dmidecode mokutil efibootmgr fwupd flashrom pciutils clang llvm libbpf-devel bpftool checksec usbutils openocd radare2"
 else ifeq ($(UNAME), Darwin)
 	@echo "[!] macOS détecté."
 	@echo "    Les dépendances de sécurité hardware sont Linux-spécifiques."
@@ -166,6 +174,79 @@ clean:
 	@rm -f $(REPORT)
 
 # =============================================================================
+# Analyse firmware — Python (binwalk + strings + r2pipe)
+# =============================================================================
+
+## Analyser un firmware : make run-firmware FIRMWARE=/path/to/firmware.bin
+run-firmware:
+	@if [ -z "$(FIRMWARE)" ]; then \
+		echo ""; \
+		echo "  Usage : make run-firmware FIRMWARE=/path/to/firmware.bin"; \
+		echo ""; \
+		exit 1; \
+	fi
+	python3 python/firmware_analyzer.py --firmware $(FIRMWARE)
+
+## Analyser firmware + rapport JSON
+run-firmware-json:
+	@if [ -z "$(FIRMWARE)" ]; then \
+		echo "Usage : make run-firmware-json FIRMWARE=/path/to/firmware.bin REPORT=out.json"; exit 1; \
+	fi
+	python3 python/firmware_analyzer.py --firmware $(FIRMWARE) --output $(REPORT)
+
+# =============================================================================
+# Audit JTAG — OpenOCD + Tcl
+# =============================================================================
+
+## Audit JTAG passif (dry-run) : make run-jtag IFACE=interface/ftdi/ft2232h.cfg TARGET_CFG=target/stm32f4x.cfg
+run-jtag:
+	@if [ -z "$(IFACE)" ] || [ -z "$(TARGET_CFG)" ]; then \
+		echo ""; \
+		echo "  Usage : make run-jtag IFACE=interface/ftdi/ft2232h.cfg TARGET_CFG=target/stm32f4x.cfg"; \
+		echo "  Fichiers cfg OpenOCD : /usr/share/openocd/scripts/"; \
+		echo ""; \
+		exit 1; \
+	fi
+	openocd -f $(IFACE) -f $(TARGET_CFG) \
+		-c "set TARGET stm32f4x; set DRY_RUN 1" \
+		-f tcl/jtag_audit.tcl -c exit
+
+# =============================================================================
+# Modules kernel C (LiME + MSR reader)
+# =============================================================================
+
+## Compiler les modules kernel
+kernel-modules:
+ifeq ($(UNAME), Linux)
+	@echo "[*] Compilation des modules kernel..."
+	$(MAKE) -C c/kernel/
+	@echo "[✓] Modules compilés : c/kernel/lime_wrapper.ko  c/kernel/msr_reader.ko"
+else
+	@echo "[!] Modules kernel disponibles uniquement sur Linux."
+endif
+
+## Charger les modules kernel (root requis)
+kernel-install: kernel-modules
+ifeq ($(UNAME), Linux)
+	@echo "[!] Chargement des modules kernel (root requis)..."
+	$(MAKE) -C c/kernel/ install
+else
+	@echo "[!] Modules kernel disponibles uniquement sur Linux."
+endif
+
+## Décharger les modules kernel
+kernel-unload:
+ifeq ($(UNAME), Linux)
+	$(MAKE) -C c/kernel/ unload
+endif
+
+## Nettoyer les modules kernel
+kernel-clean:
+ifeq ($(UNAME), Linux)
+	$(MAKE) -C c/kernel/ clean
+endif
+
+# =============================================================================
 # Aide
 # =============================================================================
 
@@ -200,12 +281,28 @@ endif
 	@echo "  make modules              Lister les modules"
 	@echo "  make module-show MODULE=hw-cpu   Détail d'un module"
 	@echo ""
+	@echo "  ── Analyse firmware (Python) ───────────────────────────────────────"
+	@echo "  make run-firmware FIRMWARE=/path/to/fw.bin"
+	@echo "  make run-firmware-json FIRMWARE=/path/to/fw.bin REPORT=out.json"
+	@echo ""
+	@echo "  ── Audit JTAG (OpenOCD + Tcl) ─────────────────────────────────────"
+	@echo "  make run-jtag IFACE=interface/ftdi/ft2232h.cfg TARGET_CFG=target/stm32f4x.cfg"
+	@echo ""
+	@echo "  ── Modules kernel C ────────────────────────────────────────────────"
+	@echo "  make kernel-modules       Compiler lime_wrapper.ko + msr_reader.ko"
+	@echo "  make kernel-install       Compiler + charger (root requis)"
+	@echo "  make kernel-unload        Décharger les modules"
+	@echo "  make kernel-clean         Nettoyer les .ko"
+	@echo ""
 	@echo "  ── Développement ───────────────────────────────────────────────────"
 	@echo "  make test                 Tests unitaires"
 	@echo "  make check                Clippy"
-	@echo "  make clean                Nettoyer les artefacts"
+	@echo "  make clean                Nettoyer les artefacts Rust"
 	@echo ""
 	@echo "  Variables :"
 	@echo "    REPORT=fichier.html     Chemin du rapport HTML (défaut: $(REPORT))"
 	@echo "    TARGET_URL=https://...  URL cible pour le timing oracle"
+	@echo "    FIRMWARE=/path/fw.bin   Chemin vers l'image firmware"
+	@echo "    IFACE=cfg               Interface OpenOCD"
+	@echo "    TARGET_CFG=cfg          Target OpenOCD"
 	@echo ""

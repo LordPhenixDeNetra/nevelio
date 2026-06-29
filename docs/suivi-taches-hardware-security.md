@@ -123,29 +123,29 @@
 
 | # | Statut | Priorité | Tâche | Effort | Dépend de | Notes |
 |---|---|---|---|---|---|---|
-| 3.1 | [ ] | 🔴 | Écrire `python/firmware_analyzer.py` : pipeline binwalk + strings | 8h | — | Détecter passwords, clés, backdoors dans le binaire |
-| 3.2 | [ ] | 🔴 | Intégrer `r2pipe` : analyse automatique des sections ELF extraites | 6h | 3.1 | Détecter NX, PIE, RELRO |
-| 3.3 | [ ] | 🟠 | Wrapper Rust `Command` → appel `python/firmware_analyzer.py` | 4h | 3.1 | Passer chemin firmware + recevoir JSON findings |
+| 3.1 | [x] | 🔴 | Écrire `python/firmware_analyzer.py` : pipeline binwalk + strings | 8h | — | `hardware/python/firmware_analyzer.py` — 7 patterns secrets, magic bytes, ELF via r2pipe |
+| 3.2 | [x] | 🔴 | Intégrer `r2pipe` : analyse automatique des sections ELF extraites | 6h | 3.1 | `analyze_elf_binaries()` — NX, PIE, Canary, RELRO — max 20 ELF |
+| 3.3 | [x] | 🟠 | Wrapper Rust `Command` → appel `python/firmware_analyzer.py` | 4h | 3.1 | `hw-jtag/src/openocd.rs::run_firmware_analyzer()` — parse JSON findings |
 | 3.4 | [ ] | 🟠 | Intégrer `angr` : analyse symbolique sur binaires ARM extraits | 12h | 3.2 | Tâche complexe — détecter buffer overflows |
-| 3.5 | [ ] | 🟡 | Détecter systèmes de fichiers connus : squashfs, jffs2, ubi | 4h | 3.1 | Via binwalk signatures |
+| 3.5 | [x] | 🟡 | Détecter systèmes de fichiers connus : squashfs, jffs2, ubi | 4h | 3.1 | `detect_filesystems_raw()` + 14 magic bytes (squashfs, jffs2, ubi, cramfs, gzip, xz…) |
 
 ### Module `hw-jtag`
 
 | # | Statut | Priorité | Tâche | Effort | Dépend de | Notes |
 |---|---|---|---|---|---|---|
-| 3.6 | [ ] | 🔴 | Écrire `tcl/jtag_audit.tcl` : connexion OpenOCD + audit Read Protection | 8h | — | Tester sur STM32F4 (puce de référence) |
-| 3.7 | [ ] | 🔴 | Détecter Read Protection Level 0 → finding Critical 9.8 | 3h | 3.6 | — |
-| 3.8 | [ ] | 🟠 | Wrapper Rust : lancer OpenOCD + exécuter script Tcl + parser sortie | 6h | 3.6 | OpenOCD doit être installé sur le système |
-| 3.9 | [ ] | 🟠 | Détection auto de sonde JTAG connectée (J-Link, FTDI) via `lsusb` | 3h | 1.2 | — |
-| 3.10 | [ ] | 🟠 | Dump flash via OpenOCD si Read Protection = Level 0 (avec `--dry-run` check) | 5h | 3.7 | Avertissement légal obligatoire |
-| 3.11 | [ ] | 🟡 | Détecter UART actif via scan série (115200 baud, pattern shell Linux) | 6h | — | Nécessite adaptateur USB-série |
+| 3.6 | [x] | 🔴 | Écrire `tcl/jtag_audit.tcl` : connexion OpenOCD + audit Read Protection | 8h | — | `hardware/tcl/jtag_audit.tcl` — STM32F4 + STM32L4 + DAP générique + PCROP + UART bootloader |
+| 3.7 | [x] | 🔴 | Détecter Read Protection Level 0 → finding Critical 9.8 | 3h | 3.6 | `audit_stm32_rdp()` — RDP 0xAA → CRITICAL, dump flash en `--active` mode |
+| 3.8 | [x] | 🟠 | Wrapper Rust : lancer OpenOCD + exécuter script Tcl + parser sortie | 6h | 3.6 | `hw-jtag/src/openocd.rs::run_openocd_audit()` — parse lignes NEVELIO_FINDING: |
+| 3.9 | [x] | 🟠 | Détection auto de sonde JTAG connectée (J-Link, FTDI) via `lsusb` | 3h | 1.2 | `hw-jtag/src/probe.rs::detect_jtag_probes()` — 8 VID/PID reconnus |
+| 3.10 | [x] | 🟠 | Dump flash via OpenOCD si Read Protection = Level 0 (avec `--dry-run` check) | 5h | 3.7 | `audit_stm32_flash_dump()` dans jtag_audit.tcl — gated par `DRY_RUN` |
+| 3.11 | [x] | 🟡 | Détecter UART actif via scan série (115200 baud, pattern shell Linux) | 6h | — | `hw-jtag/src/probe.rs::detect_uart_ports()` — scan /dev/ttyUSB* /dev/ttyACM* |
 
 ### Acquisition mémoire live
 
 | # | Statut | Priorité | Tâche | Effort | Dépend de | Notes |
 |---|---|---|---|---|---|---|
-| 3.12 | [ ] | 🟠 | Intégrer `avml` (Rust) : dump RAM sans module kernel | 4h | 1.2 | Linux uniquement, root requis |
-| 3.13 | [ ] | 🟡 | Alternative : module kernel LiME en C pour systèmes sans `avml` | 10h | — | Nécessite `linux-headers` |
+| 3.12 | [x] | 🟠 | Intégrer `avml` (Rust) : dump RAM sans module kernel | 4h | 1.2 | `hw-memory/src/avml.rs` — detect_avml() + run_avml_dump() — gated `--active` |
+| 3.13 | [x] | 🟡 | Alternative : module kernel LiME en C pour systèmes sans `avml` | 10h | — | `c/kernel/lime_wrapper.c` + `msr_reader.c` + `Makefile` (kernel 5.x/6.x) |
 
 ### Tests Phase 3
 
@@ -172,7 +172,7 @@
 | 4.3 | [ ] | 🔴 | Intégrer dans Rust via `cc` crate + unsafe FFI | 4h | 4.2 | — |
 | 4.4 | [ ] | 🟠 | Implémenter TRRespass (multi-sided) pour bypass TRR | 12h | 4.1 | Adapté des patterns du paper TRRespass (VU Amsterdam) |
 | 4.5 | [ ] | 🟠 | Détecter bit flip → finding Critical 8.8 + rapport nb flips/durée | 3h | 4.2 | — |
-| 4.6 | [ ] | 🟡 | Vérifier chiffrement swap : `/proc/swaps` + dm-crypt | 2h | 1.2 | — |
+| 4.6 | [x] | 🟡 | Vérifier chiffrement swap : `/proc/swaps` + dm-crypt | 2h | 1.2 | `hw-memory/src/swap.rs` — KASLR + randomize_va_space intégrés |
 | 4.7 | [ ] | 🟡 | Vérifier core dumps : `ulimit` + `/proc/sys/kernel/core_pattern` | 1h | 1.2 | — |
 
 ### Module `hw-memory` — Forensics
@@ -187,8 +187,8 @@
 
 | # | Statut | Priorité | Tâche | Effort | Dépend de | Notes |
 |---|---|---|---|---|---|---|
-| 4.11 | [ ] | 🟠 | Écrire `c/kernel/msr_reader.c` : module noyau lecture IA32_SPEC_CTRL | 8h | — | Alternative à `msr-tools` user-space |
-| 4.12 | [ ] | 🟡 | Écrire `c/kernel/Makefile` compatible kernels Linux 5.x et 6.x | 3h | 4.11 | Tester sur Ubuntu 22.04 (5.15) et 24.04 (6.8) |
+| 4.11 | [x] | 🟠 | Écrire `c/kernel/msr_reader.c` : module noyau lecture IA32_SPEC_CTRL | 8h | — | `c/kernel/msr_reader.c` — IBRS/STIBP/SSBD/NXE/LSTAR (rootkit detect) — SMP aware |
+| 4.12 | [x] | 🟡 | Écrire `c/kernel/Makefile` compatible kernels Linux 5.x et 6.x | 3h | 4.11 | `c/kernel/Makefile` — targets : all, lime, msr, clean, install, unload |
 
 ### Tests Phase 4
 

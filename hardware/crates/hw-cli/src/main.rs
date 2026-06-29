@@ -8,6 +8,8 @@ use hw_core::{HardwareFinding, HwHtmlReporter, HwModule, HwReport, HwScanContext
 use hw_cpu::CpuModule;
 use hw_dma::DmaModule;
 use hw_firmware::FirmwareModule;
+use hw_jtag::JtagModule;
+use hw_memory::MemoryModule;
 use hw_sidechannel::SideChannelModule;
 
 // ── CLI définition ────────────────────────────────────────────────────────────
@@ -117,6 +119,8 @@ fn handle_scan(
         Box::new(FirmwareModule),
         Box::new(DmaModule),
         Box::new(SideChannelModule),
+        Box::new(JtagModule),
+        Box::new(MemoryModule),
     ];
 
     let modules: Vec<&Box<dyn HwModule>> = match &module_filter {
@@ -182,6 +186,8 @@ fn handle_modules(action: ModulesAction) -> Result<()> {
         Box::new(FirmwareModule),
         Box::new(DmaModule),
         Box::new(SideChannelModule),
+        Box::new(JtagModule),
+        Box::new(MemoryModule),
     ];
 
     match action {
