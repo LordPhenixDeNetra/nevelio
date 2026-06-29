@@ -529,43 +529,43 @@ endmodule
 ### 5.1 Vue d'ensemble
 
 ```
-nevelio-hardware/
+nevelio/hardware/                         ← sous-répertoire du repo nevelio principal
 ├── crates/
-│   ├── hw-core/              # Types partagés (HardwareFinding, HwSeverity)
-│   ├── hw-cpu/               # Audit mitigations CPU (Rust + ASM + Shell)
-│   ├── hw-firmware/          # Analyse firmware UEFI (Rust + Shell + binwalk)
-│   ├── hw-memory/            # Rowhammer, forensics mémoire (Rust + C + Python)
-│   ├── hw-sidechannel/       # Flush+Reload, timing oracle (Rust + ASM)
-│   ├── hw-dma/               # Surface d'attaque DMA/Thunderbolt (Rust + Shell)
-│   ├── hw-jtag/              # Détection JTAG, audit flash (Rust + Tcl/OpenOCD)
-│   └── hw-cli/               # CLI principale (Rust)
+│   ├── hw-core/              ✅ Phase 1 — Types partagés (HardwareFinding, HwSeverity, HwReport)
+│   ├── hw-cpu/               ✅ Phase 1 — Audit mitigations CPU (Rust + Shell)
+│   ├── hw-firmware/          ✅ Phase 1 — Analyse firmware UEFI (Rust + Shell)
+│   ├── hw-dma/               ✅ Phase 1 — Surface DMA/Thunderbolt/PCIe (Rust + Shell)
+│   ├── hw-cli/               ✅ Phase 1 — Binaire `nevelio-hw` (Rust)
+│   ├── hw-sidechannel/       🔲 Phase 2 — Flush+Reload, timing oracle (Rust + ASM)
+│   ├── hw-memory/            🔲 Phase 4 — Rowhammer, forensics mémoire (Rust + C + Python)
+│   └── hw-jtag/              🔲 Phase 3 — Détection JTAG, audit flash (Rust + Tcl/OpenOCD)
 ├── asm/
 │   ├── x86_64/
-│   │   ├── timing.asm        # RDTSC + CLFLUSH
-│   │   └── rowhammer.asm     # Accès DRAM répétés
+│   │   ├── timing.asm        🔲 Phase 2 — RDTSC + CLFLUSH
+│   │   └── rowhammer.asm     🔲 Phase 4 — Accès DRAM répétés
 │   └── aarch64/
-│       ├── timing.asm        # CNTVCT_EL0 + DC CIVAC
-│       └── cache.asm
+│       ├── timing.asm        🔲 Phase 2 — CNTVCT_EL0 + DC CIVAC
+│       └── cache.asm         🔲 Phase 2
 ├── c/
 │   ├── kernel/
-│   │   ├── msr_reader.c      # Module noyau lecture MSR
-│   │   ├── lime_wrapper.c    # Interface LiME pour dump mémoire
+│   │   ├── msr_reader.c      🔲 Phase 4 — Module noyau lecture MSR
+│   │   ├── lime_wrapper.c    🔲 Phase 4 — Interface LiME pour dump mémoire
 │   │   └── Makefile
 │   └── userspace/
-│       ├── pci_scan.c        # Énumération PCI via libpci
-│       └── rowhammer.c       # Test Rowhammer user-space
+│       ├── pci_scan.c        🔲 Phase 4 — Énumération PCI via libpci
+│       └── rowhammer.c       🔲 Phase 4 — Test Rowhammer user-space
 ├── python/
-│   ├── volatility_runner.py  # Wrapper Volatility 3
-│   ├── cpa_analysis.py       # Correlation Power Analysis
-│   ├── firmware_analyzer.py  # Pipeline binwalk + strings + radare2
-│   └── chipwhisperer_acq.py  # Acquisition traces ChipWhisperer
+│   ├── volatility_runner.py  🔲 Phase 4 — Wrapper Volatility 3
+│   ├── cpa_analysis.py       🔲 Phase 5 — Correlation Power Analysis
+│   ├── firmware_analyzer.py  🔲 Phase 3 — Pipeline binwalk + strings + radare2
+│   └── chipwhisperer_acq.py  🔲 Phase 5 — Acquisition traces ChipWhisperer
 ├── tcl/
-│   └── jtag_audit.tcl        # Script OpenOCD d'audit JTAG
+│   └── jtag_audit.tcl        🔲 Phase 3 — Script OpenOCD d'audit JTAG
 ├── ebpf/
-│   ├── syscall_latency.bpf.c # Programme eBPF suivi latence
-│   └── memory_access.bpf.c   # Détection accès mémoire anormaux
+│   ├── syscall_latency.bpf.c 🔲 Phase 2 — Programme eBPF suivi latence
+│   └── memory_access.bpf.c   🔲 Phase 2 — Détection accès mémoire anormaux
 └── verilog/
-    └── pcie_dma/             # TLP PCIe pour attaque DMA (P4)
+    └── pcie_dma/             🔲 Phase 5 — TLP PCIe pour attaque DMA
 ```
 
 ### 5.2 Module `hw-cpu` — Audit mitigations CPU

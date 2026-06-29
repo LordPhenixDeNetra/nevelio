@@ -15,49 +15,49 @@
 
 | # | Statut | Priorité | Tâche | Effort | Dépend de | Notes |
 |---|---|---|---|---|---|---|
-| 1.1 | [ ] | 🔴 | Créer le workspace Cargo `nevelio-hardware` avec `Cargo.toml` racine | 2h | — | Séparé du workspace Nevelio principal |
-| 1.2 | [ ] | 🔴 | Créer crate `hw-core` : types `HardwareFinding`, `HwSeverity`, `HwModule` trait | 4h | 1.1 | Réutiliser le pattern `AttackModule` de Nevelio |
-| 1.3 | [ ] | 🔴 | Créer crate `hw-cli` : squelette CLI avec `clap` (`scan`, `modules list`) | 4h | 1.2 | Reprendre structure `nevelio-cli` |
-| 1.4 | [ ] | 🟠 | Implémenter `--accept-legal` + disclaimer hardware dans `hw-cli` | 2h | 1.3 | Obligatoire légalement |
-| 1.5 | [ ] | 🟠 | Implémenter `--dry-run` global (désactive les tests actifs/destructifs) | 3h | 1.3 | Défaut = `true` pour modules P3/P4 |
+| 1.1 | [x] | 🔴 | Créer le workspace Cargo `nevelio-hardware` avec `Cargo.toml` racine | 2h | — | `hardware/Cargo.toml` — 5 membres |
+| 1.2 | [x] | 🔴 | Créer crate `hw-core` : types `HardwareFinding`, `HwSeverity`, `HwModule` trait | 4h | 1.1 | `hw-core/src/lib.rs` + `report.rs` |
+| 1.3 | [x] | 🔴 | Créer crate `hw-cli` : squelette CLI avec `clap` (`scan`, `modules list`) | 4h | 1.2 | Binaire `nevelio-hw` opérationnel |
+| 1.4 | [x] | 🟠 | Implémenter `--accept-legal` + disclaimer hardware dans `hw-cli` | 2h | 1.3 | `disclaimer.rs` — prompt interactif + bypass flag |
+| 1.5 | [x] | 🟠 | Implémenter `--dry-run` global (désactive les tests actifs/destructifs) | 3h | 1.3 | Défaut `true` — `--active` pour annuler |
 
 ### Module `hw-cpu`
 
 | # | Statut | Priorité | Tâche | Effort | Dépend de | Notes |
 |---|---|---|---|---|---|---|
-| 1.6 | [ ] | 🔴 | Lire `/sys/devices/system/cpu/vulnerabilities/*` et parser les statuts | 4h | 1.2 | Détecter "Vulnerable" / "Not affected" / "Mitigation: …" |
-| 1.7 | [ ] | 🔴 | Vérifier mitigations Spectre v1, v2, Meltdown, MDS, L1TF | 3h | 1.6 | 8 checks distincts |
-| 1.8 | [ ] | 🟠 | Lire version microcode CPU via `dmidecode -t processor` subprocess | 2h | 1.2 | Comparer avec base Intel/AMD PSIRT |
-| 1.9 | [ ] | 🟠 | Vérifier ASLR : `/proc/sys/kernel/randomize_va_space` ≠ 2 | 1h | 1.2 | — |
-| 1.10 | [ ] | 🟡 | Vérifier KASLR : `/proc/kallsyms` accessible en user-space | 1h | 1.2 | — |
+| 1.6 | [x] | 🔴 | Lire `/sys/devices/system/cpu/vulnerabilities/*` et parser les statuts | 4h | 1.2 | `sysfs.rs` — 10 vulnérabilités couvertes |
+| 1.7 | [x] | 🔴 | Vérifier mitigations Spectre v1, v2, Meltdown, MDS, L1TF | 3h | 1.6 | + TAA, Retbleed, SSB, MMIO, SRBDS |
+| 1.8 | [x] | 🟠 | Lire version microcode CPU via `dmidecode -t processor` subprocess | 2h | 1.2 | `microcode.rs` — early load + NX bit + SMEP |
+| 1.9 | [x] | 🟠 | Vérifier ASLR : `/proc/sys/kernel/randomize_va_space` ≠ 2 | 1h | 1.2 | `memory_protection.rs` — niveaux 0/1/2 |
+| 1.10 | [x] | 🟡 | Vérifier KASLR : `/proc/kallsyms` accessible en user-space | 1h | 1.2 | + kptr_restrict + dmesg_restrict |
 
 ### Module `hw-firmware`
 
 | # | Statut | Priorité | Tâche | Effort | Dépend de | Notes |
 |---|---|---|---|---|---|---|
-| 1.11 | [ ] | 🔴 | Lire BIOS/UEFI via `dmidecode -t bios` et extraire version + date | 3h | 1.2 | — |
-| 1.12 | [ ] | 🔴 | Vérifier Secure Boot via `mokutil --sb-state` subprocess | 2h | 1.2 | Peut nécessiter `efivarfs` monté |
-| 1.13 | [ ] | 🟠 | Vérifier mises à jour firmware disponibles via `fwupdmgr get-updates` | 3h | 1.2 | Nécessite accès réseau LVFS |
-| 1.14 | [ ] | 🟠 | Détecter entrées boot UEFI Shell via `efibootmgr -v` | 2h | 1.2 | — |
-| 1.15 | [ ] | 🟡 | Tenter lecture flash SPI (non-destructif) via `flashrom --flash-name` | 3h | 1.2 | Root requis, tester la disponibilité de flashrom |
+| 1.11 | [x] | 🔴 | Lire BIOS/UEFI via `dmidecode -t bios` et extraire version + date | 3h | 1.2 | `uefi.rs` — détecte VM + firmware > 2020 |
+| 1.12 | [x] | 🔴 | Vérifier Secure Boot via `mokutil --sb-state` subprocess | 2h | 1.2 | Fallback sysfs EFI si mokutil absent |
+| 1.13 | [x] | 🟠 | Vérifier mises à jour firmware disponibles via `fwupdmgr get-updates` | 3h | 1.2 | Skip silencieux si fwupdmgr absent |
+| 1.14 | [x] | 🟠 | Détecter entrées boot UEFI Shell via `efibootmgr -v` | 2h | 1.2 | Détecte ShellX64, EDKII Shell |
+| 1.15 | [x] | 🟡 | Tenter lecture flash SPI (non-destructif) via `flashrom --flash-name` | 3h | 1.2 | `flash.rs` — désactivé en `--dry-run` |
 
 ### Module `hw-dma`
 
 | # | Statut | Priorité | Tâche | Effort | Dépend de | Notes |
 |---|---|---|---|---|---|---|
-| 1.16 | [ ] | 🔴 | Détecter IOMMU actif : `/proc/cmdline` + `dmesg | grep -i iommu` | 3h | 1.2 | Détecter `intel_iommu=on`, `amd_iommu=on` |
-| 1.17 | [ ] | 🔴 | Vérifier Thunderbolt Security Level via `/sys/bus/thunderbolt/devices/*/security` | 2h | 1.2 | Valeurs : `none`, `user`, `secure`, `dponly` |
-| 1.18 | [ ] | 🟠 | Lister devices PCIe BusMaster via `lspci -v` + parser | 3h | 1.2 | — |
-| 1.19 | [ ] | 🟡 | Vérifier kernel lockdown : `/sys/kernel/security/lockdown` | 1h | 1.2 | — |
+| 1.16 | [x] | 🔴 | Détecter IOMMU actif : `/proc/cmdline` + `dmesg | grep -i iommu` | 3h | 1.2 | `iommu.rs` — off/inactif/passthrough/strict |
+| 1.17 | [x] | 🔴 | Vérifier Thunderbolt Security Level via `/sys/bus/thunderbolt/devices/*/security` | 2h | 1.2 | `thunderbolt.rs` — rank par niveau |
+| 1.18 | [x] | 🟠 | Lister devices PCIe BusMaster via `lspci -v` + parser | 3h | 1.2 | `pcie.rs` — FireWire/ExpressCard détectés |
+| 1.19 | [x] | 🟡 | Vérifier kernel lockdown : `/sys/kernel/security/lockdown` | 1h | 1.2 | `lib.rs` — none/integrity/confidentiality |
 
 ### Tests et validation Phase 1
 
 | # | Statut | Priorité | Tâche | Effort | Dépend de | Notes |
 |---|---|---|---|---|---|---|
-| 1.20 | [ ] | 🔴 | Tests unitaires `hw-core` (sérialisation, sévérités) | 3h | 1.2 | — |
-| 1.21 | [ ] | 🔴 | Tests d'intégration `hw-cpu` sur machine de dev | 2h | 1.6–1.10 | Comparer sortie vs `spectre-meltdown-checker.sh` |
-| 1.22 | [ ] | 🟠 | `cargo build --workspace && cargo test --workspace` propre | 1h | 1.1–1.19 | 0 warnings |
-| 1.23 | [ ] | 🟠 | Rapport de sortie JSON + HTML (réutiliser `nevelio-reporting`) | 4h | 1.3 | — |
+| 1.20 | [x] | 🔴 | Tests unitaires `hw-core` (sérialisation, sévérités) | 3h | 1.2 | 2 tests : `severity_ordering`, `finding_display` |
+| 1.21 | [x] | 🔴 | Tests d'intégration `hw-cpu` sur machine de dev | 2h | 1.6–1.10 | 5 tests : sysfs, microcode, ASLR, module name |
+| 1.22 | [x] | 🟠 | `cargo build --workspace && cargo test --workspace` propre | 1h | 1.1–1.19 | 0 warnings, 10 tests passés |
+| 1.23 | [~] | 🟠 | Rapport de sortie JSON + HTML (réutiliser `nevelio-reporting`) | 4h | 1.3 | JSON ✓ + texte coloré ✓ — HTML dédié à faire |
 
 ---
 
@@ -284,10 +284,10 @@
 
 | Phase | Tâches | Terminées | Langages | Matériel requis |
 |---|---|---|---|---|
-| **1 — Fondations** | 23 | 0 | Rust, Shell | Machine Linux |
+| **1 — Fondations** | 23 | 22 ✅ (1 en cours) | Rust, Shell | Machine Linux |
 | **2 — Timing/Side-channel** | 17 | 0 | + Assembly, eBPF | Machine Linux |
 | **3 — Firmware/JTAG** | 15 | 0 | + Python, Tcl | + Sonde JTAG, STM32 |
 | **4 — Rowhammer/Forensics** | 14 | 0 | + C | + PC dédié |
 | **5 — Power/DMA** | 8 | 0 | + Verilog | + ChipWhisperer, FPGA |
 | **Transversal** | 8 | 0 | — | — |
-| **TOTAL** | **85** | **0** | | |
+| **TOTAL** | **85** | **22 / 85** | | |
