@@ -1,0 +1,21 @@
+[workspace]
+members = [
+    "crates/hw-core",
+    "crates/hw-cpu",
+    "crates/hw-firmware",
+    "crates/hw-dma",
+    "crates/hw-cli",
+]
+resolver = "2"
+
+[workspace.dependencies]
+serde       = { version = "1", features = ["derive"] }
+serde_json  = "1"
+clap        = { version = "4", features = ["derive"] }
+anyhow      = "1"
+colored     = "2"
+chrono      = { version = "0.4", features = ["serde"] }
+hw-core     = { path = "crates/hw-core" }
+hw-cpu      = { path = "crates/hw-cpu" }
+hw-firmware = { path = "crates/hw-firmware" }
+hw-dma      = { path = "crates/hw-dma" }

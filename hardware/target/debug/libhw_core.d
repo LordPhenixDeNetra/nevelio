@@ -1,0 +1,1 @@
+/Users/mac/Documents/THIOR/development/Rust_Project/nevelio/hardware/target/debug/libhw_core.rlib: /Users/mac/Documents/THIOR/development/Rust_Project/nevelio/hardware/crates/hw-core/src/lib.rs /Users/mac/Documents/THIOR/development/Rust_Project/nevelio/hardware/crates/hw-core/src/report.rs
