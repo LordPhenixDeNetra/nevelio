@@ -1,4 +1,4 @@
-use hw_core::{HardwareFinding, HwModule};
+use hw_core::{HardwareFinding, HwModule, HwScanContext};
 
 mod uefi;
 mod flash;
@@ -12,13 +12,13 @@ impl HwModule for FirmwareModule {
         "Audit firmware UEFI/BIOS : Secure Boot, version, entrées boot, flash SPI"
     }
 
-    fn run(&self, dry_run: bool) -> Vec<HardwareFinding> {
+    fn run(&self, ctx: &HwScanContext) -> Vec<HardwareFinding> {
         let mut findings = Vec::new();
         findings.extend(uefi::check_secure_boot());
         findings.extend(uefi::check_bios_info());
         findings.extend(uefi::check_uefi_shell());
         findings.extend(uefi::check_firmware_updates());
-        if !dry_run {
+        if !ctx.dry_run {
             findings.extend(flash::check_spi_flash());
         }
         findings
@@ -36,8 +36,7 @@ mod tests {
 
     #[test]
     fn dry_run_skips_flash() {
-        // En dry_run, flash::check_spi_flash n'est pas appelé
-        // On vérifie simplement que run() ne panique pas.
-        let _ = FirmwareModule.run(true);
+        let ctx = hw_core::HwScanContext { dry_run: true, ..Default::default() };
+        let _ = FirmwareModule.run(&ctx);
     }
 }

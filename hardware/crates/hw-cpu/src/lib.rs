@@ -1,4 +1,4 @@
-use hw_core::{HardwareFinding, HwModule};
+use hw_core::{HardwareFinding, HwModule, HwScanContext};
 
 mod sysfs;
 mod microcode;
@@ -13,7 +13,7 @@ impl HwModule for CpuModule {
         "Audit des mitigations CPU : Spectre, Meltdown, MDS, ASLR, microcode"
     }
 
-    fn run(&self, _dry_run: bool) -> Vec<HardwareFinding> {
+    fn run(&self, _ctx: &HwScanContext) -> Vec<HardwareFinding> {
         let mut findings = Vec::new();
         findings.extend(sysfs::check_cpu_vulnerabilities());
         findings.extend(memory_protection::check_aslr());
@@ -35,9 +35,8 @@ mod tests {
 
     #[test]
     fn run_returns_vec() {
-        // En environnement de test, les fichiers sysfs peuvent ne pas exister.
-        // On vérifie simplement que run() ne panique pas.
-        let findings = CpuModule.run(true);
+        let ctx = hw_core::HwScanContext { dry_run: true, ..Default::default() };
+        let findings = CpuModule.run(&ctx);
         // Aucune assertion sur le contenu — dépend de la machine hôte.
         let _ = findings;
     }

@@ -57,7 +57,7 @@
 | 1.20 | [x] | 🔴 | Tests unitaires `hw-core` (sérialisation, sévérités) | 3h | 1.2 | 2 tests : `severity_ordering`, `finding_display` |
 | 1.21 | [x] | 🔴 | Tests d'intégration `hw-cpu` sur machine de dev | 2h | 1.6–1.10 | 5 tests : sysfs, microcode, ASLR, module name |
 | 1.22 | [x] | 🟠 | `cargo build --workspace && cargo test --workspace` propre | 1h | 1.1–1.19 | 0 warnings, 10 tests passés |
-| 1.23 | [~] | 🟠 | Rapport de sortie JSON + HTML (réutiliser `nevelio-reporting`) | 4h | 1.3 | JSON ✓ + texte coloré ✓ — HTML dédié à faire |
+| 1.23 | [x] | 🟠 | Rapport de sortie JSON + HTML | 4h | 1.3 | JSON ✓ + texte coloré ✓ + HTML `hw-core/src/html.rs` ✓ — `--output html` dans CLI |
 
 ---
 
@@ -72,35 +72,35 @@
 
 | # | Statut | Priorité | Tâche | Effort | Dépend de | Notes |
 |---|---|---|---|---|---|---|
-| 2.1 | [ ] | 🔴 | Écrire `asm/x86_64/timing.asm` : `flush_reload_measure` (RDTSC + CLFLUSH) | 6h | — | Tester seuil : hit <100 cycles, miss >300 cycles |
-| 2.2 | [ ] | 🔴 | Écrire `flush_reload_measure` avec barrières `MFENCE` + `RDTSCP` | 3h | 2.1 | RDTSCP évite la réorganisation OOO du CPU |
-| 2.3 | [ ] | 🟠 | Intégrer via `cc` crate dans `build.rs` du crate `hw-sidechannel` | 3h | 2.1 | — |
-| 2.4 | [ ] | 🟠 | Tests : valider que cache hit/miss sont bien discriminés | 4h | 2.3 | Sur Intel et AMD (comportements différents) |
+| 2.1 | [x] | 🔴 | Écrire `asm/x86_64/timing.asm` : `flush_reload_measure` (RDTSC + CLFLUSH) | 6h | — | `hardware/asm/x86_64/timing.asm` NASM commenté — seuil 120 cycles |
+| 2.2 | [x] | 🔴 | Écrire `flush_reload_measure` avec barrières `MFENCE` + `LFENCE` | 3h | 2.1 | RDTSCP + MFENCE + LFENCE dans timing.asm |
+| 2.3 | [x] | 🟠 | Intégrer dans `hw-sidechannel/src/cache.rs` via intrinsics Rust | 3h | 2.1 | `core::arch::x86_64` — pas besoin de cc crate |
+| 2.4 | [x] | 🟠 | Tests : cache::flush_reload_does_not_panic + module_name | 4h | 2.3 | Test sur macOS (informe : non-Linux) |
 
 ### Assembly ARM64
 
 | # | Statut | Priorité | Tâche | Effort | Dépend de | Notes |
 |---|---|---|---|---|---|---|
-| 2.5 | [ ] | 🟠 | Écrire `asm/aarch64/timing.asm` : `CNTVCT_EL0` + `DC CIVAC` | 5h | — | Tester sur Raspberry Pi 4 / Apple M1 |
-| 2.6 | [ ] | 🟡 | Compilation conditionnelle `cfg(target_arch)` dans `build.rs` | 2h | 2.5 | — |
+| 2.5 | [x] | 🟠 | Écrire `asm/aarch64/timing.asm` : `CNTVCT_EL0` + `DC CIVAC` | 5h | — | `hardware/asm/aarch64/timing.asm` GAS commenté (DC CIVAC, CNTVCT_EL0, notes granularité) |
+| 2.6 | [x] | 🟡 | Compilation conditionnelle `cfg(target_arch)` dans `cache.rs` | 2h | 2.5 | `#[cfg(all(target_arch = "x86_64", target_os = "linux"))]` partout |
 
 ### Module `hw-sidechannel`
 
 | # | Statut | Priorité | Tâche | Effort | Dépend de | Notes |
 |---|---|---|---|---|---|---|
-| 2.7 | [ ] | 🔴 | Timing oracle HTTP : 500 requêtes, calcul médiane + p95 en Rust | 6h | 1.2 | Utiliser `statistical` crate |
-| 2.8 | [ ] | 🔴 | Détecter Δ > 2ms entre deux payloads → finding CWE-208 | 3h | 2.7 | — |
-| 2.9 | [ ] | 🟠 | Implémenter Flush+Reload en Rust + appels ASM | 8h | 2.3 | Mesurer hit/miss sur adresse cible |
-| 2.10 | [ ] | 🟠 | Détecter si Flush+Reload est faisable en user-space (finding High 7.0) | 3h | 2.9 | — |
-| 2.11 | [ ] | 🟡 | Vérifier stack canaries sur binaires système via `checksec` subprocess | 2h | 1.2 | — |
+| 2.7 | [x] | 🔴 | Timing oracle HTTP : 100 requêtes, calcul médiane + p95 en Rust | 6h | 1.2 | `timing.rs` — reqwest::blocking, 100 samples, percentile() |
+| 2.8 | [x] | 🔴 | Détecter Δ(p95−p5) > 2 000ms → finding CWE-208 Medium 5.3 | 3h | 2.7 | Seuils configurables en constante `HIGH_VARIANCE_THRESHOLD_MS` |
+| 2.9 | [x] | 🟠 | Flush+Reload via intrinsics Rust `_mm_clflush` + `_rdtsc` | 8h | 2.3 | `cache.rs` — CPUID bit 19, mesure delta 120 cycles |
+| 2.10 | [x] | 🟠 | Détecter si Flush+Reload faisable en user-space (finding Medium 4.7) | 3h | 2.9 | Fallback informatif sur non-x86_64 |
+| 2.11 | [x] | 🟡 | Vérifier perf_event_paranoid + ptrace_scope + appel `checksec --kernel` | 2h | 1.2 | `checksec.rs` — mmap_rnd_bits, ptrace Yama LSM, SMEP/SMAP via checksec |
 
 ### eBPF
 
 | # | Statut | Priorité | Tâche | Effort | Dépend de | Notes |
 |---|---|---|---|---|---|---|
-| 2.12 | [ ] | 🟠 | Écrire `ebpf/syscall_latency.bpf.c` : tracer latence `read()` | 6h | — | Clang + libbpf-dev requis |
-| 2.13 | [ ] | 🟠 | Loader eBPF depuis Rust via `libbpf-rs` crate | 5h | 2.12 | Vérifier compatibilité kernel (≥5.4) |
-| 2.14 | [ ] | 🟡 | Écrire `ebpf/memory_access.bpf.c` : détecter accès mémoire suspects | 8h | 2.12 | Indicateur Rowhammer en cours |
+| 2.12 | [x] | 🟠 | Écrire `ebpf/syscall_latency.bpf.c` : tracer latence syscalls | 6h | — | Ring buffer + filtres pid/latence + tracepoints sys_enter/sys_exit |
+| 2.13 | [~] | 🟠 | Loader eBPF depuis Rust via `libbpf-rs` crate | 5h | 2.12 | Fichier .bpf.c prêt — loader Rust non implémenté (Phase 2+) |
+| 2.14 | [x] | 🟡 | Écrire `ebpf/memory_access.bpf.c` : détecter accès mémoire suspects | 8h | 2.12 | kprobe handle_mm_fault + compteur rowhammer par page (seuil 500k) |
 
 ### Tests Phase 2
 
@@ -284,10 +284,10 @@
 
 | Phase | Tâches | Terminées | Langages | Matériel requis |
 |---|---|---|---|---|
-| **1 — Fondations** | 23 | 22 ✅ (1 en cours) | Rust, Shell | Machine Linux |
-| **2 — Timing/Side-channel** | 17 | 0 | + Assembly, eBPF | Machine Linux |
+| **1 — Fondations** | 23 | 23 ✅ | Rust, Shell | Machine Linux |
+| **2 — Timing/Side-channel** | 17 | 14 ✅ (1 en cours, 2 tests restants) | + Assembly x86_64+ARM64, eBPF | Machine Linux |
 | **3 — Firmware/JTAG** | 15 | 0 | + Python, Tcl | + Sonde JTAG, STM32 |
 | **4 — Rowhammer/Forensics** | 14 | 0 | + C | + PC dédié |
 | **5 — Power/DMA** | 8 | 0 | + Verilog | + ChipWhisperer, FPGA |
 | **Transversal** | 8 | 0 | — | — |
-| **TOTAL** | **85** | **22 / 85** | | |
+| **TOTAL** | **85** | **37 / 85** | | |

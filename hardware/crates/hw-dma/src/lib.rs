@@ -1,4 +1,4 @@
-use hw_core::{HardwareFinding, HwModule};
+use hw_core::{HardwareFinding, HwModule, HwScanContext};
 
 mod iommu;
 mod thunderbolt;
@@ -13,7 +13,7 @@ impl HwModule for DmaModule {
         "Audit de la surface d'attaque DMA : IOMMU, Thunderbolt, PCIe, kernel lockdown"
     }
 
-    fn run(&self, _dry_run: bool) -> Vec<HardwareFinding> {
+    fn run(&self, _ctx: &HwScanContext) -> Vec<HardwareFinding> {
         let mut findings = Vec::new();
         findings.extend(iommu::check_iommu());
         findings.extend(thunderbolt::check_thunderbolt());

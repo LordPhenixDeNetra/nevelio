@@ -4,6 +4,7 @@ members = [
     "crates/hw-cpu",
     "crates/hw-firmware",
     "crates/hw-dma",
+    "crates/hw-sidechannel",
     "crates/hw-cli",
 ]
 resolver = "2"
@@ -18,4 +19,5 @@ chrono      = { version = "0.4", features = ["serde"] }
 hw-core     = { path = "crates/hw-core" }
 hw-cpu      = { path = "crates/hw-cpu" }
 hw-firmware = { path = "crates/hw-firmware" }
-hw-dma      = { path = "crates/hw-dma" }
+hw-dma          = { path = "crates/hw-dma" }
+hw-sidechannel  = { path = "crates/hw-sidechannel" }

@@ -4,10 +4,11 @@ mod disclaimer;
 use anyhow::Result;
 use clap::{Parser, Subcommand, ValueEnum};
 use colored::Colorize;
-use hw_core::{HardwareFinding, HwModule, HwReport};
+use hw_core::{HardwareFinding, HwHtmlReporter, HwModule, HwReport, HwScanContext};
 use hw_cpu::CpuModule;
 use hw_dma::DmaModule;
 use hw_firmware::FirmwareModule;
+use hw_sidechannel::SideChannelModule;
 
 // ── CLI définition ────────────────────────────────────────────────────────────
 
@@ -51,10 +52,13 @@ enum Command {
         #[arg(long, default_value_t = true)]
         dry_run: bool,
 
-        /// Exécuter les checks actifs (flashrom, tests mémoire)
-        /// Annule --dry-run
+        /// Exécuter les checks actifs (flashrom, tests mémoire) — annule --dry-run
         #[arg(long, conflicts_with = "dry_run")]
         active: bool,
+
+        /// URL cible pour le module timing side-channel (ex: https://api.example.com)
+        #[arg(long)]
+        target: Option<String>,
     },
     /// Lister et inspecter les modules disponibles
     Modules {
@@ -75,6 +79,7 @@ enum ModulesAction {
 enum OutputFormat {
     Text,
     Json,
+    Html,
 }
 
 // ── Point d'entrée ────────────────────────────────────────────────────────────
@@ -85,12 +90,16 @@ fn main() -> Result<()> {
     match cli.command {
         Command::Modules { action } => handle_modules(action),
 
-        Command::Scan { modules, output, out_file, dry_run, active } => {
+        Command::Scan { modules, output, out_file, dry_run, active, target } => {
             if !cli.accept_legal {
                 disclaimer::show_and_confirm()?;
             }
-            let actually_dry_run = dry_run && !active;
-            handle_scan(modules, output, out_file, actually_dry_run, cli.verbose)
+            let ctx = HwScanContext {
+                dry_run: dry_run && !active,
+                target,
+                verbose: cli.verbose,
+            };
+            handle_scan(modules, output, out_file, ctx)
         }
     }
 }
@@ -101,13 +110,13 @@ fn handle_scan(
     module_filter: Option<Vec<String>>,
     format:        OutputFormat,
     out_file:      Option<String>,
-    dry_run:       bool,
-    verbose:       bool,
+    ctx:           HwScanContext,
 ) -> Result<()> {
     let all_modules: Vec<Box<dyn HwModule>> = vec![
         Box::new(CpuModule),
         Box::new(FirmwareModule),
         Box::new(DmaModule),
+        Box::new(SideChannelModule),
     ];
 
     let modules: Vec<&Box<dyn HwModule>> = match &module_filter {
@@ -117,11 +126,14 @@ fn handle_scan(
             .collect(),
     };
 
-    if dry_run {
+    if ctx.dry_run {
         eprintln!(
             "{}  Mode --dry-run actif : les checks destructifs (flashrom, tests mémoire) sont désactivés.",
             "[!]".yellow()
         );
+    }
+    if let Some(t) = &ctx.target {
+        eprintln!("  {}  Cible timing oracle : {}", "→".dimmed(), t.cyan());
     }
 
     eprintln!();
@@ -131,17 +143,16 @@ fn handle_scan(
     let mut all_findings: Vec<HardwareFinding> = Vec::new();
 
     for module in &modules {
-        if verbose {
+        if ctx.verbose {
             eprint!("  {}  {}…", "·".dimmed(), module.name());
         }
-        let findings = module.run(dry_run);
-        if verbose {
+        let findings = module.run(&ctx);
+        if ctx.verbose {
             eprintln!(" {} finding(s)", findings.len());
         }
         all_findings.extend(findings);
     }
 
-    // Trier par sévérité décroissante
     all_findings.sort_by(|a, b| b.severity.cmp(&a.severity));
 
     let report = HwReport::build(all_findings);
@@ -149,6 +160,7 @@ fn handle_scan(
     let rendered = match format {
         OutputFormat::Json => report.to_json(),
         OutputFormat::Text => output::render_text(&report),
+        OutputFormat::Html => HwHtmlReporter::generate(&report),
     };
 
     match out_file {
@@ -169,6 +181,7 @@ fn handle_modules(action: ModulesAction) -> Result<()> {
         Box::new(CpuModule),
         Box::new(FirmwareModule),
         Box::new(DmaModule),
+        Box::new(SideChannelModule),
     ];
 
     match action {
@@ -176,7 +189,7 @@ fn handle_modules(action: ModulesAction) -> Result<()> {
             println!("\n  {} Modules disponibles :\n", "⚙".cyan());
             for m in &all_modules {
                 println!(
-                    "  {:16} — {}",
+                    "  {:20} — {}",
                     m.name().bold(),
                     m.description()
                 );

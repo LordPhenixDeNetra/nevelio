@@ -2,7 +2,22 @@ use serde::{Deserialize, Serialize};
 use std::fmt;
 
 mod report;
+mod html;
 pub use report::{HwReport, HwSummary};
+pub use html::HwHtmlReporter;
+
+// ── Contexte de scan ──────────────────────────────────────────────────────────
+
+/// Paramètres passés à chaque module lors d'un scan.
+#[derive(Debug, Clone, Default)]
+pub struct HwScanContext {
+    /// Ne pas lancer les checks destructifs (flashrom, rowhammer, etc.)
+    pub dry_run: bool,
+    /// URL cible optionnelle (utilisée par hw-sidechannel pour le timing oracle)
+    pub target: Option<String>,
+    /// Affichage détaillé
+    pub verbose: bool,
+}
 
 // ── Sévérité ──────────────────────────────────────────────────────────────────
 
@@ -71,13 +86,12 @@ impl HardwareFinding {
 pub trait HwModule: Send + Sync {
     fn name(&self)        -> &'static str;
     fn description(&self) -> &'static str;
-    fn run(&self, dry_run: bool) -> Vec<HardwareFinding>;
+    fn run(&self, ctx: &HwScanContext) -> Vec<HardwareFinding>;
 }
 
 // ── Helpers subprocess ────────────────────────────────────────────────────────
 
-/// Exécute une commande et retourne sa sortie stdout sous forme de String.
-/// Retourne None si la commande n'est pas disponible ou échoue.
+/// Exécute une commande et retourne sa sortie stdout.
 pub fn run_command(program: &str, args: &[&str]) -> Option<String> {
     std::process::Command::new(program)
         .args(args)
@@ -115,5 +129,12 @@ mod tests {
         );
         assert_eq!(f.severity.to_string(), "CRITICAL");
         assert_eq!(f.cwe, Some(1342));
+    }
+
+    #[test]
+    fn scan_context_defaults() {
+        let ctx = HwScanContext::default();
+        assert!(!ctx.dry_run);
+        assert!(ctx.target.is_none());
     }
 }
