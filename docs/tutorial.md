@@ -5,7 +5,7 @@
 > authentification, injection, contrôle d'accès, infrastructure, logique métier,
 > XXE, SSRF, OAuth2, Prototype Pollution et bien plus.
 >
-> **Version couverte : v0.6.0** — 10 modules, 163 tests, scripting Rhai, intégrations Slack/GitHub/Jira.
+> **Version couverte : v0.6.0** — 13 modules, 180 tests, scripting Rhai, intégrations Slack/GitHub/Jira.
 
 ---
 
@@ -292,7 +292,8 @@ nevelio scan --target https://api.example.com \
 ```
 
 Noms de modules disponibles : `auth`, `injection`, `access-control`,
-`graphql`, `infra`, `business-logic`, `xxe`, `ssrf`, `oauth2`, `prototype-pollution`.
+`graphql`, `infra`, `business-logic`, `xxe`, `ssrf`, `oauth2`, `prototype-pollution`,
+`websocket`, `grpc`, `soap`.
 
 ### 4.4 Contrôle réseau fin
 
@@ -1002,12 +1003,19 @@ nevelio modules list
 Sortie :
 ```
 Modules disponibles :
-  auth           — Authentification et gestion des sessions (5 vérifications)
-  injection      — Injection SQL, NoSQL, SSTI, Command (4 vérifications)
-  access-control — IDOR, BFLA, mass assignment (5 vérifications)
-  graphql        — Introspection, field suggestions, depth DoS (3 vérifications)
-  infra          — Headers, CORS, debug endpoints, TLS (11 vérifications)
-  business-logic — Rate limiting, race condition, logique métier (4+ vérifications)
+  auth                — Authentification et gestion des sessions (5 vérifications)
+  injection           — Injection SQL, NoSQL, SSTI, Command, XXE (9 vérifications)
+  access-control      — IDOR, BFLA, mass assignment (5 vérifications)
+  graphql             — Introspection, field suggestions, depth DoS (3 vérifications)
+  infra               — Headers, CORS, debug endpoints, TLS (11 vérifications)
+  business-logic      — Rate limiting, race condition, logique métier (4+ vérifications)
+  xxe                 — XML External Entity Injection in-band et out-of-band (2 vérifications)
+  ssrf                — Server-Side Request Forgery, bypass techniques (3 vérifications)
+  oauth2              — Open redirect, PKCE, token leakage, scope creep (4 vérifications)
+  prototype-pollution — JSON body et query string pollution (2 vérifications)
+  websocket           — Origin, auth handshake, injection, rate limiting (4 vérifications)
+  grpc                — Réflexion, plaintext, health check, métadonnées (4 vérifications)
+  soap                — WSDL disclosure, XXE, SQLi, WS-Security (4 vérifications)
 ```
 
 ### Détail d'un module
@@ -1019,6 +1027,12 @@ nevelio modules show access-control
 nevelio modules show graphql
 nevelio modules show infra
 nevelio modules show business-logic
+nevelio modules show ssrf
+nevelio modules show oauth2
+nevelio modules show prototype-pollution
+nevelio modules show websocket
+nevelio modules show grpc
+nevelio modules show soap
 ```
 
 ---
@@ -1411,6 +1425,124 @@ de l'application (code 200 sur un endpoint d'admin).
 #### Query String Pollution
 
 Injecte via les paramètres GET : `?__proto__[admin]=true&constructor[prototype][admin]=true`.
+
+---
+
+### 6.11 Module `websocket` — WebSocket
+
+```bash
+nevelio scan --target https://api.example.com --module websocket --accept-legal
+```
+
+Nevelio détecte automatiquement les endpoints WebSocket courants (`/ws`, `/websocket`,
+`/socket.io/`, `/stream`, `/events`, etc.) et les endpoints marqués comme tels dans la spec.
+
+#### Validation d'Origin — CWE-346
+
+Envoie un handshake WebSocket avec un header `Origin: https://evil.example.com`.
+Si la connexion réussit, le serveur n'applique pas de liste blanche d'origines autorisées —
+n'importe quel site tiers peut ouvrir une connexion WebSocket au nom d'un utilisateur authentifié.
+
+#### Handshake sans authentification — CWE-306
+
+Tente une connexion WebSocket sans header `Authorization` ni token de session.
+Un succès indique que des utilisateurs non authentifiés peuvent interagir avec le service.
+
+#### Injection dans les messages (XSS, SQLi, SSTI) — CWE-79
+
+Envoie des payloads via WebSocket et analyse les réponses :
+
+```json
+{"msg": "<script>alert(1)</script>"}
+{"query": "' OR '1'='1"}
+{"input": "{{7*7}}"}
+```
+
+Si le serveur réfléchit le payload non filtré, un attaquant peut déclencher du XSS,
+de l'injection SQL, ou de l'exécution de template côté serveur.
+
+#### Rate Limiting sur les connexions — CWE-770
+
+Ouvre 10 connexions WebSocket consécutives. Si toutes réussissent sans aucun rejet,
+l'absence de rate limiting expose le service à l'épuisement de ressources ou au brute force.
+
+---
+
+### 6.12 Module `grpc` — gRPC / Protobuf
+
+```bash
+nevelio scan --target https://api.example.com --module grpc --accept-legal
+```
+
+#### gRPC en clair (sans TLS) — CWE-319
+
+Tente d'envoyer une requête gRPC sur `http://` (sans TLS). Un serveur répondant avec
+`content-type: application/grpc` confirme que les payloads Protobuf et les métadonnées
+d'authentification transitent en clair.
+
+#### Réflexion gRPC exposée — CWE-200
+
+Envoie une requête `ServerReflection/ServerReflectionInfo` sans authentification.
+Si le serveur répond avec `grpc-status: 0`, l'API de réflexion est active — équivalent
+de l'introspection GraphQL : un attaquant peut énumérer tous les services et méthodes Protobuf.
+
+```
+/grpc.reflection.v1alpha.ServerReflection/ServerReflectionInfo
+```
+
+#### Health Check sans authentification — CWE-200
+
+Appelle `Health/Check` sans header `Authorization`. Une réponse positive expose l'état
+des dépendances internes (bases de données, services tiers) à un attaquant non authentifié.
+
+#### Appels RPC sans vérification d'authentification — CWE-306
+
+Teste des chemins RPC courants (`/api.UserService/GetUser`, `/api.v1.AdminService/ListUsers`)
+sans token. Si le serveur répond `grpc-status: 0` (OK) ou `12` (UNIMPLEMENTED) au lieu de
+`16` (UNAUTHENTICATED) ou `7` (PERMISSION_DENIED), l'authentification n'est pas appliquée.
+
+---
+
+### 6.13 Module `soap` — SOAP / WSDL
+
+```bash
+nevelio scan --target https://api.example.com --module soap --accept-legal
+```
+
+Nevelio détecte les endpoints SOAP via leur chemin (`.asmx`, `.svc`, `/soap/`, `/rpc/`, etc.)
+et teste les suffixes WSDL courants (`?wsdl`, `?WSDL`, `.wsdl`).
+
+#### WSDL exposé publiquement — CWE-200
+
+Vérifie si le WSDL est accessible sans authentification. La présence des balises
+`<wsdl:definitions>`, `<portType>`, `<types>` confirme que la structure complète du
+service (opérations, types de données) est lisible par n'importe qui.
+
+#### XXE dans les enveloppes SOAP — CWE-611
+
+Injecte une entité XML externe dans le body SOAP :
+
+```xml
+<?xml version="1.0"?>
+<!DOCTYPE foo [<!ENTITY xxe SYSTEM "file:///etc/passwd">]>
+<soapenv:Envelope>
+  <soapenv:Body><data>&xxe;</data></soapenv:Body>
+</soapenv:Envelope>
+```
+
+La présence de `root:`, `/bin/bash` ou `nobody:` dans la réponse confirme la lecture
+du fichier `/etc/passwd`.
+
+#### Injection SQL dans les paramètres SOAP — CWE-89
+
+Injecte `' OR '1'='1' --` dans un champ du body SOAP et détecte les messages d'erreur SQL
+(`SQL syntax`, `ORA-`, `pg_query`, `SQLSTATE`).
+
+#### Absence de WS-Security — CWE-306
+
+Envoie une enveloppe SOAP anonyme (sans header WS-Security, UsernameToken ou SAML).
+Un code de réponse HTTP 200 avec un body SOAP valide indique que le service accepte
+les requêtes non authentifiées.
 
 ---
 

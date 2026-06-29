@@ -147,7 +147,7 @@ Réservé à la recherche en environnement contrôlé.
 
 ## Bilan — Ce que Nevelio couvre déjà vs ce qui reste
 
-| Capacité | Nevelio v0.1 | Extension envisagée |
+| Capacité | Nevelio v0.6 | Extension envisagée |
 |---|---|---|
 | Timing HTTP (SQLi, CMDi time-based) | ✅ | — |
 | Automation d'attaques applicatives | ✅ | — |
