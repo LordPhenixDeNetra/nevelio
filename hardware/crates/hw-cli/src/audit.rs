@@ -1,3 +1,4 @@
+use rust_i18n::t;
 use sha2::{Digest, Sha256};
 use std::fmt::Write as FmtWrite;
 
@@ -63,9 +64,9 @@ impl AuditLogger {
     /// Sauvegarde le journal dans le fichier configuré.
     pub fn save(&self) -> std::io::Result<()> {
         let mut buf = String::new();
-        writeln!(buf, "# Nevelio Hardware Security — Journal d'audit").ok();
-        writeln!(buf, "# Chaque entrée contient SHA-256(entrée_précédente || données)").ok();
-        writeln!(buf, "# Format : TIMESTAMP|ACTION|FINDINGS|MAX_SEVERITY|ELAPSED_MS|HASH").ok();
+        writeln!(buf, "{}", t!("audit.header_title")).ok();
+        writeln!(buf, "{}", t!("audit.header_chain")).ok();
+        writeln!(buf, "{}", t!("audit.header_format")).ok();
         writeln!(buf, "# ---").ok();
         for e in &self.entries {
             writeln!(

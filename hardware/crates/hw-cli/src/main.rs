@@ -13,57 +13,64 @@ use hw_jtag::JtagModule;
 use hw_memory::MemoryModule;
 use hw_sidechannel::SideChannelModule;
 
+rust_i18n::i18n!("locales", fallback = "fr");
+use rust_i18n::t;
+
 // ── CLI définition ────────────────────────────────────────────────────────────
 
 #[derive(Parser)]
 #[command(
     name    = "nevelio-hw",
     version = "0.1.0",
-    about   = "Nevelio Hardware Security — audit de sécurité matérielle",
+    about   = "Nevelio Hardware Security — hardware security audit",
     long_about = None,
 )]
 struct Cli {
     #[command(subcommand)]
     command: Command,
 
-    /// Accepter le disclaimer légal sans prompt interactif
+    /// Accept the legal disclaimer without interactive prompt
     #[arg(long, global = true)]
     accept_legal: bool,
 
-    /// Mode verbose : affiche les détails de chaque check
+    /// Verbose mode: show details for each check
     #[arg(long, short, global = true)]
     verbose: bool,
+
+    /// Language override: fr, en, es (default: auto-detect from NEVELIO_LANG / $LANG)
+    #[arg(long, global = true)]
+    lang: Option<String>,
 }
 
 #[derive(Subcommand)]
 enum Command {
-    /// Lancer un audit hardware
+    /// Run a hardware audit
     Scan {
-        /// Modules à exécuter (défaut : tous)
+        /// Modules to run (default: all)
         #[arg(long, value_delimiter = ',')]
         modules: Option<Vec<String>>,
 
-        /// Format de sortie
+        /// Output format
         #[arg(long, default_value = "text")]
         output: OutputFormat,
 
-        /// Chemin du fichier de sortie (défaut : stdout)
+        /// Output file path (default: stdout)
         #[arg(long)]
         out_file: Option<String>,
 
-        /// Mode simulation — ne lance pas les checks actifs (flashrom, etc.)
+        /// Simulation mode — skip destructive active checks (flashrom, etc.)
         #[arg(long, default_value_t = true)]
         dry_run: bool,
 
-        /// Exécuter les checks actifs (flashrom, tests mémoire) — annule --dry-run
+        /// Run active checks (flashrom, memory tests) — overrides --dry-run
         #[arg(long, conflicts_with = "dry_run")]
         active: bool,
 
-        /// URL cible pour le module timing side-channel (ex: https://api.example.com)
+        /// Target URL for the timing side-channel module (e.g. https://api.example.com)
         #[arg(long)]
         target: Option<String>,
     },
-    /// Lister et inspecter les modules disponibles
+    /// List and inspect available modules
     Modules {
         #[command(subcommand)]
         action: ModulesAction,
@@ -72,9 +79,9 @@ enum Command {
 
 #[derive(Subcommand)]
 enum ModulesAction {
-    /// Lister tous les modules
+    /// List all modules
     List,
-    /// Afficher le détail d'un module
+    /// Show details of a module
     Show { name: String },
 }
 
@@ -82,7 +89,7 @@ enum ModulesAction {
 enum OutputFormat {
     Text,
     Json,
-    /// JSON compatible avec le format de rapport Nevelio principal
+    /// JSON compatible with the main Nevelio report format
     NevelioJson,
     Html,
 }
@@ -91,6 +98,11 @@ enum OutputFormat {
 
 fn main() -> Result<()> {
     let cli = Cli::parse();
+
+    let lang = cli.lang.as_deref()
+        .map(detect_lang_from_str)
+        .unwrap_or_else(detect_lang_from_env);
+    rust_i18n::set_locale(lang);
 
     match cli.command {
         Command::Modules { action } => handle_modules(action),
@@ -107,6 +119,25 @@ fn main() -> Result<()> {
             handle_scan(modules, output, out_file, ctx, cli.verbose)
         }
     }
+}
+
+fn detect_lang_from_str(s: &str) -> &'static str {
+    match s.to_lowercase().as_str() {
+        "en" | "english" => "en",
+        "es" | "spanish" | "español" => "es",
+        _ => "fr",
+    }
+}
+
+fn detect_lang_from_env() -> &'static str {
+    if let Ok(l) = std::env::var("NEVELIO_LANG") {
+        return detect_lang_from_str(&l);
+    }
+    if let Ok(l) = std::env::var("LANG") {
+        if l.starts_with("en") { return "en"; }
+        if l.starts_with("es") { return "es"; }
+    }
+    "fr"
 }
 
 // ── Scan ──────────────────────────────────────────────────────────────────────
@@ -135,18 +166,15 @@ fn handle_scan(
     };
 
     if ctx.dry_run {
-        eprintln!(
-            "{}  Mode --dry-run actif : les checks destructifs (flashrom, tests mémoire) sont désactivés.",
-            "[!]".yellow()
-        );
+        eprintln!("{}  {}", "[!]".yellow(), t!("cli.dry_run_warning"));
     }
     if let Some(t) = &ctx.target {
-        eprintln!("  {}  Cible timing oracle : {}", "→".dimmed(), t.cyan());
+        eprintln!("  {}  {} : {}", "→".dimmed(), t!("cli.target_label"), t.cyan());
     }
 
     eprintln!();
-    eprintln!("  {}  Nevelio Hardware Security v0.1.0", "⚙".cyan());
-    eprintln!("  {}  {} module(s) sélectionné(s)\n", "→".dimmed(), modules.len());
+    eprintln!("  {}  {}", "⚙".cyan(), t!("cli.banner"));
+    eprintln!("  {}  {} {}\n", "→".dimmed(), modules.len(), t!("cli.modules_selected"));
 
     let log_path = audit::default_log_path();
     let mut auditor = audit::AuditLogger::new(&log_path);
@@ -164,16 +192,16 @@ fn handle_scan(
         let max_sev = findings.iter()
             .map(|f| f.severity.to_string())
             .max_by_key(|s| match s.as_str() {
-                "CRITICAL"    => 4,
-                "HIGH"        => 3,
-                "MEDIUM"      => 2,
-                "LOW"         => 1,
-                _             => 0,
+                "CRITICAL" => 4,
+                "HIGH"     => 3,
+                "MEDIUM"   => 2,
+                "LOW"      => 1,
+                _          => 0,
             })
             .unwrap_or_else(|| "NONE".into());
 
         if verbose {
-            eprintln!(" {} finding(s) [{} ms]", findings.len(), elapsed);
+            eprintln!(" {}", t!("cli.findings_elapsed", elapsed = elapsed.to_string(), count = findings.len().to_string()));
         }
 
         auditor.record(
@@ -190,7 +218,6 @@ fn handle_scan(
 
     let report = HwReport::build(all_findings);
 
-    // Enregistrer le scan complet dans le journal d'audit
     auditor.record(
         format!("scan:complete dry_run={}", ctx.dry_run),
         report.summary.total,
@@ -200,24 +227,23 @@ fn handle_scan(
         0,
     );
 
-    // Sauvegarder le journal (non bloquant en cas d'erreur)
     if let Err(e) = auditor.save() {
-        eprintln!("  {}  Journal d'audit non sauvegardé : {}", "!".yellow(), e);
+        eprintln!("  {}  {} : {}", "!".yellow(), t!("cli.audit_save_error"), e);
     } else if verbose {
-        eprintln!("  {}  Journal d'audit : {}", "✓".green(), log_path.cyan());
+        eprintln!("  {}  {} : {}", "✓".green(), t!("cli.audit_saved"), log_path.cyan());
     }
 
     let rendered = match format {
-        OutputFormat::Json       => report.to_json(),
+        OutputFormat::Json        => report.to_json(),
         OutputFormat::NevelioJson => report.to_nevelio_json(),
-        OutputFormat::Text       => output::render_text(&report),
-        OutputFormat::Html       => HwHtmlReporter::generate(&report),
+        OutputFormat::Text        => output::render_text(&report),
+        OutputFormat::Html        => HwHtmlReporter::generate(&report),
     };
 
     match out_file {
         Some(path) => {
             std::fs::write(&path, &rendered)?;
-            eprintln!("\n  {}  Rapport écrit dans {}", "✓".green(), path.cyan());
+            eprintln!("\n  {}  {} {}", "✓".green(), t!("cli.report_written"), path.cyan());
         }
         None => println!("{}", rendered),
     }
@@ -239,26 +265,22 @@ fn handle_modules(action: ModulesAction) -> Result<()> {
 
     match action {
         ModulesAction::List => {
-            println!("\n  {} Modules disponibles :\n", "⚙".cyan());
+            println!("\n  {} {} :\n", "⚙".cyan(), t!("cli.modules_available"));
             for m in &all_modules {
-                println!(
-                    "  {:20} — {}",
-                    m.name().bold(),
-                    m.description()
-                );
+                println!("  {:20} — {}", m.name().bold(), m.description());
             }
             println!();
         }
         ModulesAction::Show { name } => {
-            let found = all_modules.iter().find(|m| m.name().contains(&name));
-            match found {
+            match all_modules.iter().find(|m| m.name().contains(&name)) {
                 Some(m) => {
                     println!("\n  {}  {}", "⚙".cyan(), m.name().bold());
                     println!("  {}\n", m.description());
                 }
                 None => {
-                    eprintln!("  {} Module '{}' introuvable.", "✗".red(), name);
-                    eprintln!("  Modules disponibles : {}",
+                    eprintln!("  {}  {}", "✗".red(), t!("cli.module_not_found", name = name));
+                    eprintln!("  {} : {}",
+                        t!("cli.modules_list_hint"),
                         all_modules.iter().map(|m| m.name()).collect::<Vec<_>>().join(", "));
                 }
             }

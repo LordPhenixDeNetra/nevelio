@@ -524,3 +524,8 @@ git push && git push --tags
 ---
 
 *Dernière mise à jour : 2026-06-28 — v0.9.0 ✅ livrée — toutes les features v0.1→v0.8 complètes*
+
+
+
+
+Ou se trouve "NEVELIO_LANG=en (variable d'environnement)"

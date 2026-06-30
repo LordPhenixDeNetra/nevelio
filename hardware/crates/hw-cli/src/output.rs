@@ -1,19 +1,29 @@
 use colored::Colorize;
 use hw_core::{HwReport, HwSeverity};
+use rust_i18n::t;
 
 pub fn render_text(report: &HwReport) -> String {
     let mut out = String::new();
 
     out.push_str(&format!(
-        "\n  {} Nevelio Hardware Security — Rapport d'audit\n",
-        "⚙".cyan()
+        "\n  {} {}\n",
+        "⚙".cyan(),
+        t!("output.report_title")
     ));
-    out.push_str(&format!("  {} Hôte       : {}\n", "·".dimmed(), report.hostname));
-    out.push_str(&format!("  {} Généré le  : {}\n", "·".dimmed(), report.generated_at));
     out.push_str(&format!(
-        "  {} Résumé    : {} findings  [{} CRIT  {} HIGH  {} MED  {} LOW]\n\n",
+        "  {} {:<13}: {}\n",
+        "·".dimmed(), t!("output.host_label"), report.hostname
+    ));
+    out.push_str(&format!(
+        "  {} {:<13}: {}\n",
+        "·".dimmed(), t!("output.generated_label"), report.generated_at
+    ));
+    out.push_str(&format!(
+        "  {} {:<13}: {} {}  [{} CRIT  {} HIGH  {} MED  {} LOW]\n\n",
         "·".dimmed(),
+        t!("output.summary_label"),
         report.summary.total.to_string().bold(),
+        t!("output.findings_word"),
         colorize_count(report.summary.critical, HwSeverity::Critical),
         colorize_count(report.summary.high,     HwSeverity::High),
         colorize_count(report.summary.medium,   HwSeverity::Medium),
@@ -22,8 +32,9 @@ pub fn render_text(report: &HwReport) -> String {
 
     if report.findings.is_empty() {
         out.push_str(&format!(
-            "  {}  Aucun finding détecté. Le système semble correctement configuré.\n\n",
-            "✓".green()
+            "  {}  {}\n\n",
+            "✓".green(),
+            t!("output.no_findings")
         ));
         return out;
     }
@@ -32,22 +43,28 @@ pub fn render_text(report: &HwReport) -> String {
 
     for (i, f) in report.findings.iter().enumerate() {
         let sev_badge = severity_badge(&f.severity);
-        let cwe_str = f.cwe.map(|c| format!(" CWE-{}", c)).unwrap_or_default();
+        let cwe_str  = f.cwe.map(|c| format!(" CWE-{}", c)).unwrap_or_default();
         let cvss_str = f.cvss.map(|v| format!(" CVSS {:.1}", v)).unwrap_or_default();
 
         out.push_str(&format!(
             "  [{:>3}] {}{}{}  {}\n",
-            i + 1,
-            sev_badge,
-            cwe_str.dimmed(),
-            cvss_str.dimmed(),
+            i + 1, sev_badge,
+            cwe_str.dimmed(), cvss_str.dimmed(),
             f.title.bold()
         ));
-        out.push_str(&format!("        Module    : {}\n", f.module.cyan()));
-        out.push_str(&format!("        Détail    : {}\n", wrap_text(&f.description, 66, 20)));
-        out.push_str(&format!("        Evidence  : {}\n", wrap_text(&f.evidence, 66, 20).dimmed()));
         out.push_str(&format!(
-            "        Remédiation : {}\n\n",
+            "        {:<13}: {}\n", t!("output.field_module"), f.module.cyan()
+        ));
+        out.push_str(&format!(
+            "        {:<13}: {}\n", t!("output.field_detail"),
+            wrap_text(&f.description, 66, 22)
+        ));
+        out.push_str(&format!(
+            "        {:<13}: {}\n", t!("output.field_evidence"),
+            wrap_text(&f.evidence, 66, 22).dimmed()
+        ));
+        out.push_str(&format!(
+            "        {:<13}: {}\n\n", t!("output.field_remediation"),
             wrap_text(&f.remediation, 66, 22).yellow()
         ));
     }
@@ -68,9 +85,7 @@ fn severity_badge(sev: &HwSeverity) -> colored::ColoredString {
 
 fn colorize_count(count: usize, sev: HwSeverity) -> colored::ColoredString {
     let s = count.to_string();
-    if count == 0 {
-        return s.dimmed();
-    }
+    if count == 0 { return s.dimmed(); }
     match sev {
         HwSeverity::Critical => s.red().bold(),
         HwSeverity::High     => s.red(),
@@ -81,9 +96,7 @@ fn colorize_count(count: usize, sev: HwSeverity) -> colored::ColoredString {
 }
 
 fn wrap_text(text: &str, width: usize, indent: usize) -> String {
-    if text.len() <= width {
-        return text.to_string();
-    }
+    if text.len() <= width { return text.to_string(); }
     let pad = " ".repeat(indent);
     let mut result = String::new();
     let mut line_len = 0;

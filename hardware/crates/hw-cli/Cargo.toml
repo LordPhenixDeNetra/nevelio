@@ -21,3 +21,4 @@ serde_json  = { workspace = true }
 anyhow      = { workspace = true }
 chrono      = { workspace = true }
 sha2        = "0.10"
+rust-i18n   = { workspace = true }

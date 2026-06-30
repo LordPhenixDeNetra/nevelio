@@ -1,0 +1,47 @@
+_version: 2
+
+cli:
+  dry_run_warning: "--dry-run mode active: destructive checks (flashrom, memory tests) are disabled."
+  target_label: "Timing oracle target"
+  banner: "Nevelio Hardware Security v0.1.0"
+  modules_selected: "module(s) selected"
+  findings_elapsed: "%{count} finding(s) [%{elapsed} ms]"
+  audit_save_error: "Audit log not saved"
+  audit_saved: "Audit log"
+  report_written: "Report written to"
+  modules_available: "Available modules"
+  module_not_found: "Module '%{name}' not found."
+  modules_list_hint: "Available modules"
+
+output:
+  report_title: "Nevelio Hardware Security — Audit Report"
+  host_label: "Host"
+  generated_label: "Generated at"
+  summary_label: "Summary"
+  findings_word: "findings"
+  no_findings: "No findings detected. The system appears to be correctly configured."
+  field_module: "Module"
+  field_detail: "Detail"
+  field_evidence: "Evidence"
+  field_remediation: "Remediation"
+
+disclaimer:
+  title: "LEGAL DISCLAIMER — Nevelio Hardware Security"
+  active_word: "active"
+  intro: "This tool performs %{kind} security tests on the local system's hardware and firmware."
+  usage_title: "Authorised use only:"
+  usage_1: "On hardware you own"
+  usage_2: "With explicit written authorisation (pentest contract)"
+  usage_3: "In an isolated laboratory environment"
+  legal_title: "Legal framework:"
+  legal_fr: "France  : Articles 323-1 to 323-8 of the Penal Code"
+  legal_eu: "EU      : NIS2 Directive + GDPR"
+  legal_us: "USA     : Computer Fraud and Abuse Act (CFAA)"
+  confirm_prompt: "Type %{yes} to continue or %{cancel} to abort:"
+  confirm_word: "yes"
+  rejected: "Disclaimer not accepted — aborting."
+
+audit:
+  header_title: "# Nevelio Hardware Security — Audit log"
+  header_chain: "# Each entry contains SHA-256(previous_entry || data)"
+  header_format: "# Format: TIMESTAMP|ACTION|FINDINGS|MAX_SEVERITY|ELAPSED_MS|HASH"

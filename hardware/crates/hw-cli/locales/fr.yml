@@ -1,0 +1,47 @@
+_version: 2
+
+cli:
+  dry_run_warning: "Mode --dry-run actif : les checks destructifs (flashrom, tests mémoire) sont désactivés."
+  target_label: "Cible timing oracle"
+  banner: "Nevelio Hardware Security v0.1.0"
+  modules_selected: "module(s) sélectionné(s)"
+  findings_elapsed: "%{count} finding(s) [%{elapsed} ms]"
+  audit_save_error: "Journal d'audit non sauvegardé"
+  audit_saved: "Journal d'audit"
+  report_written: "Rapport écrit dans"
+  modules_available: "Modules disponibles"
+  module_not_found: "Module '%{name}' introuvable."
+  modules_list_hint: "Modules disponibles"
+
+output:
+  report_title: "Nevelio Hardware Security — Rapport d'audit"
+  host_label: "Hôte"
+  generated_label: "Généré le"
+  summary_label: "Résumé"
+  findings_word: "findings"
+  no_findings: "Aucun finding détecté. Le système semble correctement configuré."
+  field_module: "Module"
+  field_detail: "Détail"
+  field_evidence: "Evidence"
+  field_remediation: "Remédiation"
+
+disclaimer:
+  title: "AVERTISSEMENT LÉGAL — Nevelio Hardware Security"
+  active_word: "actifs"
+  intro: "Cet outil effectue des tests de sécurité %{kind} sur le hardware et le firmware du système local."
+  usage_title: "Utilisation autorisée uniquement :"
+  usage_1: "Sur du matériel dont vous êtes propriétaire"
+  usage_2: "Avec une autorisation écrite explicite (contrat de pentest)"
+  usage_3: "Dans un environnement de laboratoire isolé"
+  legal_title: "Cadre légal :"
+  legal_fr: "France  : Articles 323-1 à 323-8 du Code Pénal"
+  legal_eu: "UE      : Directive NIS2 + RGPD"
+  legal_us: "USA     : Computer Fraud and Abuse Act (CFAA)"
+  confirm_prompt: "Tapez %{yes} pour continuer ou %{cancel} pour annuler :"
+  confirm_word: "oui"
+  rejected: "Disclaimer non accepté — abandon."
+
+audit:
+  header_title: "# Nevelio Hardware Security — Audit log"
+  header_chain: "# Each entry contains SHA-256(previous_entry || data)"
+  header_format: "# Format: TIMESTAMP|ACTION|FINDINGS|MAX_SEVERITY|ELAPSED_MS|HASH"

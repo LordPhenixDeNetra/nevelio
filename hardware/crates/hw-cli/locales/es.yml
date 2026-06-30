@@ -1,0 +1,47 @@
+_version: 2
+
+cli:
+  dry_run_warning: "Modo --dry-run activo: las comprobaciones destructivas (flashrom, tests de memoria) están desactivadas."
+  target_label: "Objetivo del oráculo de timing"
+  banner: "Nevelio Hardware Security v0.1.0"
+  modules_selected: "módulo(s) seleccionado(s)"
+  findings_elapsed: "%{count} hallazgo(s) [%{elapsed} ms]"
+  audit_save_error: "Registro de auditoría no guardado"
+  audit_saved: "Registro de auditoría"
+  report_written: "Informe escrito en"
+  modules_available: "Módulos disponibles"
+  module_not_found: "Módulo '%{name}' no encontrado."
+  modules_list_hint: "Módulos disponibles"
+
+output:
+  report_title: "Nevelio Hardware Security — Informe de auditoría"
+  host_label: "Host"
+  generated_label: "Generado el"
+  summary_label: "Resumen"
+  findings_word: "hallazgos"
+  no_findings: "No se detectaron hallazgos. El sistema parece estar correctamente configurado."
+  field_module: "Módulo"
+  field_detail: "Detalle"
+  field_evidence: "Evidencia"
+  field_remediation: "Remediación"
+
+disclaimer:
+  title: "AVISO LEGAL — Nevelio Hardware Security"
+  active_word: "activas"
+  intro: "Esta herramienta realiza pruebas de seguridad %{kind} en el hardware y firmware del sistema local."
+  usage_title: "Uso autorizado únicamente:"
+  usage_1: "En hardware de su propiedad"
+  usage_2: "Con autorización escrita explícita (contrato de pentest)"
+  usage_3: "En un entorno de laboratorio aislado"
+  legal_title: "Marco legal:"
+  legal_fr: "Francia : Artículos 323-1 a 323-8 del Código Penal"
+  legal_eu: "UE      : Directiva NIS2 + RGPD"
+  legal_us: "EE.UU.  : Computer Fraud and Abuse Act (CFAA)"
+  confirm_prompt: "Escriba %{yes} para continuar o %{cancel} para cancelar:"
+  confirm_word: "si"
+  rejected: "Aviso legal no aceptado — abortando."
+
+audit:
+  header_title: "# Nevelio Hardware Security — Audit log"
+  header_chain: "# Each entry contains SHA-256(previous_entry || data)"
+  header_format: "# Format: TIMESTAMP|ACTION|FINDINGS|MAX_SEVERITY|ELAPSED_MS|HASH"
