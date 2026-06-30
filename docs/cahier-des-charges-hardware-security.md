@@ -1,8 +1,8 @@
 # Cahier des charges — Module Sécurité Hardware (Nevelio Hardware Extension)
 
-> **Statut :** Proposition — hors scope Nevelio v0.x (scanner API couche 7)
-> **Cible :** Nevelio vHW.1 — outil autonome ou extension optionnelle
-> **Date de rédaction :** 2026-06-29
+> **Statut :** ✅ Partiellement implémenté — **v0.5.0** (72/85 tâches — 50 tests — 0 warning)
+> **Binaire :** `nevelio-hw` — outil autonome dans `hardware/`
+> **Dernière mise à jour :** 2026-06-30
 
 ---
 
@@ -536,36 +536,37 @@ nevelio/hardware/                         ← sous-répertoire du repo nevelio p
 │   ├── hw-firmware/          ✅ Phase 1 — Analyse firmware UEFI (Rust + Shell)
 │   ├── hw-dma/               ✅ Phase 1 — Surface DMA/Thunderbolt/PCIe (Rust + Shell)
 │   ├── hw-cli/               ✅ Phase 1 — Binaire `nevelio-hw` (Rust)
-│   ├── hw-sidechannel/       🔲 Phase 2 — Flush+Reload, timing oracle (Rust + ASM)
-│   ├── hw-memory/            🔲 Phase 4 — Rowhammer, forensics mémoire (Rust + C + Python)
-│   └── hw-jtag/              🔲 Phase 3 — Détection JTAG, audit flash (Rust + Tcl/OpenOCD)
+│   ├── hw-sidechannel/       ✅ Phase 2 — Flush+Reload, timing oracle (Rust + ASM)
+│   ├── hw-memory/            ✅ Phase 4 — Rowhammer, forensics mémoire (Rust + C + Python)
+│   ├── hw-jtag/              ✅ Phase 3 — Détection JTAG, audit flash (Rust + Tcl/OpenOCD)
+│   └── hw-dma-fpga/          ✅ Phase 5 — IOMMU, Thunderbolt, leechcore FFI (Rust)
 ├── asm/
 │   ├── x86_64/
-│   │   ├── timing.asm        🔲 Phase 2 — RDTSC + CLFLUSH
-│   │   └── rowhammer.asm     🔲 Phase 4 — Accès DRAM répétés
+│   │   ├── timing.asm        ✅ Phase 2 — RDTSC + CLFLUSH
+│   │   └── rowhammer.asm     ✅ Phase 4 — Accès DRAM répétés double-sided
 │   └── aarch64/
-│       ├── timing.asm        🔲 Phase 2 — CNTVCT_EL0 + DC CIVAC
-│       └── cache.asm         🔲 Phase 2
+│       ├── timing.asm        ✅ Phase 2 — CNTVCT_EL0 + DC CIVAC
+│       └── cache.asm         ✅ Phase 2
 ├── c/
 │   ├── kernel/
-│   │   ├── msr_reader.c      🔲 Phase 4 — Module noyau lecture MSR
-│   │   ├── lime_wrapper.c    🔲 Phase 4 — Interface LiME pour dump mémoire
+│   │   ├── msr_reader.c      ✅ Phase 4 — Module noyau lecture MSR (IBRS/STIBP/LSTAR)
+│   │   ├── lime_wrapper.c    ✅ Phase 4 — Interface LiME pour dump mémoire
 │   │   └── Makefile
 │   └── userspace/
-│       ├── pci_scan.c        🔲 Phase 4 — Énumération PCI via libpci
-│       └── rowhammer.c       🔲 Phase 4 — Test Rowhammer user-space
+│       ├── pci_scan.c        🔲 Phase 4 — Énumération PCI via libpci (non implémenté)
+│       └── rowhammer.c       ✅ Phase 4 — Test Rowhammer user-space (mmap+mlock+CLFLUSH)
 ├── python/
-│   ├── volatility_runner.py  🔲 Phase 4 — Wrapper Volatility 3
-│   ├── cpa_analysis.py       🔲 Phase 5 — Correlation Power Analysis
-│   ├── firmware_analyzer.py  🔲 Phase 3 — Pipeline binwalk + strings + radare2
-│   └── chipwhisperer_acq.py  🔲 Phase 5 — Acquisition traces ChipWhisperer
+│   ├── volatility_runner.py  ✅ Phase 4 — Wrapper Volatility 3 (DKOM, malfind, hashdump)
+│   ├── cpa_analysis.py       ✅ Phase 5 — CPA Pearson + TVLA Welch/SCALib + plots
+│   ├── firmware_analyzer.py  ✅ Phase 3 — Pipeline binwalk + strings + r2pipe + angr
+│   └── chipwhisperer_acq.py  ✅ Phase 5 — Acquisition traces CW Nano/Lite/Pro + simulation
 ├── tcl/
-│   └── jtag_audit.tcl        🔲 Phase 3 — Script OpenOCD d'audit JTAG
+│   └── jtag_audit.tcl        ✅ Phase 3 — Script OpenOCD d'audit JTAG (STM32 RDP)
 ├── ebpf/
-│   ├── syscall_latency.bpf.c 🔲 Phase 2 — Programme eBPF suivi latence
-│   └── memory_access.bpf.c   🔲 Phase 2 — Détection accès mémoire anormaux
+│   ├── syscall_latency.bpf.c ✅ Phase 2 — Programme eBPF suivi latence syscall
+│   └── memory_access.bpf.c   ✅ Phase 2 — Détection accès mémoire anormaux
 └── verilog/
-    └── pcie_dma/             🔲 Phase 5 — TLP PCIe pour attaque DMA
+    └── pcie_dma/             ✅ Phase 5 — tlp_reader.v + nexys_a7.tcl/xdc (Artix-7)
 ```
 
 ### 5.2 Module `hw-cpu` — Audit mitigations CPU

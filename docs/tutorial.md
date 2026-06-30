@@ -2154,4 +2154,39 @@ il doit passer **tous** les scripts (logique AND entre scripts).
 
 ---
 
+## Extension Hardware Security (`nevelio-hw`)
+
+En complément du scanner API, l'extension `nevelio-hw` audite les vulnérabilités
+au niveau matériel, firmware, noyau et canaux auxiliaires.
+
+```bash
+# Depuis hardware/
+make install-deps
+make
+
+# Audit passif (sans root)
+./target/release/nevelio-hw scan --accept-legal
+
+# Rapport compatible nevelio
+./target/release/nevelio-hw scan --accept-legal --output nevelio-json
+```
+
+**Modules disponibles (v0.5.0) :**
+
+| Module | Couverture |
+|---|---|
+| `hw-cpu` | Spectre, Meltdown, Retbleed, microcode, NX/SMEP/SMAP |
+| `hw-firmware` | Secure Boot, flashrom, mises à jour BIOS |
+| `hw-dma` | IOMMU/VT-d, Thunderbolt, PCIe |
+| `hw-sidechannel` | Timing oracle, Flush+Reload, AES-NI |
+| `hw-jtag` | Sondes JTAG/UART, STM32 RDP, firmware (binwalk+angr) |
+| `hw-memory` | Rowhammer, ECC, swap, KASLR, Volatility forensics |
+| `hw-dma-fpga` | leechcore FFI, Verilog TLP, IOMMU strict |
+
+Voir [hardware-security-extensions.md](hardware-security-extensions.md) pour la documentation complète,
+[hardware/INSTALL.md](../hardware/INSTALL.md) pour l'installation,
+[hardware/LEGAL.md](../hardware/LEGAL.md) pour les obligations légales.
+
+---
+
 *Généré pour Nevelio v0.6 — Scanner d'API de sécurité*

@@ -1,173 +1,232 @@
-# Extensions possibles : Sécurité Hardware
+# Nevelio Hardware Security — Documentation de l'extension
 
-> Pistes d'extension de Nevelio vers les vulnérabilités hardware et bas niveau.
-> Ces fonctionnalités sont hors scope de la v0.1 (scanner API couche 7).
-
----
-
-## Vulnérabilités hardware à couvrir
-
-### Attaques CPU
-- **Spectre / Meltdown** — Exécution spéculative des processeurs (Intel, AMD, ARM).
-  Permettent de lire la mémoire d'autres processus, y compris le noyau OS.
-- **Rowhammer** — Accès répétés à des lignes DRAM adjacentes pour faire basculer
-  des bits voisins. Élévation de privilèges démontrée.
-
-### Canaux auxiliaires (Side-channel)
-- **Timing attacks** — Mesurer le temps d'exécution d'une opération cryptographique
-  pour retrouver des informations sur la clé secrète.
-- **Power analysis** — Mesurer la consommation électrique pendant un chiffrement
-  (courant sur cartes à puce).
-- **Electromagnetic analysis** — Même principe via les émissions EM.
-
-### Attaques physiques
-- **Cold boot attack** — La RAM conserve ses données quelques secondes après
-  coupure courant. Permet d'extraire des clés BitLocker/FileVault.
-- **DMA attacks** — Via Thunderbolt/FireWire, un périphérique accède directement
-  à la RAM sans passer par le CPU.
-- **JTAG/debug ports** — Interfaces de débogage laissées ouvertes sur embarqué.
-
-### Supply chain
-- **Implants hardware** — Composants modifiés en usine ou en transit.
-- **Firmware malveillant** — BIOS/UEFI ou firmware disque/réseau infecté,
-  persistant après réinstallation OS.
+> **Version :** v0.5.0 — **72/85 tâches** — 50 tests — 9 crates — 0 warning
+> **Binaire :** `nevelio-hw` (workspace `hardware/`)
+> **Dernière mise à jour :** 2026-06-30
 
 ---
 
-## Rôles des langages
+## Présentation
 
-### Shell — Extraction brute et automation système
+`nevelio-hw` est l'extension de sécurité matérielle de Nevelio. Elle audite les
+vulnérabilités aux couches hardware, firmware, noyau et canaux auxiliaires,
+en complément du scanner API `nevelio` (couche 7).
+
+L'outil fonctionne en **outil autonome** (`nevelio-hw scan`) ou peut exporter ses
+résultats au **format nevelio** (`--output nevelio-json`) pour les inclure dans un
+rapport de sécurité global.
+
+---
+
+## Démarrage rapide
 
 ```bash
-# Inspecter le firmware d'un appareil
-binwalk -e firmware.bin
+# Depuis hardware/
+make install-deps        # Dépendances système (Debian/Ubuntu)
+make                     # Build release
 
-# Dump de la mémoire RAM (cold boot)
-dd if=/dev/mem of=ram.dump bs=1M count=512
+# Audit passif (sans root, sans matériel)
+./target/release/nevelio-hw scan --accept-legal
 
-# Inspecter le BIOS/UEFI
-dmidecode -t bios
+# Rapport HTML
+./target/release/nevelio-hw scan --accept-legal --output html --out-file audit.html
 
-# Lire les interfaces PCI (détection DMA)
-lspci -vvv
+# Rapport JSON compatible nevelio principal
+./target/release/nevelio-hw scan --accept-legal --output nevelio-json
 
-# Extraire des chaînes lisibles d'un binaire
-strings firmware.bin | grep -i "password\|key\|secret"
-
-# Lire le flash SPI d'une carte mère
-flashrom -p internal -r bios_backup.bin
+# Mode actif (root, eBPF, dump RAM) — lab uniquement
+sudo ./target/release/nevelio-hw scan --accept-legal --active
 ```
-
-**Intégration Nevelio envisagée :** module `nevelio-hardware` qui exécute
-ces commandes via `std::process::Command` et parse les sorties.
 
 ---
 
-### Python — Analyse de dumps et timing
+## Modules implémentés (9 crates)
 
-```python
-# ── Timing attack sur un endpoint HTTP ──────────────────────────────────────
-import requests, time, statistics
+### `hw-cpu` — Mitigations CPU
+Vérifie les protections contre les attaques d'exécution spéculative.
 
-def timing_oracle(payload, n=100):
-    """Mesure le temps médian de réponse pour détecter un side-channel."""
-    temps = []
-    for _ in range(n):
-        t0 = time.perf_counter_ns()
-        requests.post("https://api.example.com/login", json=payload)
-        temps.append(time.perf_counter_ns() - t0)
-    return statistics.median(temps)
-
-# Comparer deux payloads — une différence > 1ms peut indiquer une fuite
-t_valide   = timing_oracle({"user": "admin", "pass": "correct"})
-t_invalide = timing_oracle({"user": "admin", "pass": "wrong"})
-print(f"Δ = {abs(t_valide - t_invalide) / 1e6:.3f} ms")
-
-
-# ── Analyse mémoire avec Volatility ─────────────────────────────────────────
-# pip install volatility3
-
-# volatility -f ram.dump windows.pslist   → liste des processus
-# volatility -f ram.dump windows.hashdump → extraire les hashs NTLM
-# volatility -f ram.dump windows.netscan  → connexions réseau actives
-
-
-# ── Manipulation réseau bas niveau avec Scapy ────────────────────────────────
-# pip install scapy
-from scapy.all import *
-
-# Sniffer le trafic réseau
-sniff(iface="eth0", prn=lambda p: p.summary(), count=100)
-
-# Forger un paquet ARP (man-in-the-middle)
-arp = ARP(op=2, pdst="192.168.1.1", hwdst="ff:ff:ff:ff:ff:ff",
-          psrc="192.168.1.100")
-send(arp, verbose=False)
-```
-
-**Intégration Nevelio envisagée :** module `nevelio-timing` qui effectue
-des mesures statistiques précises sur les réponses HTTP (détection de
-timing oracles liés à des vulnérabilités hardware côté serveur).
-
----
-
-### Rust — Exploitation bas niveau
-
-```rust
-// ── Mesure de timing haute précision (Spectre-style) ────────────────────────
-use std::time::Instant;
-use std::hint::black_box;
-
-fn mesure_acces_cache(ptr: *const u8) -> u64 {
-    let debut = Instant::now();
-    unsafe { black_box(ptr.read_volatile()); }
-    debut.elapsed().as_nanos() as u64
-}
-
-// Seuil : < 100ns → en cache (ligne lue récemment)
-//         > 300ns → pas en cache (accès DRAM)
-
-
-// ── Pattern Rowhammer (accès répétés DRAM) ───────────────────────────────────
-unsafe fn hammer_row(addr_a: *mut u64, addr_b: *mut u64, iterations: usize) {
-    for _ in 0..iterations {
-        addr_a.read_volatile();
-        addr_b.read_volatile();
-        // Flush le cache pour forcer un accès DRAM
-        core::arch::x86_64::_mm_clflush(addr_a as *const u8);
-        core::arch::x86_64::_mm_clflush(addr_b as *const u8);
-    }
-}
-```
-
-**Note :** Ces techniques nécessitent `unsafe` Rust et des droits élevés.
-Réservé à la recherche en environnement contrôlé.
-
----
-
-## Bilan — Ce que Nevelio couvre déjà vs ce qui reste
-
-| Capacité | Nevelio v0.6 | Extension envisagée |
+| Check | Méthode | CWE |
 |---|---|---|
-| Timing HTTP (SQLi, CMDi time-based) | ✅ | — |
-| Automation d'attaques applicatives | ✅ | — |
-| Timing oracle statistique (side-channel réseau) | ❌ | Module `timing` (Rust) |
-| Analyse firmware / BIOS | ❌ | Module `hardware` (Shell via Command) |
-| Analyse dumps mémoire | ❌ | Intégration Volatility (Python subprocess) |
-| Exploitation Spectre/Rowhammer | ❌ | Rust `unsafe` — recherche uniquement |
-| Manipulation réseau bas niveau | ❌ | Intégration Scapy ou crate `pnet` |
+| Spectre v1/v2, Meltdown, MDS, L1TF | `/sys/devices/system/cpu/vulnerabilities/*` | 1342 |
+| Retbleed, TAA, SRBDS, MMIO | sysfs kernel | 1342 |
+| Microcode CPU à jour | `dmidecode -t processor` | 1352 |
+| NX bit (DEP) | `/proc/cpuinfo` flags | 1419 |
+| SMEP/SMAP | `/proc/cpuinfo` flags | 1419 |
+
+### `hw-firmware` — Firmware UEFI/BIOS
+Vérifie l'intégrité et la configuration du firmware.
+
+| Check | Méthode | CWE |
+|---|---|---|
+| Secure Boot | `mokutil --sb-state` | 1326 |
+| Mises à jour firmware | `fwupdmgr get-updates` | 1395 |
+| Version BIOS | `dmidecode -t bios` | 1395 |
+| Flashrom (écriture BIOS) | `flashrom -p internal` (actif) | 1326 |
+
+### `hw-dma` — Surface d'attaque DMA
+Détecte les vecteurs d'attaque DMA physique.
+
+| Check | Méthode | CWE |
+|---|---|---|
+| IOMMU / Intel VT-d | `dmesg` + `/sys/class/iommu` | 1274 |
+| Mode Thunderbolt | `/sys/bus/thunderbolt/*/security` | 284 |
+| Devices PCIe suspects | `lspci` | 1274 |
+| Kernel DMA protection | `/sys/bus/platform/drivers/efi-framebuffer` | 1274 |
+
+### `hw-sidechannel` — Canaux auxiliaires
+Timing attacks et side-channels via ASM haute précision.
+
+| Check | Méthode | CWE |
+|---|---|---|
+| Timing oracle HTTP | Mesures RDTSC/CNTVCT, t-test de Welch | 208 |
+| Flush+Reload cache L3 | ASM x86_64 : CLFLUSH + RDTSC | 1342 |
+| AES-NI disponible | `/proc/cpuinfo` flags | 327 |
+| Timing endpoint cible | `--target https://...` | 208 |
+
+### `hw-jtag` — Audit JTAG / Firmware embarqué
+Détection de sondes JTAG et analyse de firmware.
+
+| Check | Méthode | CWE |
+|---|---|---|
+| Sondes JTAG connectées | `lsusb` — 8 VID/PID (FTDI, J-Link, ST-Link…) | 1191 |
+| Ports UART | `/dev/ttyUSB*`, `/dev/ttyACM*` | 1191 |
+| OpenOCD STM32 RDP Level 0 | `tcl/jtag_audit.tcl` | 1191 |
+| Analyse firmware | `firmware_analyzer.py` (binwalk + strings + r2pipe + angr) | 321 |
+
+### `hw-memory` — Mémoire physique & Forensics
+Rowhammer, ECC, dump RAM, analyse Volatility.
+
+| Check | Méthode | CWE |
+|---|---|---|
+| Chiffrement swap | `/proc/swaps` + dm-crypt | 311 |
+| KASLR | `/proc/sys/kernel/randomize_va_space` | 330 |
+| ECC disponible | `/sys/devices/system/edac/mc` | 1278 |
+| TRR (DDR4/DDR5) | `dmidecode -t memory` | 1278 |
+| Rowhammer test | `c/userspace/rowhammer.c` via FFI (actif) | 1278 |
+| Core dumps | `/proc/sys/kernel/core_pattern` + ulimit | 312 |
+| Volatility forensics | `volatility_runner.py` (DKOM, malfind, hashdump, check_syscall) | 693 |
+| Dump RAM | avml ou LiME (actif, root) | — |
+
+### `hw-dma-fpga` — PCIe DMA FPGA
+Interface leechcore et audit IOMMU/Thunderbolt approfondi.
+
+| Check | Méthode | CWE |
+|---|---|---|
+| IOMMU mode strict | `/proc/cmdline` : `iommu=force` | 1274 |
+| Thunderbolt security level | `/sys/bus/thunderbolt/*/security` | 284 |
+| leechcore FPGA (actif) | `feature=leechcore` — nécessite PCILeech FPGA | 1274 |
 
 ---
 
-## Priorités si extension souhaitée
+## Outils Python
 
-1. **Module timing oracle** — Extension naturelle de Nevelio, 100% Rust,
-   mesures statistiques (médiane, percentile 95) sur les réponses HTTP.
-   Détecte les side-channels applicatifs liés au hardware serveur.
+### `firmware_analyzer.py` — Analyse firmware
+Pipeline complet sur une image firmware.
 
-2. **Module hardware audit** — Exécute `dmidecode`, `lspci`, `flashrom`
-   via `std::process::Command` et parse les sorties pour détecter
-   configurations dangereuses (debug ports ouverts, firmware non signé).
+```bash
+python3 hardware/python/firmware_analyzer.py \
+    --firmware firmware.bin \
+    --output findings.json
+```
 
-3. **Intégration Volatility** — Via subprocess Python, analyse des dumps
-   RAM fournis par l'utilisateur dans le cadre d'un incident response.
+Étapes : binwalk extraction → strings (7 patterns secrets) → magic bytes (14 signatures)
+→ r2pipe ELF (NX/PIE/Canary/RELRO) → **angr** (fonctions dangereuses : strcpy, gets, system…)
+
+### `volatility_runner.py` — Forensics mémoire
+Analyse d'un dump RAM (LiME, raw, mem).
+
+```bash
+python3 hardware/python/volatility_runner.py \
+    --dump /tmp/memory.lime \
+    --os linux
+```
+
+Modules Volatility lancés : `linux.pslist`, `linux.psscan` (DKOM), `linux.malfind`,
+`linux.check_syscall` (hooks rootkit), `linux.netstat` (ports C2).
+
+### `chipwhisperer_acq.py` — Acquisition power traces
+```bash
+# Avec hardware ChipWhisperer
+python3 hardware/python/chipwhisperer_acq.py --n 500 --output traces.npz
+
+# Mode simulation (sans hardware)
+python3 hardware/python/chipwhisperer_acq.py --n 500 --simulate --output traces.npz
+```
+
+### `cpa_analysis.py` — Correlation Power Analysis
+```bash
+# CPA AES-128 + TVLA + graphiques
+python3 hardware/python/cpa_analysis.py \
+    --traces traces.npz \
+    --tvla \
+    --plot \
+    --output-key recovered_key.hex
+
+# Démo sans hardware (traces simulées)
+python3 hardware/python/cpa_analysis.py --simulate --n 500 --tvla --plot
+```
+
+---
+
+## Journal d'audit
+
+Chaque scan produit un journal signé SHA-256 dans `~/.local/share/nevelio-hw/audit.log`.
+Chaque entrée contient un hash SHA-256 de l'entrée précédente (chaînage), ce qui permet
+de détecter toute modification ultérieure du journal.
+
+Format : `TIMESTAMP|ACTION|FINDINGS|MAX_SEVERITY|ELAPSED_MS|HASH`
+
+---
+
+## Format de rapport
+
+| Format | Commande | Usage |
+|---|---|---|
+| Texte | `--output text` (défaut) | Terminal, lisibilité |
+| JSON natif | `--output json` | Intégration CI, scripts |
+| JSON nevelio | `--output nevelio-json` | Import dans rapport nevelio principal |
+| HTML | `--output html --out-file audit.html` | Livrable client |
+
+---
+
+## Bilan — Ce que nevelio-hw couvre
+
+| Capacité | nevelio v0.6 | nevelio-hw v0.5.0 |
+|---|---|---|
+| Timing HTTP (SQLi, CMDi time-based) | ✅ | ✅ (haute précision RDTSC) |
+| Side-channel timing oracle | ❌ | ✅ hw-sidechannel |
+| Mitigations CPU (Spectre, Meltdown…) | ❌ | ✅ hw-cpu |
+| Firmware UEFI / Secure Boot | ❌ | ✅ hw-firmware |
+| Analyse firmware embarqué | ❌ | ✅ binwalk + r2pipe + angr |
+| IOMMU / DMA protection | ❌ | ✅ hw-dma + hw-dma-fpga |
+| JTAG / Debug ports | ❌ | ✅ hw-jtag + OpenOCD |
+| Rowhammer DRAM | ❌ | ✅ hw-memory (ASM + C + FFI) |
+| Forensics RAM (Volatility) | ❌ | ✅ hw-memory + volatility_runner.py |
+| Power Analysis (CPA/TVLA) | ❌ | ✅ cpa_analysis.py + SCALib |
+| PCIe DMA FPGA (PCILeech) | ❌ | ✅ hw-dma-fpga + verilog/pcie_dma/ |
+| Rapport unifié | ✅ | ✅ `--output nevelio-json` |
+
+---
+
+## Ce qui reste (matériel physique requis)
+
+| Tâche | Matériel nécessaire |
+|---|---|
+| Test Rowhammer réel | Machine dédiée (jamais en prod) |
+| Volatility sur dump VM réel | VM Linux publiée (projet Volatility) |
+| JTAG sur STM32 Nucleo | STM32 Nucleo-F446RE + sonde J-Link/ST-Link |
+| Acquisition traces CPA | ChipWhisperer Nano/Lite |
+| PCIe DMA FPGA | Nexys A7-35T + Vivado |
+| Thunderbolt DMA test | Câble TB3 + machine cible |
+
+---
+
+## Installation
+
+Voir [INSTALL.md](../hardware/INSTALL.md) pour les commandes détaillées par distribution
+(Ubuntu, Fedora, Arch) et les dépendances Python, eBPF, JTAG, modules kernel.
+
+## Légal
+
+Voir [LEGAL.md](../hardware/LEGAL.md) — Code Pénal 323-1/323-8, NIS2, CRA, RGPD,
+CFAA, template de lettre d'autorisation.

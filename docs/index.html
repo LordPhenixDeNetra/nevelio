@@ -109,6 +109,14 @@
     <a class="nav-link" href="#i18n"><span class="nav-icon">🌐</span><span data-i18n="nav.i18n">Internationalisation</span></a>
     <a class="nav-link" href="#flags-ref"><span class="nav-icon">📖</span><span data-i18n="nav.flags">Tous les flags</span></a>
   </div>
+
+  <div class="nav-section">
+    <div class="nav-section-label">Extension Hardware</div>
+    <a class="nav-link" href="#hardware"><span class="nav-icon">🔧</span>nevelio-hw</a>
+    <a class="nav-link nav-sub" href="#hw-modules">↳ Modules</a>
+    <a class="nav-link nav-sub" href="#hw-python">↳ Outils Python</a>
+    <a class="nav-link nav-sub" href="#hw-quickstart">↳ Démarrage rapide</a>
+  </div>
 </nav>
 
 <!-- ── Main ─────────────────────────────────────────────────────────────── -->
@@ -1949,10 +1957,125 @@ if severity == "Critical" || severity == "High" {
     </div>
   </section>
 
+  <!-- ── Extension Hardware Security ──────────────────────────────────────── -->
+  <section class="doc-section" id="hardware">
+    <h2><span class="section-icon">🔧</span> Extension Hardware Security — <code>nevelio-hw</code></h2>
+
+    <p>
+      En complément du scanner API (couche 7), <strong>nevelio-hw</strong> audite les
+      vulnérabilités au niveau hardware, firmware, noyau et canaux auxiliaires.
+      <br>Version actuelle&nbsp;: <strong>v0.5.0</strong> — 72/85 tâches — 50 tests — 9 crates.
+    </p>
+
+    <h3 id="hw-quickstart">Démarrage rapide</h3>
+
+    <pre><code class="language-bash"># Depuis hardware/
+make install-deps          # Dépendances système (Debian/Ubuntu)
+make                       # Build release
+
+# Audit passif (sans root, sans matériel spécifique)
+./target/release/nevelio-hw scan --accept-legal
+
+# Rapport HTML
+./target/release/nevelio-hw scan --accept-legal --output html --out-file audit.html
+
+# Rapport JSON compatible nevelio principal
+./target/release/nevelio-hw scan --accept-legal --output nevelio-json
+
+# Audit actif (root + eBPF + dump RAM) — lab uniquement
+sudo ./target/release/nevelio-hw scan --accept-legal --active
+
+# Analyser un firmware
+python3 hardware/python/firmware_analyzer.py --firmware firmware.bin
+
+# Analyser un dump mémoire
+python3 hardware/python/volatility_runner.py --dump /tmp/memory.lime --os linux</code></pre>
+
+    <h3 id="hw-modules">Modules (9 crates)</h3>
+
+    <table>
+      <thead><tr><th>Module</th><th>Couverture</th><th>Sévérité max</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><code>hw-cpu</code></td>
+          <td>Spectre, Meltdown, Retbleed, TAA, MDS, microcode, NX/SMEP/SMAP</td>
+          <td><span class="badge badge-critical">CRITICAL</span></td>
+        </tr>
+        <tr>
+          <td><code>hw-firmware</code></td>
+          <td>Secure Boot UEFI, flashrom, mises à jour BIOS/LVFS</td>
+          <td><span class="badge badge-high">HIGH</span></td>
+        </tr>
+        <tr>
+          <td><code>hw-dma</code></td>
+          <td>IOMMU/VT-d, Thunderbolt security level, PCIe</td>
+          <td><span class="badge badge-high">HIGH</span></td>
+        </tr>
+        <tr>
+          <td><code>hw-sidechannel</code></td>
+          <td>Timing oracle HTTP (RDTSC), Flush+Reload cache L3, AES-NI</td>
+          <td><span class="badge badge-high">HIGH</span></td>
+        </tr>
+        <tr>
+          <td><code>hw-jtag</code></td>
+          <td>Sondes JTAG/UART, STM32 RDP Level 0, firmware (binwalk + angr)</td>
+          <td><span class="badge badge-critical">CRITICAL</span></td>
+        </tr>
+        <tr>
+          <td><code>hw-memory</code></td>
+          <td>Rowhammer, ECC/TRR, swap+KASLR, Volatility forensics (DKOM, malfind)</td>
+          <td><span class="badge badge-critical">CRITICAL</span></td>
+        </tr>
+        <tr>
+          <td><code>hw-dma-fpga</code></td>
+          <td>IOMMU strict, Thunderbolt, leechcore FFI, Verilog PCIe TLP</td>
+          <td><span class="badge badge-high">HIGH</span></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3 id="hw-python">Outils Python</h3>
+
+    <table>
+      <thead><tr><th>Script</th><th>Usage</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><code>firmware_analyzer.py</code></td>
+          <td>binwalk + strings (7 patterns) + r2pipe ELF + angr (fonctions dangereuses)</td>
+        </tr>
+        <tr>
+          <td><code>volatility_runner.py</code></td>
+          <td>pslist vs psscan (DKOM), malfind, hashdump, check_syscall (hooks rootkit)</td>
+        </tr>
+        <tr>
+          <td><code>chipwhisperer_acq.py</code></td>
+          <td>Acquisition traces CW Nano/Lite/Pro — mode <code>--simulate</code> sans hardware</td>
+        </tr>
+        <tr>
+          <td><code>cpa_analysis.py</code></td>
+          <td>CPA AES-128 (Pearson), TVLA Welch/SCALib, visualisation matplotlib PNG</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="callout callout-warning">
+      <strong>⚠️ Usage légal uniquement.</strong>
+      Voir <a href="../hardware/LEGAL.md"><code>hardware/LEGAL.md</code></a> —
+      Code Pénal 323-1/323-8, NIS2, CFAA. Un audit sans autorisation écrite est illégal.
+      Les tests actifs (Rowhammer, dump RAM) doivent être réalisés sur des machines de lab dédiées.
+    </div>
+
+    <p>
+      Documentation complète :
+      <a href="hardware-security-extensions.md">hardware-security-extensions.md</a> —
+      Installation : <a href="../hardware/INSTALL.md">hardware/INSTALL.md</a>
+    </p>
+  </section>
+
 </div><!-- .content -->
 
 <footer class="footer">
-  <span data-i18n="footer.text">Nevelio v0.6 — API Security Scanner — Usage autorisé uniquement</span>
+  <span data-i18n="footer.text">Nevelio v0.6 — API Security Scanner | nevelio-hw v0.5.0 — Hardware Security — Usage autorisé uniquement</span>
 </footer>
 </main>
 
