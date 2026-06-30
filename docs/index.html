@@ -111,11 +111,11 @@
   </div>
 
   <div class="nav-section">
-    <div class="nav-section-label">Extension Hardware</div>
+    <div class="nav-section-label" data-i18n="nav.hardware">Extension Hardware</div>
     <a class="nav-link" href="#hardware"><span class="nav-icon">🔧</span>nevelio-hw</a>
-    <a class="nav-link nav-sub" href="#hw-modules">↳ Modules</a>
-    <a class="nav-link nav-sub" href="#hw-python">↳ Outils Python</a>
-    <a class="nav-link nav-sub" href="#hw-quickstart">↳ Démarrage rapide</a>
+    <a class="nav-link nav-sub" href="#hw-modules"><span data-i18n="nav.hw.modules">↳ Modules</span></a>
+    <a class="nav-link nav-sub" href="#hw-python"><span data-i18n="nav.hw.python">↳ Outils Python</span></a>
+    <a class="nav-link nav-sub" href="#hw-quickstart"><span data-i18n="nav.hw.quickstart">↳ Démarrage rapide</span></a>
   </div>
 </nav>
 
@@ -1959,15 +1959,15 @@ if severity == "Critical" || severity == "High" {
 
   <!-- ── Extension Hardware Security ──────────────────────────────────────── -->
   <section class="doc-section" id="hardware">
-    <h2><span class="section-icon">🔧</span> Extension Hardware Security — <code>nevelio-hw</code></h2>
+    <h2><span class="section-icon">🔧</span> <span data-i18n="hw.title">Extension Hardware Security — nevelio-hw</span></h2>
 
-    <p>
+    <p data-i18n-html="1" data-i18n="hw.desc">
       En complément du scanner API (couche 7), <strong>nevelio-hw</strong> audite les
       vulnérabilités au niveau hardware, firmware, noyau et canaux auxiliaires.
       <br>Version actuelle&nbsp;: <strong>v0.5.0</strong> — 72/85 tâches — 50 tests — 9 crates.
     </p>
 
-    <h3 id="hw-quickstart">Démarrage rapide</h3>
+    <h3 id="hw-quickstart" data-i18n="hw.quickstart.title">Démarrage rapide</h3>
 
     <pre><code class="language-bash"># Depuis hardware/
 make install-deps          # Dépendances système (Debian/Ubuntu)
@@ -1991,84 +1991,84 @@ python3 hardware/python/firmware_analyzer.py --firmware firmware.bin
 # Analyser un dump mémoire
 python3 hardware/python/volatility_runner.py --dump /tmp/memory.lime --os linux</code></pre>
 
-    <h3 id="hw-modules">Modules (9 crates)</h3>
+    <h3 id="hw-modules" data-i18n="hw.modules.title">Modules (9 crates)</h3>
 
     <table>
-      <thead><tr><th>Module</th><th>Couverture</th><th>Sévérité max</th></tr></thead>
+      <thead><tr><th>Module</th><th data-i18n="hw.col.coverage">Couverture</th><th data-i18n="hw.col.severity">Sévérité max</th></tr></thead>
       <tbody>
         <tr>
           <td><code>hw-cpu</code></td>
-          <td>Spectre, Meltdown, Retbleed, TAA, MDS, microcode, NX/SMEP/SMAP</td>
+          <td data-i18n="hw.mod.cpu">Spectre, Meltdown, Retbleed, TAA, MDS, microcode, NX/SMEP/SMAP</td>
           <td><span class="badge badge-critical">CRITICAL</span></td>
         </tr>
         <tr>
           <td><code>hw-firmware</code></td>
-          <td>Secure Boot UEFI, flashrom, mises à jour BIOS/LVFS</td>
+          <td data-i18n="hw.mod.firmware">Secure Boot UEFI, flashrom, mises à jour BIOS/LVFS</td>
           <td><span class="badge badge-high">HIGH</span></td>
         </tr>
         <tr>
           <td><code>hw-dma</code></td>
-          <td>IOMMU/VT-d, Thunderbolt security level, PCIe</td>
+          <td data-i18n="hw.mod.dma">IOMMU/VT-d, Thunderbolt security level, PCIe</td>
           <td><span class="badge badge-high">HIGH</span></td>
         </tr>
         <tr>
           <td><code>hw-sidechannel</code></td>
-          <td>Timing oracle HTTP (RDTSC), Flush+Reload cache L3, AES-NI</td>
+          <td data-i18n="hw.mod.side">Timing oracle HTTP (RDTSC), Flush+Reload cache L3, AES-NI</td>
           <td><span class="badge badge-high">HIGH</span></td>
         </tr>
         <tr>
           <td><code>hw-jtag</code></td>
-          <td>Sondes JTAG/UART, STM32 RDP Level 0, firmware (binwalk + angr)</td>
+          <td data-i18n="hw.mod.jtag">Sondes JTAG/UART, STM32 RDP Level 0, firmware (binwalk + angr)</td>
           <td><span class="badge badge-critical">CRITICAL</span></td>
         </tr>
         <tr>
           <td><code>hw-memory</code></td>
-          <td>Rowhammer, ECC/TRR, swap+KASLR, Volatility forensics (DKOM, malfind)</td>
+          <td data-i18n="hw.mod.memory">Rowhammer, ECC/TRR, swap+KASLR, Volatility forensics (DKOM, malfind)</td>
           <td><span class="badge badge-critical">CRITICAL</span></td>
         </tr>
         <tr>
           <td><code>hw-dma-fpga</code></td>
-          <td>IOMMU strict, Thunderbolt, leechcore FFI, Verilog PCIe TLP</td>
+          <td data-i18n="hw.mod.fpga">IOMMU strict, Thunderbolt, leechcore FFI, Verilog PCIe TLP</td>
           <td><span class="badge badge-high">HIGH</span></td>
         </tr>
       </tbody>
     </table>
 
-    <h3 id="hw-python">Outils Python</h3>
+    <h3 id="hw-python" data-i18n="hw.python.title">Outils Python</h3>
 
     <table>
-      <thead><tr><th>Script</th><th>Usage</th></tr></thead>
+      <thead><tr><th>Script</th><th data-i18n="hw.col.usage">Usage</th></tr></thead>
       <tbody>
         <tr>
           <td><code>firmware_analyzer.py</code></td>
-          <td>binwalk + strings (7 patterns) + r2pipe ELF + angr (fonctions dangereuses)</td>
+          <td data-i18n="hw.py.firmware">binwalk + strings (7 patterns) + r2pipe ELF + angr (fonctions dangereuses)</td>
         </tr>
         <tr>
           <td><code>volatility_runner.py</code></td>
-          <td>pslist vs psscan (DKOM), malfind, hashdump, check_syscall (hooks rootkit)</td>
+          <td data-i18n="hw.py.volatility">pslist vs psscan (DKOM), malfind, hashdump, check_syscall (hooks rootkit)</td>
         </tr>
         <tr>
           <td><code>chipwhisperer_acq.py</code></td>
-          <td>Acquisition traces CW Nano/Lite/Pro — mode <code>--simulate</code> sans hardware</td>
+          <td data-i18n-html="1" data-i18n="hw.py.cw">Acquisition traces CW Nano/Lite/Pro — mode <code>--simulate</code> sans hardware</td>
         </tr>
         <tr>
           <td><code>cpa_analysis.py</code></td>
-          <td>CPA AES-128 (Pearson), TVLA Welch/SCALib, visualisation matplotlib PNG</td>
+          <td data-i18n="hw.py.cpa">CPA AES-128 (Pearson), TVLA Welch/SCALib, visualisation matplotlib PNG</td>
         </tr>
       </tbody>
     </table>
 
     <div class="callout callout-warning">
-      <strong>⚠️ Usage légal uniquement.</strong>
-      Voir <a href="../hardware/LEGAL.md"><code>hardware/LEGAL.md</code></a> —
+      <strong>⚠️ <span data-i18n="hw.legal.title">Usage légal uniquement.</span></strong>
+      <span data-i18n-html="1" data-i18n="hw.legal.desc">Voir <a href="../hardware/LEGAL.md"><code>hardware/LEGAL.md</code></a> —
       Code Pénal 323-1/323-8, NIS2, CFAA. Un audit sans autorisation écrite est illégal.
-      Les tests actifs (Rowhammer, dump RAM) doivent être réalisés sur des machines de lab dédiées.
+      Les tests actifs (Rowhammer, dump RAM) doivent être réalisés sur des machines de lab dédiées.</span>
     </div>
 
     <p>
-      Documentation complète :
+      <span data-i18n="hw.docs.link">Documentation complète :</span>
       <a href="hardware-security-extensions.md">hardware-security-extensions.md</a> —
-      Installation : <a href="../hardware/INSTALL.md">hardware/INSTALL.md</a>
+      <span data-i18n="hw.install.link">Installation :</span> <a href="../hardware/INSTALL.md">hardware/INSTALL.md</a>
     </p>
   </section>
 
