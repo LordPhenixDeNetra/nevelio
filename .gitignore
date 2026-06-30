@@ -37,4 +37,5 @@ report.md
 security-report.xml
 security-report.sarif
 nevelio-results/
+.claude/worktrees
 
