@@ -22,6 +22,16 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
+try:
+    from i18n import t
+except ImportError:
+    import sys as _sys, os as _os
+    _sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__)))
+    try:
+        from i18n import t
+    except ImportError:
+        def t(key, **kwargs): return key
+
 VERSION = "0.1.0"
 
 # ── Imports optionnels ────────────────────────────────────────────────────────
@@ -148,7 +158,7 @@ def cpa_full_key(
         key[byte_idx]  = best
         corrs.append(max_corr)
         confidence = max_corr[best]
-        print(f"  Byte {byte_idx:2d} → 0x{best:02X}  (corrélation max : {confidence:.4f})")
+        print(t("cpa.byte_result", idx=byte_idx, key=best, corr=confidence))
 
     return bytes(key), corrs
 
@@ -207,7 +217,7 @@ def plot_traces(
 ) -> None:
     """Trace les n_show premières traces de consommation."""
     if not MPL_AVAILABLE:
-        print("  [!] matplotlib non disponible — visualisation ignorée.", file=sys.stderr)
+        print(t("cpa.matplotlib_missing"), file=sys.stderr)
         return
 
     fig, ax = plt.subplots(figsize=(14, 5))
@@ -215,17 +225,17 @@ def plot_traces(
         ax.plot(traces[i], alpha=0.4, linewidth=0.5)
     ax.set_title(title)
     ax.set_xlabel("Échantillon")
-    ax.set_ylabel("Amplitude")
+    ax.set_ylabel(t("plot.amplitude"))
     ax.grid(True, alpha=0.3)
 
     if save_to:
         plt.tight_layout()
         plt.savefig(save_to, dpi=150)
-        print(f"  [✓] Traces sauvegardées : {save_to}")
+        print(t("cpa.plot_saved", path=save_to))
     else:
         plt.tight_layout()
         plt.savefig("traces.png", dpi=150)
-        print("  [✓] Traces sauvegardées : traces.png")
+        print(t("cpa.plot_saved", path="traces.png"))
     plt.close()
 
 
@@ -246,16 +256,16 @@ def plot_cpa_results(
         ax.bar(range(256), corr, width=1, color='steelblue', alpha=0.7)
         best = recovered_key[byte_idx]
         ax.bar(best, corr[best], width=2, color='red', label=f'0x{best:02X}')
-        ax.set_title(f"Byte {byte_idx} → 0x{best:02X}")
+        ax.set_title(t("plot.byte_label", idx=byte_idx, key=best))
         ax.set_xlim(0, 256)
         ax.tick_params(labelsize=7)
 
-    plt.suptitle("CPA — Corrélation max par hypothèse de clé", fontsize=13)
+    plt.suptitle(t("plot.cpa_title"), fontsize=13)
     plt.tight_layout()
 
     out = save_to or "cpa_results.png"
     plt.savefig(out, dpi=150)
-    print(f"  [✓] Résultats CPA sauvegardés : {out}")
+    print(t("cpa.cpa_saved", path=out))
     plt.close()
 
 
@@ -274,8 +284,8 @@ def plot_tvla(
     ax.axhline(-threshold, color='red', linestyle='--', linewidth=1, label=f'-{threshold}')
     ax.fill_between(range(len(t_values)), t_values,
                     where=np.abs(t_values) > threshold,
-                    color='red', alpha=0.3, label='Fuite détectée')
-    ax.set_title("TVLA — t de Welch (|t| > 4.5 = fuite significative)")
+                    color='red', alpha=0.3, label=t("plot.tvla_leak_label"))
+    ax.set_title(t("plot.tvla_title"))
     ax.set_xlabel("Échantillon")
     ax.set_ylabel("t-statistique")
     ax.legend()
@@ -284,7 +294,7 @@ def plot_tvla(
     out = save_to or "tvla.png"
     plt.tight_layout()
     plt.savefig(out, dpi=150)
-    print(f"  [✓] TVLA sauvegardé : {out}")
+    print(t("cpa.tvla_saved", path=out))
     plt.close()
 
 
@@ -312,26 +322,26 @@ def generate_simulated_traces_cpa(n_traces: int, n_samples: int = 5000):
 
 def run_analysis(args: argparse.Namespace) -> int:
     if not NP_AVAILABLE:
-        print("[✗] numpy requis : pip install numpy", file=sys.stderr)
+        print(t("cpa.numpy_missing"), file=sys.stderr)
         return 1
 
-    print(f"\n  Nevelio CPA Analysis v{VERSION}\n")
+    print(t("cpa.banner", version=VERSION))
 
     # Chargement ou simulation des traces
     if args.simulate:
-        print(f"  [i] Mode simulation — génération de {args.n} traces AES-128...")
+        print(t("cpa.simulate_info", n=args.n))
         traces, plaintexts, secret_key = generate_simulated_traces_cpa(args.n)
-        print(f"  Clé secrète simulée : {secret_key.hex()}\n")
+        print(t("cpa.secret_key", key=secret_key.hex()))
     else:
         if not args.traces:
-            print("[✗] --traces requis (ou --simulate)", file=sys.stderr)
+            print(t("cpa.error.traces_required"), file=sys.stderr)
             return 1
-        print(f"  Chargement des traces : {args.traces}")
+        print(t("cpa.loading", path=args.traces))
         data   = np.load(args.traces)
         traces = data["traces"]
         plaintexts = data["plaintexts"]
         secret_key = None
-        print(f"  {traces.shape[0]} traces × {traces.shape[1]} échantillons\n")
+        print(t("cpa.shape", n=traces.shape[0], s=traces.shape[1]))
 
     # Visualisation des traces brutes
     if args.plot:
@@ -342,16 +352,16 @@ def run_analysis(args: argparse.Namespace) -> int:
                "timestamp": datetime.now(timezone.utc).isoformat()}
 
     # CPA
-    print("  [*] Attaque CPA en cours...")
+    print(t("cpa.running"))
     recovered_key, corrs = cpa_full_key(traces, plaintexts)
-    print(f"\n  Clé recouvrée : {recovered_key.hex()}")
+    print(t("cpa.key_recovered", key=recovered_key.hex()))
 
     if secret_key:
         if recovered_key == secret_key:
-            print("  [✓] Clé correctement recouvrée !")
+            print(t("cpa.key_correct"))
         else:
             wrong = sum(1 for a, b in zip(recovered_key, secret_key) if a != b)
-            print(f"  [!] {wrong}/16 bytes incorrects")
+            print(t("cpa.key_wrong", n=wrong))
 
     results["recovered_key"] = recovered_key.hex()
 
@@ -361,29 +371,29 @@ def run_analysis(args: argparse.Namespace) -> int:
 
     # TVLA
     if args.tvla:
-        print("\n  [*] TVLA en cours...")
+        print(t("cpa.tvla_running"))
         mid = len(traces) // 2
         try:
             t_values, leakage = tvla_welch(traces[:mid], traces[mid:])
-            status = "FUITE DÉTECTÉE" if leakage else "Pas de fuite détectée"
+            status = t("cpa.tvla_leak") if leakage else t("cpa.tvla_ok")
             t_max  = float(np.abs(t_values).max())
-            print(f"  TVLA → |t|_max = {t_max:.2f}  ({status})")
+            print(t("cpa.tvla_result", t=t_max, status=status))
             results["tvla"] = {"t_max": t_max, "leakage_detected": leakage}
 
             if args.plot:
                 plot_tvla(t_values,
                     save_to=args.plot_dir + "/tvla.png" if args.plot_dir else None)
         except RuntimeError as e:
-            print(f"  [!] TVLA non disponible : {e}", file=sys.stderr)
+            print(t("cpa.tvla_error", error=e), file=sys.stderr)
 
     # Sauvegarde
     if args.output_key:
         Path(args.output_key).write_text(recovered_key.hex() + "\n")
-        print(f"\n  [✓] Clé sauvegardée : {args.output_key}")
+        print(t("cpa.key_saved", path=args.output_key))
 
     if args.output_json:
         Path(args.output_json).write_text(json.dumps(results, indent=2))
-        print(f"  [✓] Rapport JSON : {args.output_json}")
+        print(t("cpa.json_saved", path=args.output_json))
 
     return 0
 

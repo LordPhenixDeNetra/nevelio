@@ -21,6 +21,16 @@ import subprocess
 import sys
 from datetime import datetime, timezone
 
+try:
+    from i18n import t
+except ImportError:
+    import sys as _sys, os as _os
+    _sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__)))
+    try:
+        from i18n import t
+    except ImportError:
+        def t(key, **kwargs): return key
+
 VERSION = "0.1.0"
 MODULE  = "hw-memory-forensics"
 
@@ -160,24 +170,19 @@ def analyze_pslist_psscan(vol_bin: str, dump_path: str, os_name: str, findings: 
     hidden_pids = {p for p in hidden_pids if p > 4}  # exclure PID 0 et 4 (System)
 
     if hidden_pids:
+        _pids_str = ', '.join(str(p) for p in sorted(hidden_pids)[:10])
         findings.append(finding(
-            f"DKOM détecté : {len(hidden_pids)} processus caché(s) — CWE-693",
-            f"psscan a détecté {len(hidden_pids)} processus non listés par pslist. \
-             Cette divergence indique probablement une manipulation des structures de \
-             liste de processus (Direct Kernel Object Manipulation — rootkit technique). \
-             PIDs suspects : {', '.join(str(p) for p in sorted(hidden_pids)[:10])}",
+            t("vol.dkom.title", n=len(hidden_pids)),
+            t("vol.dkom.desc", n=len(hidden_pids), pids=_pids_str),
             "CRITICAL",
             693, 8.1,
             f"PIDs dans psscan∖pslist : {sorted(hidden_pids)[:10]}",
-            "Analyser chaque PID suspect avec malfind et dlllist. \
-             Comparer avec les connexions réseau (netscan). \
-             L'indicateur de compromission le plus fiable est la présence de \
-             connexions réseau actives depuis un PID caché.",
+            t("vol.dkom.rem"),
         ))
     elif pslist_pids:
         findings.append(finding(
-            f"Aucun processus caché détecté ({len(pslist_pids)} processus analysés)",
-            "pslist et psscan sont cohérents — pas d'indice de DKOM.",
+            t("vol.dkom.ok.title", n=len(pslist_pids)),
+            t("vol.dkom.ok.desc"),
             "INFORMATIVE",
             evidence=f"{len(pslist_pids)} processus dans pslist",
         ))
@@ -218,22 +223,17 @@ def analyze_malfind(vol_bin: str, dump_path: str, os_name: str, findings: list):
 
     if suspicious:
         findings.append(finding(
-            f"Code injecté détecté : {len(suspicious)} région(s) suspecte(s) — CWE-94",
-            f"malfind a identifié {len(suspicious)} région(s) mémoire avec des caractéristiques \
-             d'injection de code (PE header hors de son emplacement normal, \
-             ou pages RWX avec patterns shellcode). \
-             Technique typique : process hollowing, reflective DLL injection, shellcode injection.",
+            t("vol.malfind.title", n=len(suspicious)),
+            t("vol.malfind.desc", n=len(suspicious)),
             "HIGH",
             94, 7.8,
             '\n'.join(i.get('line', '') for i in suspicious[:3]),
-            "Extraire les régions suspectes avec malfind --dump pour analyse statique. \
-             Analyser avec YARA (yargen) ou VirusTotal. \
-             Corrélation avec les connexions réseau pour identifier les C2.",
+            t("vol.malfind.rem"),
         ))
     else:
         findings.append(finding(
-            "Aucune injection de code détectée par malfind",
-            "malfind n'a pas trouvé de régions mémoire avec signatures d'injection.",
+            t("vol.malfind.ok.title"),
+            t("vol.malfind.ok.desc"),
             "INFORMATIVE",
         ))
 
@@ -261,20 +261,13 @@ def analyze_hashdump(vol_bin: str, dump_path: str, findings: list):
                     hashes.append((username, ntlm))
 
     if hashes:
-        # Masquer les hashes dans le rapport (ne pas exposer)
-        hash_preview = [f"{u}:{h[:8]}..." for u, h in hashes[:5]]
         findings.append(finding(
-            f"Hashes NTLM extraits de la mémoire : {len(hashes)} compte(s) — CWE-312",
-            f"{len(hashes)} hash(es) NTLM ont été extraits de la mémoire vive. \
-             Ces hashes permettent des attaques Pass-the-Hash sans craquer le mot de passe. \
-             La présence de hashes NTLM en mémoire est normale mais représente un risque \
-             en cas de compromission du système (Mimikatz-style).",
+            t("vol.hashdump.title", n=len(hashes)),
+            t("vol.hashdump.desc", n=len(hashes)),
             "HIGH",
             312, 7.5,
             f"Comptes : {', '.join(u for u, _ in hashes[:5])} ...",
-            "Activer Windows Credential Guard (Virtualization-Based Security). \
-             Configurer lsass en mode protégé (Protected Process Light). \
-             Appliquer la politique 'Network security: Do not store LAN Manager hash value'.",
+            t("vol.hashdump.rem"),
         ))
 
 
@@ -297,19 +290,12 @@ def analyze_syscall_hooks(vol_bin: str, dump_path: str, findings: list):
 
     if hooked:
         findings.append(finding(
-            f"Hooks syscall détectés : {len(hooked)} entrée(s) modifiée(s) — CWE-693",
-            f"La table des syscalls Linux contient {len(hooked)} hook(s). \
-             Ce pattern est caractéristique d'un rootkit kernel (LKM rootkit). \
-             Les hooks permettent d'intercepter les appels système pour dissimuler \
-             des processus, des fichiers, des connexions réseau.",
+            t("vol.syscall.title", n=len(hooked)),
+            t("vol.syscall.desc", n=len(hooked)),
             "CRITICAL",
             693, 9.1,
             '\n'.join(hooked[:5]),
-            "Système considéré comme compromis. Actions immédiates :\n\
-             1. Isoler le système du réseau\n\
-             2. Créer un dump complet avec avml/LiME\n\
-             3. Analyser avec un second kernel (live boot USB)\n\
-             4. Réinstaller depuis une image connue saine",
+            t("vol.syscall.rem"),
         ))
 
 
@@ -341,16 +327,12 @@ def analyze_network(vol_bin: str, dump_path: str, os_name: str, findings: list):
 
     if suspicious_connections:
         findings.append(finding(
-            f"Connexions réseau suspectes : {len(suspicious_connections)} sur port(s) C2 connus",
-            f"Des connexions sur des ports typiquement utilisés par des outils offensifs "
-            f"(Metasploit, netcat backdoors, IRC botnets) ont été détectées. "
-            f"Ports détectés : {', '.join(str(p) for p in suspicious_ports)}",
+            t("vol.network.title", n=len(suspicious_connections)),
+            t("vol.network.desc"),
             "HIGH",
             200, 7.5,
             '\n'.join(suspicious_connections[:3]),
-            "Analyser les processus associés à ces connexions. \
-             Comparer avec les processus cachés (DKOM). \
-             Bloquer ces connexions au pare-feu et analyser les destinations.",
+            t("vol.network.rem"),
         ))
 
 
@@ -369,7 +351,7 @@ def main():
     args = parser.parse_args()
 
     if not os.path.exists(args.dump):
-        print(json.dumps({'error': f'Dump introuvable : {args.dump}'}))
+        print(json.dumps({'error': t("vol.error.not_found", path=args.dump)}))
         sys.exit(1)
 
     findings = []
@@ -384,12 +366,11 @@ def main():
     vol_bin = find_volatility()
     if not vol_bin:
         findings.append(finding(
-            "Volatility 3 non installé — analyse forensique ignorée",
-            "vol3 / volatility3 est requis pour l'analyse du dump mémoire. \
-             Installer : pip install volatility3",
+            t("vol.missing.title"),
+            t("vol.missing.desc"),
             "INFORMATIVE",
             evidence="vol3 absent du PATH",
-            remediation="pip install volatility3",
+            remediation=t("vol.missing.rem"),
         ))
     else:
         # Lancer les analyses
@@ -423,7 +404,7 @@ def main():
     else:
         with open(args.output, 'w', encoding='utf-8') as f:
             f.write(output)
-        print(f"[✓] Rapport forensique : {args.output} ({len(findings)} finding(s))",
+        print(t("vol.report_written", path=args.output, n=len(findings)),
               file=sys.stderr)
 
 

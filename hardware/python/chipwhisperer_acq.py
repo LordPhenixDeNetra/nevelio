@@ -18,6 +18,16 @@ import os
 import sys
 import time
 from datetime import datetime, timezone
+
+try:
+    from i18n import t
+except ImportError:
+    import sys as _sys, os as _os
+    _sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__)))
+    try:
+        from i18n import t
+    except ImportError:
+        def t(key, **kwargs): return key
 from pathlib import Path
 
 VERSION = "0.1.0"
@@ -94,7 +104,7 @@ def connect_target(scope, target_type: str = "simpleserial") -> object:
     elif target_type == "simpleserial2":
         target = cw.target(scope, cw.targets.SimpleSerial2)
     else:
-        raise ValueError(f"Type de cible inconnu : {target_type}")
+        raise ValueError(t("cw.error.unknown_target", target=target_type))
 
     target.baud = 38400
     return target
@@ -145,7 +155,7 @@ def capture_n_traces(
 
         ret = scope.capture()
         if ret:
-            print(f"  [!] Timeout à la trace {i+1}/{n_traces}", file=sys.stderr)
+            print(t("cw.timeout", i=i+1, n=n_traces), file=sys.stderr)
             continue
 
         trace = scope.get_last_trace()
@@ -156,7 +166,7 @@ def capture_n_traces(
         ciphertexts.append(ct)
 
         if (i + 1) % 100 == 0:
-            print(f"  [*] {i+1}/{n_traces} traces acquises", file=sys.stderr)
+            print(t("cw.progress", i=i+1, n=n_traces), file=sys.stderr)
 
     return traces, plaintexts, ciphertexts
 
@@ -237,10 +247,10 @@ def save_traces(
         meta_path = output_path.replace(".npz", "_meta.json")
         with open(meta_path, "w") as f:
             json.dump(meta, f, indent=2)
-        print(f"[✓] Traces sauvegardées : {output_path}")
-        print(f"[✓] Métadonnées         : {meta_path}")
+        print(t("cw.saved", path=output_path))
+        print(t("cw.meta_saved", path=meta_path))
     else:
-        raise ValueError("Format supporté : .npz uniquement")
+        raise ValueError(t("cw.error.format"))
 
 
 def load_traces(path: str) -> tuple[object, object, object, dict]:
@@ -262,30 +272,30 @@ def load_traces(path: str) -> tuple[object, object, object, dict]:
 
 def run_acquisition(args: argparse.Namespace) -> int:
     """Pipeline complet d'acquisition. Retourne 0 si succès."""
-    print(f"\n  Nevelio ChipWhisperer Acquisition v{VERSION}")
-    print(f"  Scope : {args.scope}  |  Cible : {args.target_type}")
-    print(f"  Traces demandées : {args.n}\n")
+    print(t("cw.banner", version=VERSION))
+    print(t("cw.info_scope", scope=args.scope, target=args.target_type))
+    print(t("cw.info_traces", n=args.n))
 
     if not CW_AVAILABLE or args.simulate:
         if args.simulate:
-            print("  [i] Mode simulation activé (--simulate).")
+            print(t("cw.simulate_forced"))
         else:
-            print("  [!] ChipWhisperer non détecté — mode simulation.")
-        print(f"  Génération de {args.n} traces simulées...")
+            print(t("cw.simulate_fallback"))
+        print(t("cw.generating", n=args.n))
         traces, pts, cts = generate_simulated_traces(args.n)
     else:
         try:
             scope  = connect_scope(args.scope)
             configure_scope(scope, gain=args.gain, samples=args.samples)
             target = connect_target(scope, args.target_type)
-            print(f"  [✓] Scope connecté : {scope}")
-            print(f"  [✓] Cible connectée : {target}\n")
+            print(t("cw.scope_ok", scope=scope))
+            print(t("cw.target_ok", target=target))
             traces, pts, cts = capture_n_traces(scope, target, n_traces=args.n)
             scope.dis()
             target.dis()
         except Exception as e:
-            print(f"  [✗] Erreur acquisition : {e}", file=sys.stderr)
-            print("  Basculement vers le mode simulation...", file=sys.stderr)
+            print(t("cw.acq_error", error=e), file=sys.stderr)
+            print(t("cw.fallback_sim"), file=sys.stderr)
             traces, pts, cts = generate_simulated_traces(args.n)
 
     meta = {
@@ -297,7 +307,7 @@ def run_acquisition(args: argparse.Namespace) -> int:
     }
 
     save_traces(args.output, traces, pts, cts, metadata=meta)
-    print(f"\n  [✓] {len(traces)} traces acquises et sauvegardées.")
+    print(t("cw.done", n=len(traces)))
     return 0
 
 

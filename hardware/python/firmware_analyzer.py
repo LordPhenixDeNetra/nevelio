@@ -22,6 +22,16 @@ import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 
+try:
+    from i18n import t
+except ImportError:
+    import sys as _sys, os as _os
+    _sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__)))
+    try:
+        from i18n import t
+    except ImportError:
+        def t(key, **kwargs): return key
+
 VERSION = "0.1.0"
 MODULE  = "hw-firmware-ext"
 
@@ -124,11 +134,10 @@ def run_binwalk(firmware_path: str, extract_dir: str, findings: list) -> list:
     """Extraction et signatures binwalk."""
     if not tool_available('binwalk'):
         findings.append(finding(
-            "binwalk non installé — analyse firmware incomplète",
-            "L'outil binwalk est requis pour l'extraction et la détection de signatures. "
-            "Installer : pip install binwalk  ou  apt-get install binwalk",
+            t("fw.binwalk.missing.title"),
+            t("fw.binwalk.missing.desc"),
             "INFORMATIVE", evidence="binwalk absent du PATH",
-            remediation="pip install binwalk"
+            remediation=t("fw.binwalk.missing.rem")
         ))
         return []
 
@@ -143,14 +152,13 @@ def run_binwalk(firmware_path: str, extract_dir: str, findings: list) -> list:
                     detected_fs.append(fs_name)
                     break
         if detected_fs:
+            _fs_set = set(detected_fs)
             findings.append(finding(
-                f"Système(s) de fichiers détecté(s) : {', '.join(set(detected_fs))}",
-                f"binwalk a détecté {len(set(detected_fs))} type(s) de conteneur(s) dans "
-                f"l'image firmware. L'extraction peut révéler des binaires analysables, "
-                f"des scripts de démarrage et des fichiers de configuration.",
+                t("fw.binwalk.filesystems.title", fs=', '.join(_fs_set)),
+                t("fw.binwalk.filesystems.desc", n=len(_fs_set)),
                 "INFORMATIVE",
-                evidence=f"binwalk scan : {', '.join(set(detected_fs))}",
-                remediation="Extraire et analyser chaque système de fichiers individuellement."
+                evidence=f"binwalk scan : {', '.join(_fs_set)}",
+                remediation=t("fw.binwalk.filesystems.rem")
             ))
 
     # Extraction dans extract_dir
@@ -161,10 +169,10 @@ def run_binwalk(firmware_path: str, extract_dir: str, findings: list) -> list:
     )
     if rc != 0 and rc not in (-1, -2):
         findings.append(finding(
-            "Extraction binwalk partielle ou échouée",
-            f"Code de retour : {rc}. L'extraction a peut-être partiellement réussi.",
+            t("fw.binwalk.partial.title"),
+            t("fw.binwalk.partial.desc", rc=rc),
             "INFORMATIVE", evidence=err[:500] if err else '',
-            remediation="Vérifier les droits d'écriture sur le répertoire d'extraction."
+            remediation=t("fw.binwalk.partial.rem")
         ))
 
     return list(set(detected_fs))
@@ -204,13 +212,10 @@ def run_strings_analysis(firmware_path: str, findings: list):
         evidence_lines = [f"  • {s[:120]}" for s in samples]
         findings.append(finding(
             title,
-            f"Détecté par analyse `strings` sur l'image firmware brute. "
-            f"{len(samples)} occurrence(s) (tronquées à 3 pour l'affichage).",
+            t("fw.strings.desc", n=len(samples)),
             severity, cwe, cvss,
             evidence='\n'.join(evidence_lines),
-            remediation="Ne pas embarquer de secrets en clair dans le firmware. "
-                        "Utiliser un stockage sécurisé (eFuse, secure enclave, TPM). "
-                        "Implémenter un mécanisme de provisioning post-production."
+            remediation=t("fw.strings.rem")
         ))
 
 
@@ -233,12 +238,11 @@ def detect_filesystems_raw(firmware_path: str, findings: list) -> list:
     if detected:
         detail = ', '.join(f"{n} @ 0x{o:x}" for n, o in detected[:6])
         findings.append(finding(
-            f"Magic bytes détectés : {len(detected)} conteneur(s)",
-            "Des signatures de systèmes de fichiers ou de formats compressés ont été "
-            "trouvées dans l'image brute. Utiliser binwalk pour l'extraction complète.",
+            t("fw.magic.title", n=len(detected)),
+            t("fw.magic.desc"),
             "INFORMATIVE",
             evidence=detail,
-            remediation="binwalk --extract --matryoshka firmware.bin"
+            remediation=t("fw.magic.rem")
         ))
 
     return [n for n, _ in detected]
@@ -250,11 +254,10 @@ def analyze_elf_binaries(extract_dir: str, findings: list):
     """Cherche les ELF extraits et vérifie NX, PIE, Canary, RELRO."""
     if not tool_available('r2') and not tool_available('radare2'):
         findings.append(finding(
-            "radare2 non installé — analyse ELF ignorée",
-            "L'analyse des protections binaires (NX, PIE, Canary, RELRO) "
-            "nécessite radare2. Installer : apt-get install radare2",
+            t("fw.r2.missing.title"),
+            t("fw.r2.missing.desc"),
             "INFORMATIVE",
-            remediation="apt-get install radare2  # ou pip install r2pipe"
+            remediation=t("fw.r2.missing.rem")
         ))
         return
 
@@ -305,20 +308,16 @@ def analyze_elf_binaries(extract_dir: str, findings: list):
         detail = '; '.join(f"{n}: manque {', '.join(m)}" for n, m in unprotected[:5])
         severity = "HIGH" if len(unprotected) > 3 else "MEDIUM"
         findings.append(finding(
-            f"Binaires ELF sans protections : {len(unprotected)} trouvé(s) — CWE-1209",
-            f"{len(unprotected)} binaire(s) extrait(s) du firmware manquent de protections "
-            f"mémoire critiques. Un attaquant ayant accès au shell du dispositif peut "
-            f"plus facilement exploiter des vulnérabilités buffer overflow.",
+            t("fw.elf.unprotected.title", n=len(unprotected)),
+            t("fw.elf.unprotected.desc", n=len(unprotected)),
             severity, 1209, 6.8,
             evidence=detail,
-            remediation="Recompiler avec : -fstack-protector-strong -fPIE -pie -Wl,-z,relro,-z,now\n"
-                        "Vérifier les options du toolchain (Buildroot, Yocto) pour activer "
-                        "ces protections par défaut."
+            remediation=t("fw.elf.unprotected.rem")
         ))
     else:
         findings.append(finding(
-            f"Binaires ELF correctement protégés ({len(elf_files)} analysés)",
-            "Tous les binaires ELF analysés disposent des protections mémoire standard.",
+            t("fw.elf.ok.title", n=len(elf_files)),
+            t("fw.elf.ok.desc"),
             "INFORMATIVE",
             evidence=f"{len(elf_files)} ELF analysés via radare2"
         ))
@@ -344,10 +343,8 @@ def analyze_with_angr(extract_dir: str, findings: list, max_binaries: int = 5):
         import angr
     except ImportError:
         findings.append(finding(
-            "angr non installé — analyse symbolique ignorée",
-            "angr (analyse symbolique) n'est pas installé. "
-            "Pour détecter les buffer overflows dans les binaires ARM/MIPS/x86 : "
-            "pip install angr (installation ~5 min, ~500MB)",
+            t("fw.angr.missing.title"),
+            t("fw.angr.missing.desc"),
             "INFORMATIVE",
             remediation="pip install angr"
         ))
@@ -408,12 +405,11 @@ def analyze_with_angr(extract_dir: str, findings: list, max_binaries: int = 5):
         nx_stack = getattr(proj.loader.main_object, 'execstack', None)
         if nx_stack:  # pile exécutable
             findings.append(finding(
-                f"Pile exécutable dans {os.path.basename(elf_path)} — CWE-119",
-                "Le binaire a été compilé avec une pile exécutable (GNU_STACK RWX). "
-                "Un attaquant peut injecter et exécuter du shellcode directement sur la pile.",
+                t("fw.angr.execstack.title", bin=os.path.basename(elf_path)),
+                t("fw.angr.execstack.desc"),
                 "CRITICAL", 119, 9.3,
                 evidence=f"{elf_path}: execstack=RWX",
-                remediation="Recompiler avec : -Wl,-z,noexecstack"
+                remediation=t("fw.angr.execstack.rem")
             ))
 
         analyzed += 1
@@ -423,22 +419,17 @@ def analyze_with_angr(extract_dir: str, findings: list, max_binaries: int = 5):
         for bin_name, vulns, top in all_vulns:
             names = ', '.join(v[0] for v in vulns)
             findings.append(finding(
-                f"Fonctions dangereuses dans {bin_name} — {names}",
-                f"angr a détecté {len(vulns)} fonction(s) dangereuse(s) importée(s) dans "
-                f"{bin_name}. Ces fonctions sont connues pour être vulnérables aux buffer "
-                f"overflows et injections de commandes si les entrées ne sont pas validées.",
+                t("fw.angr.dangerous.title", bin=bin_name, funcs=names),
+                t("fw.angr.dangerous.desc", n=len(vulns), bin=bin_name),
                 top[2], top[3], top[4],
                 evidence=', '.join(v[0] for v in vulns),
-                remediation="Remplacer par des alternatives sécurisées : "
-                            "strncpy/strlcpy, fgets, snprintf, strncat. "
-                            "Activer les sanitizers à la compilation : -fsanitize=address,undefined"
+                remediation=t("fw.angr.dangerous.rem")
             ))
 
     if analyzed > 0:
         findings.append(finding(
-            f"Analyse symbolique angr terminée ({analyzed} binaire(s))",
-            f"angr a analysé {analyzed} binaire(s) ELF. "
-            f"{len(all_vulns)} binaire(s) contiennent des fonctions potentiellement dangereuses.",
+            t("fw.angr.done.title", n=analyzed),
+            t("fw.angr.done.desc", analyzed=analyzed, vulns=len(all_vulns)),
             "INFORMATIVE",
             evidence=f"{analyzed} binaires analysés via angr CFGFast"
         ))
@@ -466,14 +457,11 @@ def firmware_info(firmware_path: str, findings: list) -> dict:
             if avg_entropy < 0.5:
                 low_entropy_detected = True
                 findings.append(finding(
-                    "Entropie faible détectée — firmware potentiellement non chiffré",
-                    f"L'entropie moyenne du firmware est {avg_entropy:.2f} (< 0.5). "
-                    "Un firmware non chiffré expose son contenu à l'analyse statique complète, "
-                    "facilitant l'extraction de secrets, de clés et de code propriétaire.",
+                    t("fw.entropy.low.title"),
+                    t("fw.entropy.low.desc", entropy=avg_entropy),
                     "HIGH", 311, 7.5,
                     evidence=f"Entropie moyenne : {avg_entropy:.2f}",
-                    remediation="Chiffrer le firmware avec AES-256 (boot ROM decrypt). "
-                                "Activer Secure Boot pour vérifier l'authenticité."
+                    remediation=t("fw.entropy.low.rem")
                 ))
 
     return {
@@ -491,16 +479,16 @@ def main():
     parser = argparse.ArgumentParser(
         description='Nevelio Firmware Analyzer v' + VERSION
     )
-    parser.add_argument('--firmware',     required=True,  help='Chemin vers l'image firmware')
-    parser.add_argument('--output',       default='-',    help='Fichier JSON de sortie (défaut : stdout)')
-    parser.add_argument('--no-r2',        action='store_true', help='Désactiver l'analyse radare2')
-    parser.add_argument('--no-extract',   action='store_true', help='Ne pas extraire avec binwalk')
-    parser.add_argument('--extract-dir',  default=None,   help='Répertoire d'extraction (défaut : tempdir)')
-    parser.add_argument('--no-angr',      action='store_true', help='Désactiver l'analyse symbolique angr')
+    parser.add_argument('--firmware',     required=True,  help="Chemin vers l'image firmware")
+    parser.add_argument('--output',       default='-',    help="Fichier JSON de sortie (défaut : stdout)")
+    parser.add_argument('--no-r2',        action='store_true', help="Désactiver l'analyse radare2")
+    parser.add_argument('--no-extract',   action='store_true', help="Ne pas extraire avec binwalk")
+    parser.add_argument('--extract-dir',  default=None,   help="Répertoire d'extraction (défaut : tempdir)")
+    parser.add_argument('--no-angr',      action='store_true', help="Désactiver l'analyse symbolique angr")
     args = parser.parse_args()
 
     if not os.path.exists(args.firmware):
-        print(json.dumps({'error': f"Firmware introuvable : {args.firmware}"}))
+        print(json.dumps({'error': t("fw.error.not_found", path=args.firmware)}))
         sys.exit(1)
 
     findings  = []
@@ -559,7 +547,7 @@ def main():
         else:
             with open(args.output, 'w', encoding='utf-8') as f:
                 f.write(output)
-            print(f"[✓] Rapport écrit dans {args.output} ({len(findings)} finding(s))",
+            print(t("fw.report_written", path=args.output, n=len(findings)),
                   file=sys.stderr)
 
     finally:
