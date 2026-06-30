@@ -24,6 +24,7 @@ impl HwModule for FpgaDmaModule {
     }
 
     fn run(&self, ctx: &HwScanContext) -> Vec<HardwareFinding> {
+        #[allow(unused_mut)]
         let mut findings = run_passive_dma_audit();
 
         if !ctx.dry_run {

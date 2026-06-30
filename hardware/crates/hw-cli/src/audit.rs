@@ -78,6 +78,7 @@ impl AuditLogger {
     }
 
     /// Vérifie l'intégrité de la chaîne de hachages.
+    #[allow(dead_code)]
     pub fn verify(&self) -> bool {
         let mut prev = "0000000000000000000000000000000000000000000000000000000000000000".to_string();
         for e in &self.entries {
@@ -94,6 +95,7 @@ impl AuditLogger {
         true
     }
 
+    #[allow(dead_code)]
     pub fn entries(&self) -> &[AuditEntry] { &self.entries }
 }
 

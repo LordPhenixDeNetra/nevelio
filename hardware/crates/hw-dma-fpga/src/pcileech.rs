@@ -15,6 +15,10 @@ pub struct DmaScanResult {
 pub fn check_iommu_status() -> Vec<HardwareFinding> {
     let mut findings = Vec::new();
 
+    // Suppression du warning mut inutile sur macOS (le bloc Linux l'utilise)
+    #[allow(unused_mut)]
+    let _ = &mut findings;
+
     #[cfg(target_os = "linux")]
     {
         // Vérification IOMMU via dmesg
@@ -96,6 +100,7 @@ pub fn check_iommu_status() -> Vec<HardwareFinding> {
 
 /// Vérifie si Thunderbolt avec DMA est activé (risque BadUSB/Thunderclap).
 pub fn check_thunderbolt_dma() -> Vec<HardwareFinding> {
+    #[allow(unused_mut)]
     let mut findings = Vec::new();
 
     #[cfg(target_os = "linux")]

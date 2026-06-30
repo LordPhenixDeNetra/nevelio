@@ -1,3 +1,4 @@
+mod audit;
 mod output;
 mod disclaimer;
 
@@ -81,6 +82,8 @@ enum ModulesAction {
 enum OutputFormat {
     Text,
     Json,
+    /// JSON compatible avec le format de rapport Nevelio principal
+    NevelioJson,
     Html,
 }
 
@@ -101,7 +104,7 @@ fn main() -> Result<()> {
                 target,
                 verbose: cli.verbose,
             };
-            handle_scan(modules, output, out_file, ctx)
+            handle_scan(modules, output, out_file, ctx, cli.verbose)
         }
     }
 }
@@ -113,6 +116,7 @@ fn handle_scan(
     format:        OutputFormat,
     out_file:      Option<String>,
     ctx:           HwScanContext,
+    verbose:       bool,
 ) -> Result<()> {
     let all_modules: Vec<Box<dyn HwModule>> = vec![
         Box::new(CpuModule),
@@ -144,16 +148,41 @@ fn handle_scan(
     eprintln!("  {}  Nevelio Hardware Security v0.1.0", "⚙".cyan());
     eprintln!("  {}  {} module(s) sélectionné(s)\n", "→".dimmed(), modules.len());
 
+    let log_path = audit::default_log_path();
+    let mut auditor = audit::AuditLogger::new(&log_path);
+
     let mut all_findings: Vec<HardwareFinding> = Vec::new();
 
     for module in &modules {
-        if ctx.verbose {
+        if verbose {
             eprint!("  {}  {}…", "·".dimmed(), module.name());
         }
+        let t0 = std::time::Instant::now();
         let findings = module.run(&ctx);
-        if ctx.verbose {
-            eprintln!(" {} finding(s)", findings.len());
+        let elapsed  = t0.elapsed().as_millis() as u64;
+
+        let max_sev = findings.iter()
+            .map(|f| f.severity.to_string())
+            .max_by_key(|s| match s.as_str() {
+                "CRITICAL"    => 4,
+                "HIGH"        => 3,
+                "MEDIUM"      => 2,
+                "LOW"         => 1,
+                _             => 0,
+            })
+            .unwrap_or_else(|| "NONE".into());
+
+        if verbose {
+            eprintln!(" {} finding(s) [{} ms]", findings.len(), elapsed);
         }
+
+        auditor.record(
+            format!("module:{}", module.name()),
+            findings.len(),
+            &max_sev,
+            elapsed,
+        );
+
         all_findings.extend(findings);
     }
 
@@ -161,10 +190,28 @@ fn handle_scan(
 
     let report = HwReport::build(all_findings);
 
+    // Enregistrer le scan complet dans le journal d'audit
+    auditor.record(
+        format!("scan:complete dry_run={}", ctx.dry_run),
+        report.summary.total,
+        if report.summary.critical > 0 { "CRITICAL" }
+        else if report.summary.high > 0 { "HIGH" }
+        else { "INFORMATIVE" },
+        0,
+    );
+
+    // Sauvegarder le journal (non bloquant en cas d'erreur)
+    if let Err(e) = auditor.save() {
+        eprintln!("  {}  Journal d'audit non sauvegardé : {}", "!".yellow(), e);
+    } else if verbose {
+        eprintln!("  {}  Journal d'audit : {}", "✓".green(), log_path.cyan());
+    }
+
     let rendered = match format {
-        OutputFormat::Json => report.to_json(),
-        OutputFormat::Text => output::render_text(&report),
-        OutputFormat::Html => HwHtmlReporter::generate(&report),
+        OutputFormat::Json       => report.to_json(),
+        OutputFormat::NevelioJson => report.to_nevelio_json(),
+        OutputFormat::Text       => output::render_text(&report),
+        OutputFormat::Html       => HwHtmlReporter::generate(&report),
     };
 
     match out_file {

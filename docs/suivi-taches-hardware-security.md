@@ -126,7 +126,7 @@
 | 3.1 | [x] | 🔴 | Écrire `python/firmware_analyzer.py` : pipeline binwalk + strings | 8h | — | `hardware/python/firmware_analyzer.py` — 7 patterns secrets, magic bytes, ELF via r2pipe |
 | 3.2 | [x] | 🔴 | Intégrer `r2pipe` : analyse automatique des sections ELF extraites | 6h | 3.1 | `analyze_elf_binaries()` — NX, PIE, Canary, RELRO — max 20 ELF |
 | 3.3 | [x] | 🟠 | Wrapper Rust `Command` → appel `python/firmware_analyzer.py` | 4h | 3.1 | `hw-jtag/src/openocd.rs::run_firmware_analyzer()` — parse JSON findings |
-| 3.4 | [ ] | 🟠 | Intégrer `angr` : analyse symbolique sur binaires ARM extraits | 12h | 3.2 | Tâche complexe — détecter buffer overflows |
+| 3.4 | [x] | 🟠 | Intégrer `angr` : analyse symbolique sur binaires ARM extraits | 12h | 3.2 | `firmware_analyzer.py::analyze_with_angr()` — CFGFast + PLT dangereuses (strcpy/gets/system…) + pile exécutable, `--no-angr` flag |
 | 3.5 | [x] | 🟡 | Détecter systèmes de fichiers connus : squashfs, jffs2, ubi | 4h | 3.1 | `detect_filesystems_raw()` + 14 magic bytes (squashfs, jffs2, ubi, cramfs, gzip, xz…) |
 
 ### Module `hw-jtag`
@@ -210,18 +210,18 @@
 
 | # | Statut | Priorité | Tâche | Effort | Dépend de | Notes |
 |---|---|---|---|---|---|---|
-| 5.1 | [ ] | 🟡 | Écrire `python/chipwhisperer_acq.py` : acquisition N traces | 8h | — | Nécessite ChipWhisperer hardware |
-| 5.2 | [ ] | 🟡 | Écrire `python/cpa_analysis.py` : Correlation Power Analysis AES | 10h | 5.1 | Implémenter hamming weight + corrélation Pearson |
-| 5.3 | [ ] | 🟢 | Visualisation traces power (matplotlib) | 4h | 5.1 | Export PNG dans rapport |
-| 5.4 | [ ] | 🟢 | Intégrer SCALib pour TVLA (Test Vector Leakage Assessment) | 6h | 5.1 | Méthode standardisée de validation |
+| 5.1 | [x] | 🟡 | Écrire `python/chipwhisperer_acq.py` : acquisition N traces | 8h | — | `hardware/python/chipwhisperer_acq.py` — SimpleSerial v1/v2, CW-Nano/Lite/Pro/Husky, mode simulation (`--simulate`) sans hardware |
+| 5.2 | [x] | 🟡 | Écrire `python/cpa_analysis.py` : Correlation Power Analysis AES | 10h | 5.1 | `hardware/python/cpa_analysis.py` — hamming weight + corrélation Pearson vectorisée, attaque 16 bytes |
+| 5.3 | [x] | 🟢 | Visualisation traces power (matplotlib) | 4h | 5.1 | Intégré dans cpa_analysis.py : `plot_traces()`, `plot_cpa_results()`, `plot_tvla()` → PNG via `--plot` |
+| 5.4 | [x] | 🟢 | Intégrer SCALib pour TVLA (Test Vector Leakage Assessment) | 6h | 5.1 | `tvla_welch()` — Welch t-test, SCALib si dispo sinon scipy.stats.ttest_ind, seuil |t|>4.5 |
 
 ### DMA FPGA
 
 | # | Statut | Priorité | Tâche | Effort | Dépend de | Notes |
 |---|---|---|---|---|---|---|
-| 5.5 | [ ] | 🟡 | Écrire `verilog/pcie_dma/tlp_reader.v` : TLP Memory Read Request | 16h | — | Basé sur PCILeech-FPGA (Artix-7) |
-| 5.6 | [ ] | 🟡 | Synthèse et bitstream via Vivado pour Nexys A7 | 8h | 5.5 | Vivado requis (licence gratuite Webpack) |
-| 5.7 | [ ] | 🟡 | Intégration Rust : contrôle PCILeech via `leechcore` | 10h | 5.5 | FFI vers `leechcore.dll`/`leechcore.so` |
+| 5.5 | [x] | 🟡 | Écrire `verilog/pcie_dma/tlp_reader.v` : TLP Memory Read Request | 16h | — | `hardware/verilog/pcie_dma/tlp_reader.v` — FSM 7 états, MRd32/MRd64, completion parsing, `dma_controller` séquenceur |
+| 5.6 | [x] | 🟡 | Synthèse et bitstream via Vivado pour Nexys A7 | 8h | 5.5 | `synthesis/nexys_a7.tcl` (synth+place+route+bitstream) + `nexys_a7.xdc` (contraintes 100MHz, UART, PCIe slots commentés) |
+| 5.7 | [x] | 🟡 | Intégration Rust : contrôle PCILeech via `leechcore` | 10h | 5.5 | Crate `hw-dma-fpga` — `leechcore.rs` (FFI extern "C" LcCreate/LcRead/LcClose) + `pcileech.rs` (IOMMU + Thunderbolt audit passif) |
 | 5.8 | [ ] | 🟢 | Alternative Thunderbolt : test avec câble TB3 + machine cible | 6h | — | Plus simple que FPGA, mais limité macOS/Windows |
 
 ---
@@ -230,13 +230,13 @@
 
 | # | Statut | Priorité | Tâche | Effort | Dépend de | Notes |
 |---|---|---|---|---|---|---|
-| T.1 | [ ] | 🔴 | Rédiger `INSTALL.md` : dépendances système par distro (Ubuntu, Fedora, Arch) | 4h | 1.22 | Inclure les commandes `apt`, `dnf`, `pacman` |
-| T.2 | [ ] | 🔴 | Rédiger `LEGAL.md` : avertissements légaux par pays (FR, UE, USA) | 3h | — | Citer articles Code Pénal 323-1 à 323-8 |
-| T.3 | [ ] | 🟠 | CI GitHub Actions : build Phase 1 + tests unitaires | 4h | 1.22 | Runner `ubuntu-latest` |
-| T.4 | [ ] | 🟠 | CI : build conditionnel ARM64 (cross-compilation) | 6h | T.3 | `cross` crate ou `aarch64-unknown-linux-gnu` target |
-| T.5 | [ ] | 🟠 | Format de rapport unifié : réutiliser `HardwareFinding` → JSON + HTML | 6h | 1.2 | Compatible avec rapports Nevelio |
-| T.6 | [ ] | 🟡 | Log d'audit signé (SHA-256) de toutes les actions exécutées | 5h | 1.3 | Exigence légale pour pentests |
-| T.7 | [ ] | 🟡 | Documentation API Rust (`cargo doc`) | 3h | Phase 1 | — |
+| T.1 | [x] | 🔴 | Rédiger `INSTALL.md` : dépendances système par distro (Ubuntu, Fedora, Arch) | 4h | 1.22 | `hardware/INSTALL.md` — apt/dnf/pacman, Python, modules kernel, eBPF, JTAG, vérification |
+| T.2 | [x] | 🔴 | Rédiger `LEGAL.md` : avertissements légaux par pays (FR, UE, USA) | 3h | — | `hardware/LEGAL.md` — CP 323-1/323-8, NIS2, CRA, RGPD Art.32/35, CFAA 18 USC 1030, template lettre autorisation |
+| T.3 | [x] | 🟠 | CI GitHub Actions : build Phase 1 + tests unitaires | 4h | 1.22 | `.github/workflows/hardware-security.yml` — ubuntu-latest build+test+clippy+fmt + Python ruff |
+| T.4 | [x] | 🟠 | CI : build conditionnel ARM64 (cross-compilation) | 6h | T.3 | Intégré dans `hardware-security.yml` — job `cross-arm64` avec `gcc-aarch64-linux-gnu` |
+| T.5 | [x] | 🟠 | Format de rapport unifié : réutiliser `HardwareFinding` → JSON + HTML | 6h | 1.2 | `hw-core/src/report.rs::to_nevelio_json()` — export compatible nevelio avec IDs HW-XXXX + `--output nevelio-json` |
+| T.6 | [x] | 🟡 | Log d'audit signé (SHA-256) de toutes les actions exécutées | 5h | 1.3 | `hw-cli/src/audit.rs` — chaîne SHA-256(prev||ts||action||findings||sev), `~/.local/share/nevelio-hw/audit.log` |
+| T.7 | [x] | 🟡 | Documentation API Rust (`cargo doc`) | 3h | Phase 1 | `hw-core/src/lib.rs` — `///` doc + `//!` module doc + exemple dans `HardwareFinding::new()` |
 | T.8 | [ ] | 🟢 | Intégration optionnelle dans workspace Nevelio principal | 6h | Phase 1 | Feature flag `hardware` dans Nevelio CLI |
 
 ---
