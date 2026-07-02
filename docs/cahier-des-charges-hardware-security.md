@@ -1,6 +1,6 @@
 # Cahier des charges — Module Sécurité Hardware (Nevelio Hardware Extension)
 
-> **Statut :** ✅ Partiellement implémenté — **v0.6.0** (52/92 tâches — 43 tests — 0 erreur)
+> **Statut :** ✅ Partiellement implémenté — **v0.6.0** (84/92 tâches — 43 tests — 0 erreur)
 > **Binaire :** `nevelio-hw` — outil autonome dans `hardware/`
 > **Dernière mise à jour :** 2026-07-02
 

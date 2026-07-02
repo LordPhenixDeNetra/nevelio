@@ -1964,7 +1964,7 @@ if severity == "Critical" || severity == "High" {
     <p data-i18n-html="1" data-i18n="hw.desc">
       En complément du scanner API (couche 7), <strong>nevelio-hw</strong> audite les
       vulnérabilités au niveau hardware, firmware, noyau et canaux auxiliaires.
-      <br>Version actuelle&nbsp;: <strong>v0.5.0</strong> — 72/85 tâches — 50 tests — 9 crates.
+      <br>Version actuelle&nbsp;: <strong>v0.6.0</strong> — 84/92 tâches — 43 tests — 9 crates — i18n fr/en/es.
     </p>
 
     <h3 id="hw-quickstart" data-i18n="hw.quickstart.title">Démarrage rapide</h3>
@@ -1975,6 +1975,9 @@ make                       # Build release
 
 # Audit passif (sans root, sans matériel spécifique)
 ./target/release/nevelio-hw scan --accept-legal
+
+# Choisir la langue des findings (fr par défaut, en, es)
+./target/release/nevelio-hw scan --accept-legal --lang en
 
 # Rapport HTML
 ./target/release/nevelio-hw scan --accept-legal --output html --out-file audit.html

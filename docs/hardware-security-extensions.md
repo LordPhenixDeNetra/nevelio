@@ -1,8 +1,8 @@
 # Nevelio Hardware Security — Documentation de l'extension
 
-> **Version :** v0.5.0 — **72/85 tâches** — 50 tests — 9 crates — 0 warning
+> **Version :** v0.6.0 — **84/92 tâches** — 43 tests — 9 crates — 0 erreur
 > **Binaire :** `nevelio-hw` (workspace `hardware/`)
-> **Dernière mise à jour :** 2026-06-30
+> **Dernière mise à jour :** 2026-07-02
 
 ---
 
@@ -27,6 +27,9 @@ make                     # Build release
 
 # Audit passif (sans root, sans matériel)
 ./target/release/nevelio-hw scan --accept-legal
+
+# Choix de la langue (fr par défaut, en, es disponibles)
+./target/release/nevelio-hw scan --accept-legal --lang en
 
 # Rapport HTML
 ./target/release/nevelio-hw scan --accept-legal --output html --out-file audit.html
@@ -191,7 +194,7 @@ Format : `TIMESTAMP|ACTION|FINDINGS|MAX_SEVERITY|ELAPSED_MS|HASH`
 
 ## Bilan — Ce que nevelio-hw couvre
 
-| Capacité | nevelio v0.6 | nevelio-hw v0.5.0 |
+| Capacité | nevelio v0.6 | nevelio-hw v0.6.0 |
 |---|---|---|
 | Timing HTTP (SQLi, CMDi time-based) | ✅ | ✅ (haute précision RDTSC) |
 | Side-channel timing oracle | ❌ | ✅ hw-sidechannel |
@@ -218,6 +221,24 @@ Format : `TIMESTAMP|ACTION|FINDINGS|MAX_SEVERITY|ELAPSED_MS|HASH`
 | Acquisition traces CPA | ChipWhisperer Nano/Lite |
 | PCIe DMA FPGA | Nexys A7-35T + Vivado |
 | Thunderbolt DMA test | Câble TB3 + machine cible |
+
+---
+
+## Internationalisation (i18n)
+
+Tous les messages de findings sont traduits via `rust-i18n v3`. Les locales YAML
+(`fr`, `en`, `es`) se trouvent dans `hardware/crates/hw-cli/locales/`.
+
+| Langue | Code | Commande |
+|---|---|---|
+| Français (défaut) | `fr` | `--lang fr` ou sans flag |
+| Anglais | `en` | `--lang en` |
+| Espagnol | `es` | `--lang es` |
+
+Ordre de priorité : `--lang` → `NEVELIO_LANG` → `LANG` → `fr`.
+
+Chaque crate bibliothèque appelle `rust_i18n::i18n!("../hw-cli/locales", fallback = "fr")`
+dans son `lib.rs` pour compiler les locales dans son scope.
 
 ---
 

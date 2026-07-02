@@ -293,8 +293,8 @@
 |---|---|---|---|---|
 | **1 — Fondations** | 23 | 23 ✅ | Rust, Shell | Machine Linux |
 | **2 — Timing/Side-channel** | 17 | 15 ✅ (2 tests terrain restants) | + Assembly x86_64+ARM64, eBPF | Machine Linux |
-| **3 — Firmware/JTAG** | 15 | 0 | + Python, Tcl | + Sonde JTAG, STM32 |
-| **4 — Rowhammer/Forensics** | 14 | 0 | + C | + PC dédié |
-| **5 — Power/DMA** | 8 | 0 | + Verilog | + ChipWhisperer, FPGA |
+| **3 — Firmware/JTAG** | 15 | 13 ✅ (2 tests terrain restants) | + Python, Tcl | + Sonde JTAG, STM32 |
+| **4 — Rowhammer/Forensics** | 14 | 12 ✅ (2 tests terrain restants) | + C | + PC dédié |
+| **5 — Power/DMA** | 8 | 7 ✅ (1 test Thunderbolt restant) | + Verilog | + ChipWhisperer, FPGA |
 | **Transversal** | 15 | 14 ✅ (1 optionnel restant) | — | — |
-| **TOTAL** | **92** | **52 / 92** | | |
+| **TOTAL** | **92** | **84 / 92** | | |
