@@ -39,21 +39,21 @@ MODULE  = "hw-firmware-ext"
 
 SENSITIVE_PATTERNS = [
     (re.compile(r'-----BEGIN (?:RSA |EC |DSA |OPENSSH )?PRIVATE KEY', re.I),
-     "Clé privée embarquée dans le firmware", "CRITICAL", 321, 9.1),
+     "fw.secret.private_key", "CRITICAL", 321, 9.1),
     (re.compile(r'AKIA[0-9A-Z]{16}'),
-     "Clé AWS IAM Access Key détectée", "CRITICAL", 798, 9.1),
+     "fw.secret.aws_key", "CRITICAL", 798, 9.1),
     (re.compile(r'(?:password|passwd|secret|pwd)\s*[=:]\s*["\']?(\S{4,})["\']?', re.I),
-     "Credential en clair détecté", "HIGH", 798, 7.5),
+     "fw.secret.credential", "HIGH", 798, 7.5),
     (re.compile(r'(?:admin|root):[^:]{0,60}:\d+:\d+:', re.I),
-     "Entrée /etc/passwd (compte root/admin)", "HIGH", 798, 7.5),
+     "fw.secret.passwd_entry", "HIGH", 798, 7.5),
     (re.compile(r'backdoor|BACKDOOR|debug_shell|factory_mode', re.I),
-     "Référence à une backdoor ou mode usine", "CRITICAL", 912, 9.8),
+     "fw.secret.backdoor", "CRITICAL", 912, 9.8),
     (re.compile(r'telnetd|dropbear|sshd\b', re.I),
-     "Service réseau distant détecté dans le firmware", "MEDIUM", 912, 5.3),
+     "fw.secret.remote_service", "MEDIUM", 912, 5.3),
     (re.compile(r'(?:authtoken|api[_\-]?key|bearer\s+)[=: ]["\']?\S{8,}', re.I),
-     "Token ou clé API en clair", "HIGH", 312, 7.5),
+     "fw.secret.api_token", "HIGH", 312, 7.5),
     (re.compile(r'https?://(?!example\.com|localhost)\S{8,}', re.I),
-     "URL distante en dur (C2 potentiel ou endpoint de confiance)", "LOW", 200, 3.1),
+     "fw.secret.hardcoded_url", "LOW", 200, 3.1),
 ]
 
 # ── Signatures de systèmes de fichiers (magic bytes) ─────────────────────────
@@ -103,9 +103,9 @@ def run(cmd: list, timeout: int = 60) -> tuple[int, str, str]:
         r = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
         return r.returncode, r.stdout, r.stderr
     except FileNotFoundError:
-        return -1, '', f"Commande introuvable : {cmd[0]}"
+        return -1, '', t("fw.error.cmd_missing", cmd=cmd[0])
     except subprocess.TimeoutExpired:
-        return -2, '', f"Timeout ({timeout}s) : {' '.join(cmd)}"
+        return -2, '', t("fw.error.timeout", timeout=timeout, cmd=' '.join(cmd))
     except Exception as e:
         return -3, '', str(e)
 
@@ -200,18 +200,18 @@ def run_strings_analysis(firmware_path: str, findings: list):
 
     hits: dict[str, list[str]] = {}
 
-    for pattern, title, severity, cwe, cvss in SENSITIVE_PATTERNS:
+    for pattern, title_key, severity, cwe, cvss in SENSITIVE_PATTERNS:
         matches = pattern.findall(out)
         if matches:
             # Dédupliquer et tronquer
             samples = list(dict.fromkeys(str(m) for m in matches))[:3]
-            key = f"{title}|{severity}"
-            hits[key] = (title, severity, cwe, cvss, samples)
+            key = f"{title_key}|{severity}"
+            hits[key] = (title_key, severity, cwe, cvss, samples)
 
-    for key, (title, severity, cwe, cvss, samples) in hits.items():
+    for key, (title_key, severity, cwe, cvss, samples) in hits.items():
         evidence_lines = [f"  • {s[:120]}" for s in samples]
         findings.append(finding(
-            title,
+            t(title_key),
             t("fw.strings.desc", n=len(samples)),
             severity, cwe, cvss,
             evidence='\n'.join(evidence_lines),
@@ -326,15 +326,15 @@ def analyze_elf_binaries(extract_dir: str, findings: list):
 # ── Analyse symbolique angr ───────────────────────────────────────────────────
 
 ANGR_DANGEROUS_FUNCS = [
-    ('strcpy',   'Buffer overflow potentiel via strcpy()',  'HIGH',    121, 7.8),
-    ('gets',     'Buffer overflow via gets() — CWE-120',   'CRITICAL', 120, 9.8),
-    ('sprintf',  'Format string ou overflow via sprintf()', 'HIGH',    134, 7.5),
-    ('strcat',   'Buffer overflow potentiel via strcat()',  'HIGH',    121, 7.2),
-    ('scanf',    'Entrée non bornée via scanf()',           'HIGH',    120, 7.2),
-    ('system',   'Exécution commande arbitraire via system()', 'HIGH', 78, 8.1),
-    ('popen',    'Exécution commande via popen()',          'HIGH',    78, 7.5),
-    ('printf',   'Format string potentiel via printf()',    'MEDIUM',  134, 5.5),
-    ('memcpy',   'Possible overflow mémoire non borné',    'LOW',     120, 4.3),
+    ('strcpy',   'fw.func.strcpy',  'HIGH',    121, 7.8),
+    ('gets',     'fw.func.gets',    'CRITICAL', 120, 9.8),
+    ('sprintf',  'fw.func.sprintf', 'HIGH',    134, 7.5),
+    ('strcat',   'fw.func.strcat',  'HIGH',    121, 7.2),
+    ('scanf',    'fw.func.scanf',   'HIGH',    120, 7.2),
+    ('system',   'fw.func.system',  'HIGH',    78,  8.1),
+    ('popen',    'fw.func.popen',   'HIGH',    78,  7.5),
+    ('printf',   'fw.func.printf',  'MEDIUM',  134, 5.5),
+    ('memcpy',   'fw.func.memcpy',  'LOW',     120, 4.3),
 ]
 
 def analyze_with_angr(extract_dir: str, findings: list, max_binaries: int = 5):
@@ -460,7 +460,7 @@ def firmware_info(firmware_path: str, findings: list) -> dict:
                     t("fw.entropy.low.title"),
                     t("fw.entropy.low.desc", entropy=avg_entropy),
                     "HIGH", 311, 7.5,
-                    evidence=f"Entropie moyenne : {avg_entropy:.2f}",
+                    evidence=t("fw.entropy.low.evidence", entropy=avg_entropy),
                     remediation=t("fw.entropy.low.rem")
                 ))
 

@@ -1,4 +1,5 @@
 use hw_core::{run_command, HardwareFinding, HwSeverity};
+use rust_i18n::t;
 
 /// Exécute l'audit OpenOCD avec `tcl/jtag_audit.tcl` et parse la sortie.
 /// Retourne les findings extraits des lignes NEVELIO_FINDING:.
@@ -13,14 +14,13 @@ pub fn run_openocd_audit(
 
     if run_command("openocd", &["--version"]).is_none() {
         findings.push(HardwareFinding::new(
-            "OpenOCD non installé — audit JTAG ignoré",
-            "OpenOCD est requis pour l'audit JTAG/SWD. \
-             Installer : apt-get install openocd",
+            t!("jtag.openocd.missing.title"),
+            t!("jtag.openocd.missing.desc"),
             HwSeverity::Informative,
             "hw-jtag",
             None, None,
             "openocd absent du PATH",
-            "sudo apt-get install openocd",
+            t!("jtag.openocd.missing.rem"),
         ));
         return findings;
     }
@@ -41,13 +41,13 @@ pub fn run_openocd_audit(
         Some(o) => o,
         None    => {
             findings.push(HardwareFinding::new(
-                "Échec lancement OpenOCD",
-                "openocd n'a pas pu démarrer. Vérifier l'interface et le target configurés.",
+                t!("jtag.openocd.launch_failed.title"),
+                t!("jtag.openocd.launch_failed.desc"),
                 HwSeverity::Informative,
                 "hw-jtag",
                 None, None,
-                format!("interface={}, target={}", interface_cfg, target_cfg),
-                "Vérifier le câblage et les fichiers de configuration OpenOCD.",
+                t!("jtag.openocd.launch_failed.evidence", interface = interface_cfg, target = target_cfg),
+                t!("jtag.openocd.launch_failed.rem"),
             ));
             return findings;
         }
@@ -60,9 +60,8 @@ pub fn run_openocd_audit(
         // Aucun finding de sécurité — vérifier si openocd a bien communiqué avec la cible
         if raw.contains("Error") || raw.contains("error") {
             findings.push(HardwareFinding::new(
-                "OpenOCD : erreur de connexion à la cible",
-                "OpenOCD a démarré mais n'a pas pu communiquer avec la cible JTAG. \
-                 Vérifier le câblage, la tension et la configuration.",
+                t!("jtag.openocd.conn_error.title"),
+                t!("jtag.openocd.conn_error.desc"),
                 HwSeverity::Informative,
                 "hw-jtag",
                 None, None,
@@ -71,7 +70,7 @@ pub fn run_openocd_audit(
                    .take(3)
                    .collect::<Vec<_>>()
                    .join(" | "),
-                "Consulter la documentation OpenOCD pour votre interface et target.",
+                t!("jtag.openocd.conn_error.rem"),
             ));
         }
     }
@@ -155,13 +154,13 @@ pub fn run_firmware_analyzer(
 
     if !std::path::Path::new(firmware_path).exists() {
         findings.push(HardwareFinding::new(
-            "Firmware introuvable",
-            format!("Le fichier {} n'existe pas.", firmware_path),
+            t!("jtag.firmware.missing.title"),
+            t!("jtag.firmware.missing.desc", path = firmware_path),
             HwSeverity::Informative,
             "hw-jtag",
             None, None,
             firmware_path.to_string(),
-            "Fournir le chemin vers un fichier firmware valide.",
+            t!("jtag.firmware.missing.rem"),
         ));
         return findings;
     }
@@ -172,13 +171,13 @@ pub fn run_firmware_analyzer(
         "python"
     } else {
         findings.push(HardwareFinding::new(
-            "Python non disponible — analyse firmware ignorée",
-            "python3 est requis pour firmware_analyzer.py.",
+            t!("jtag.firmware.python_missing.title"),
+            t!("jtag.firmware.python_missing.desc"),
             HwSeverity::Informative,
             "hw-jtag",
             None, None,
             "python3 absent",
-            "sudo apt-get install python3",
+            t!("jtag.firmware.python_missing.rem"),
         ));
         return findings;
     };
@@ -196,13 +195,13 @@ pub fn run_firmware_analyzer(
         Some(o) => o,
         None    => {
             findings.push(HardwareFinding::new(
-                "Échec du script firmware_analyzer.py",
-                "Le script Python n'a pas produit de sortie.",
+                t!("jtag.firmware.script_failed.title"),
+                t!("jtag.firmware.script_failed.desc"),
                 HwSeverity::Informative,
                 "hw-jtag",
                 None, None,
                 python_script.to_string(),
-                "Vérifier que firmware_analyzer.py est accessible et que les dépendances sont installées.",
+                t!("jtag.firmware.script_failed.rem"),
             ));
             return findings;
         }
@@ -212,13 +211,13 @@ pub fn run_firmware_analyzer(
     match serde_json::from_str::<serde_json::Value>(&json_str) {
         Err(e) => {
             findings.push(HardwareFinding::new(
-                "Erreur de parsing JSON firmware_analyzer",
-                format!("Le script a retourné un JSON invalide : {}", e),
+                t!("jtag.firmware.json_error.title"),
+                t!("jtag.firmware.json_error.desc", error = e),
                 HwSeverity::Informative,
                 "hw-jtag",
                 None, None,
                 json_str.chars().take(200).collect::<String>(),
-                "Vérifier la sortie de firmware_analyzer.py manuellement.",
+                t!("jtag.firmware.json_error.rem"),
             ));
         }
         Ok(result) => {

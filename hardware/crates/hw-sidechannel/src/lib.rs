@@ -1,12 +1,14 @@
+rust_i18n::i18n!("../hw-cli/locales", fallback = "fr");
+
 mod timing;
 mod cache;
 mod checksec;
 mod ebpf;
 
-pub use timing::check_timing_oracle;
-pub use cache::check_flush_reload;
-pub use checksec::check_stack_protections;
-pub use ebpf::check_ebpf_timing;
+use timing::check_timing_oracle;
+use cache::check_flush_reload;
+use checksec::check_kernel_hardening;
+use ebpf::check_ebpf_timing;
 
 use hw_core::{HardwareFinding, HwModule, HwScanContext};
 
@@ -26,7 +28,7 @@ impl HwModule for SideChannelModule {
         findings.extend(check_flush_reload());
 
         // Protections stack (perf_event_paranoid, ptrace_scope, checksec)
-        findings.extend(check_stack_protections());
+        findings.extend(check_kernel_hardening());
 
         // Timing oracle HTTP — requiert --target
         if let Some(ref url) = ctx.target {

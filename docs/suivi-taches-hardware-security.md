@@ -238,6 +238,13 @@
 | T.6 | [x] | 🟡 | Log d'audit signé (SHA-256) de toutes les actions exécutées | 5h | 1.3 | `hw-cli/src/audit.rs` — chaîne SHA-256(prev||ts||action||findings||sev), `~/.local/share/nevelio-hw/audit.log` |
 | T.7 | [x] | 🟡 | Documentation API Rust (`cargo doc`) | 3h | Phase 1 | `hw-core/src/lib.rs` — `///` doc + `//!` module doc + exemple dans `HardwareFinding::new()` |
 | T.8 | [ ] | 🟢 | Intégration optionnelle dans workspace Nevelio principal | 6h | Phase 1 | Feature flag `hardware` dans Nevelio CLI |
+| T.9 | [x] | 🟠 | i18n : moteur Rust (`rust-i18n v3`) + locales YAML fr/en/es dans hw-cli | 4h | 1.3 | `hw-cli/locales/{fr,en,es}.yml` — `i18n!("../hw-cli/locales", fallback="fr")` dans hw-cli/main.rs |
+| T.10 | [x] | 🟠 | i18n Rust : couverture hw-cpu, hw-dma, hw-firmware, hw-sidechannel | 6h | T.9 | `use rust_i18n::t;` + clés `cpu.*`, `dma.*`, `firmware.*`, `sidechannel.*` dans fr/en/es.yml |
+| T.11 | [x] | 🟠 | i18n Rust : couverture hw-jtag (probe.rs, openocd.rs) | 4h | T.9 | Clés `jtag.probe.*`, `jtag.openocd.*`, `jtag.firmware.*` — check_jtag_probes retourne tuple (findings, noms) |
+| T.12 | [x] | 🟠 | i18n Rust : couverture hw-memory (avml, forensics, swap, rowhammer, lib) | 8h | T.9 | Clés `memory.*` — 50+ strings traduits, tests fixés language-agnostiques |
+| T.13 | [x] | 🟠 | i18n Rust : couverture hw-dma-fpga (pcileech, leechcore) | 3h | T.9 | Clés `fpga.*` — IOMMU, Thunderbolt niveaux, leechcore |
+| T.14 | [x] | 🟠 | i18n Python : moteur `hardware/python/i18n.py` + locales YAML + volatility_runner.py | 3h | T.9 | `t("vol.*")` — clés vol.dkom, vol.malfind, vol.hashdump, vol.syscall, vol.network, vol.missing |
+| T.15 | [x] | 🔴 | Correctifs compilation : `rust_i18n::i18n!()` dans 7 lib.rs, align probe.rs/lib.rs hw-jtag | 2h | T.10–13 | `cargo build --workspace` ✓ zéro erreur · `cargo test --workspace` ✓ 43 tests passés |
 
 ---
 
@@ -289,5 +296,5 @@
 | **3 — Firmware/JTAG** | 15 | 0 | + Python, Tcl | + Sonde JTAG, STM32 |
 | **4 — Rowhammer/Forensics** | 14 | 0 | + C | + PC dédié |
 | **5 — Power/DMA** | 8 | 0 | + Verilog | + ChipWhisperer, FPGA |
-| **Transversal** | 8 | 0 | — | — |
-| **TOTAL** | **85** | **38 / 85** | | |
+| **Transversal** | 15 | 14 ✅ (1 optionnel restant) | — | — |
+| **TOTAL** | **92** | **52 / 92** | | |

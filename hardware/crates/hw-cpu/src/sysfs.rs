@@ -1,101 +1,41 @@
 use hw_core::{HardwareFinding, HwSeverity, read_sysfs};
+use rust_i18n::t;
 
 const VULN_PATH: &str = "/sys/devices/system/cpu/vulnerabilities";
 
-// Mappage : nom fichier → (titre, CWE, CVSS si vulnérable, remédiation)
-const VULN_MAP: &[(&str, &str, u32, f32, &str)] = &[
-    (
-        "spectre_v1",
-        "Spectre v1 — Bounds Check Bypass",
-        1342, 5.6,
-        "Mettre à jour le microcode CPU et le noyau Linux. Appliquer les patches SWAPGS \
-         et usercopy barriers. Vérifier que le noyau est ≥ 5.2.",
-    ),
-    (
-        "spectre_v2",
-        "Spectre v2 — Branch Target Injection",
-        1342, 8.1,
-        "Activer IBRS/IBPB/STIBP via le microcode Intel/AMD à jour. Vérifier \
-         `/sys/devices/system/cpu/vulnerabilities/spectre_v2` affiche 'Mitigation: Retpolines'.",
-    ),
-    (
-        "meltdown",
-        "Meltdown — Rogue Data Cache Load",
-        1342, 8.1,
-        "Activer KPTI (Kernel Page-Table Isolation). Mettre à jour le noyau Linux ≥ 4.15. \
-         Vérifier `/proc/cpuinfo` contient le flag 'pti'.",
-    ),
-    (
-        "mds",
-        "MDS — Microarchitectural Data Sampling",
-        1342, 6.5,
-        "Mettre à jour le microcode Intel (mai 2019 ou ultérieur). Activer le vidage \
-         des buffers CPU via 'mds=full,nosmt' dans les paramètres noyau.",
-    ),
-    (
-        "l1tf",
-        "L1TF — L1 Terminal Fault",
-        1342, 6.5,
-        "Appliquer le microcode Intel août 2018. Activer 'l1tf=full,force' dans les \
-         paramètres noyau. Désactiver Hyper-Threading si risque élevé.",
-    ),
-    (
-        "tsx_async_abort",
-        "TAA — TSX Asynchronous Abort",
-        1342, 6.5,
-        "Mettre à jour le microcode Intel (novembre 2019). Désactiver TSX via \
-         'tsx=off' si le microcode n'est pas disponible.",
-    ),
-    (
-        "retbleed",
-        "Retbleed — Return Stack Buffer Underflow",
-        1342, 6.5,
-        "Mettre à jour le noyau Linux ≥ 5.19. Appliquer les patches Retbleed \
-         (IBPB-on-entry ou SRSO pour AMD).",
-    ),
-    (
-        "spec_store_bypass",
-        "Spectre v4 — Speculative Store Bypass",
-        1342, 5.5,
-        "Activer SSBD (Speculative Store Bypass Disable) via le microcode et \
-         le paramètre noyau 'spec_store_bypass_disable=seccomp'.",
-    ),
-    (
-        "mmio_stale_data",
-        "MMIO Stale Data — Intel MMIO Information Disclosure",
-        1342, 6.0,
-        "Mettre à jour le microcode Intel (juin 2022). Appliquer les patches \
-         noyau MMIO Stale Data (Linux ≥ 5.18).",
-    ),
-    (
-        "srbds",
-        "SRBDS — Special Register Buffer Data Sampling",
-        1342, 5.5,
-        "Mettre à jour le microcode Intel (juin 2020). Vérifier que \
-         `/sys/devices/system/cpu/vulnerabilities/srbds` affiche 'Mitigation'.",
-    ),
+// Mappage : nom fichier → (CWE, CVSS)
+const VULN_MAP: &[(&str, u32, f32)] = &[
+    ("spectre_v1",       1342, 5.6),
+    ("spectre_v2",       1342, 8.1),
+    ("meltdown",         1342, 8.1),
+    ("mds",              1342, 6.5),
+    ("l1tf",             1342, 6.5),
+    ("tsx_async_abort",  1342, 6.5),
+    ("retbleed",         1342, 6.5),
+    ("spec_store_bypass",1342, 5.5),
+    ("mmio_stale_data",  1342, 6.0),
+    ("srbds",            1342, 5.5),
 ];
 
 pub(super) fn check_cpu_vulnerabilities() -> Vec<HardwareFinding> {
     let mut findings = Vec::new();
 
-    for &(vuln_file, title, cwe, cvss, remediation) in VULN_MAP {
+    for &(vuln_file, cwe, cvss) in VULN_MAP {
         let path = format!("{}/{}", VULN_PATH, vuln_file);
         let Some(content) = read_sysfs(&path) else { continue };
 
         if is_vulnerable(&content) {
+            let title_key = format!("cpu.vuln.{}.title", vuln_file);
+            let rem_key   = format!("cpu.vuln.{}.rem",   vuln_file);
             findings.push(HardwareFinding::new(
-                title,
-                format!(
-                    "Le noyau Linux rapporte une vulnérabilité CPU non atténuée : {}",
-                    content
-                ),
+                t!(&title_key).to_string(),
+                t!("cpu.vuln.desc", content = content.clone()).to_string(),
                 severity_for_cvss(cvss),
                 "hw-cpu",
                 Some(cwe),
                 Some(cvss),
                 format!("Fichier sysfs `{}` contient : \"{}\"", path, content),
-                remediation,
+                t!(&rem_key).to_string(),
             ));
         }
     }

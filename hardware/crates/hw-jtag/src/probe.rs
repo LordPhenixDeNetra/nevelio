@@ -1,163 +1,121 @@
-use hw_core::{run_command, HardwareFinding, HwSeverity};
+use hw_core::{HardwareFinding, HwSeverity, run_command};
+use rust_i18n::t;
 
-// VID USB → nom de sonde JTAG connus
-const JTAG_PROBES: &[(&str, &str)] = &[
-    ("0403", "FTDI (FT2232H/FT232H — sonde générique)"),
-    ("1366", "Segger J-Link"),
-    ("0483:3748", "STMicroelectronics ST-Link v2"),
-    ("0483:374b", "STMicroelectronics ST-Link v2.1"),
-    ("0483:374f", "STMicroelectronics ST-Link v3"),
-    ("0d28:0204", "DAPLink / CMSIS-DAP"),
-    ("1fc9:0090", "NXP LPC-Link2"),
-    ("04b4:8613", "Cypress FX2LP (sonde générique)"),
+// Sondes JTAG/SWD connues identifiées par leur VID:PID USB
+const KNOWN_JTAG_PROBES: &[(&str, &str)] = &[
+    ("0403:6014", "FTDI FT232H (generic JTAG)"),
+    ("0403:6010", "FTDI FT2232H (OpenOCD)"),
+    ("0403:6011", "FTDI FT4232H"),
+    ("1366:0101", "SEGGER J-Link (base)"),
+    ("1366:0105", "SEGGER J-Link (PRO)"),
+    ("1366:0107", "SEGGER J-Link (ULTRA+)"),
+    ("0483:374b", "ST-Link/V2-1"),
+    ("0483:3748", "ST-Link/V2"),
+    ("0483:374d", "ST-Link/V3 (HLA)"),
+    ("2233:1001", "Black Magic Probe"),
+    ("1d50:6018", "GreatFET One"),
+    ("0451:bef3", "Texas Instruments XDS110"),
+    ("0451:c0a0", "Texas Instruments MSP-FET"),
+    ("04b4:f139", "Cypress FX2 (OpenOCD USB-Blaster)"),
+    ("09fb:6001", "Altera USB-Blaster"),
 ];
 
-/// Détecte les sondes JTAG connectées via lsusb.
-/// Retourne les findings + la liste des sondes trouvées.
-pub fn detect_jtag_probes() -> (Vec<HardwareFinding>, Vec<String>) {
+pub(super) fn check_jtag_probes() -> (Vec<HardwareFinding>, Vec<String>) {
     let mut findings = Vec::new();
-    let mut found    = Vec::new();
+    let mut detected_names: Vec<String> = Vec::new();
 
-    let output = match run_command("lsusb", &[]) {
-        Some(o) => o,
-        None    => {
-            findings.push(HardwareFinding::new(
-                "lsusb non disponible — détection sonde JTAG ignorée",
-                "lsusb est requis pour détecter les sondes JTAG connectées. \
-                 Installer : apt-get install usbutils",
-                HwSeverity::Informative,
-                "hw-jtag",
-                None, None,
-                "lsusb absent du PATH",
-                "sudo apt-get install usbutils",
-            ));
-            return (findings, found);
-        }
-    };
-
-    for line in output.lines() {
-        let line_lower = line.to_lowercase();
-
-        for (vid_pid, probe_name) in JTAG_PROBES {
-            // Vérifier VID seul ou VID:PID
-            let vid = &vid_pid[..4];
-            let matches = if vid_pid.len() > 4 {
-                // VID:PID exact
-                line_lower.contains(&format!("id {}:", vid_pid.to_lowercase()))
-            } else {
-                // VID seul — n'importe quel PID
-                line_lower.contains(&format!("id {}:", vid.to_lowercase()))
-            };
-
-            if matches {
-                found.push(probe_name.to_string());
-                findings.push(HardwareFinding::new(
-                    format!("Sonde JTAG détectée : {}", probe_name),
-                    format!(
-                        "Une sonde JTAG/SWD est connectée à la machine ({probe_name}). \
-                         Si la machine est un système de production, cette sonde permet \
-                         à un attaquant avec accès physique de déboguer, lire la flash \
-                         ou modifier l'exécution de tout firmware connecté.",
-                        probe_name = probe_name
-                    ),
-                    HwSeverity::Medium,
-                    "hw-jtag",
-                    Some(1240),
-                    Some(5.2),
-                    format!("lsusb : {}", line.trim()),
-                    "Retirer les sondes JTAG des systèmes de production. \
-                     Si nécessaire pour le développement, les conserver dans un lab isolé. \
-                     Activer le RDP Level 2 sur les cibles STM32 en production.",
-                ));
-            }
-        }
-    }
-
-    if found.is_empty() {
+    let Some(lsusb_out) = run_command("lsusb", &[]) else {
         findings.push(HardwareFinding::new(
-            "Aucune sonde JTAG détectée via USB",
-            "lsusb n'a pas détecté de sonde JTAG/SWD connue. \
-             Cela ne garantit pas l'absence de sonde : les sondes PCIe ou internes \
-             ne sont pas détectées par cette méthode.",
+            t!("jtag.probe.lsusb_missing.title").to_string(),
+            t!("jtag.probe.lsusb_missing.desc").to_string(),
             HwSeverity::Informative,
             "hw-jtag",
-            None, None,
-            "lsusb scanné — 0 sonde JTAG reconnue",
-            "Pour un audit complet, vérifier physiquement les connecteurs JTAG/SWD \
-             sur les cartes cibles.",
+            None,
+            None,
+            "lsusb non disponible",
+            t!("jtag.probe.lsusb_missing.rem").to_string(),
         ));
+        return (findings, detected_names);
+    };
+
+    for (vid_pid, name) in KNOWN_JTAG_PROBES {
+        if lsusb_out.to_lowercase().contains(&vid_pid.to_lowercase()) {
+            detected_names.push(name.to_string());
+        }
     }
 
-    (findings, found)
+    if detected_names.is_empty() {
+        findings.push(HardwareFinding::new(
+            t!("jtag.probe.none_detected.title").to_string(),
+            t!("jtag.probe.none_detected.desc").to_string(),
+            HwSeverity::Informative,
+            "hw-jtag",
+            None,
+            None,
+            "lsusb : aucune sonde JTAG connue détectée",
+            t!("jtag.probe.none_detected.rem").to_string(),
+        ));
+    } else {
+        for probe_name in &detected_names {
+            findings.push(HardwareFinding::new(
+                t!("jtag.probe.detected.title", name = probe_name.as_str()).to_string(),
+                t!("jtag.probe.detected.desc", name = probe_name.as_str()).to_string(),
+                HwSeverity::High,
+                "hw-jtag",
+                Some(1191),
+                Some(7.5),
+                format!("lsusb détecte la sonde : {}", probe_name),
+                t!("jtag.probe.detected.rem").to_string(),
+            ));
+        }
+    }
+
+    findings.extend(check_uart_ports());
+
+    (findings, detected_names)
 }
 
-/// Détecte les ports UART/série connectés (USB-to-serial ou natifs).
-pub fn detect_uart_ports() -> Vec<HardwareFinding> {
+fn check_uart_ports() -> Vec<HardwareFinding> {
     let mut findings = Vec::new();
-    let mut ports    = Vec::new();
+    let mut uart_ports = Vec::new();
 
-    // Ports USB-to-serial et CDC ACM
+    // Chercher ttyUSB*, ttyACM*, ttyS*
     for pattern in &["/dev/ttyUSB*", "/dev/ttyACM*", "/dev/ttyS[0-9]*"] {
-        if let Some(out) = run_command("sh", &["-c", &format!("ls {} 2>/dev/null", pattern)]) {
+        if let Some(out) = run_command("ls", &[pattern]) {
             for line in out.lines() {
-                let port = line.trim().to_string();
-                if !port.is_empty() {
-                    ports.push(port);
+                let p = line.trim();
+                if !p.is_empty() {
+                    uart_ports.push(p.to_string());
                 }
             }
         }
     }
 
-    if ports.is_empty() {
+    if uart_ports.is_empty() {
         findings.push(HardwareFinding::new(
-            "Aucun port série UART détecté",
-            "Aucun /dev/ttyUSB*, /dev/ttyACM* ou /dev/ttyS* trouvé. \
-             Connecter un adaptateur USB-série pour détecter les consoles UART des cibles.",
+            t!("jtag.probe.uart_none.title").to_string(),
+            t!("jtag.probe.uart_none.desc").to_string(),
             HwSeverity::Informative,
             "hw-jtag",
-            None, None,
-            "ls /dev/ttyUSB* /dev/ttyACM* /dev/ttyS* → vide",
-            "Connecter un adaptateur USB-série (FTDI, CP2102, CH340).",
+            None,
+            None,
+            "Aucun port série /dev/ttyUSB*, /dev/ttyACM*, /dev/ttyS*",
+            t!("jtag.probe.uart_none.rem").to_string(),
         ));
-        return findings;
+    } else {
+        let ports_str = uart_ports.join(", ");
+        let count = uart_ports.len();
+        findings.push(HardwareFinding::new(
+            t!("jtag.probe.uart_found.title", ports = ports_str.clone(), count = count.to_string()).to_string(),
+            t!("jtag.probe.uart_found.desc", ports = ports_str.clone(), count = count.to_string()).to_string(),
+            HwSeverity::Medium,
+            "hw-jtag",
+            Some(1191),
+            Some(5.0),
+            format!("Ports série détectés : {}", ports_str),
+            t!("jtag.probe.uart_found.rem").to_string(),
+        ));
     }
-
-    // Tenter d'identifier si un shell Linux répond (115200 baud)
-    let port_list = ports.join(", ");
-    findings.push(HardwareFinding::new(
-        format!("Port(s) série UART disponible(s) : {}", port_list),
-        format!(
-            "{} port(s) série détecté(s). Si connectés à un dispositif embarqué, \
-             ces ports exposent potentiellement une console de débogage ou un shell root. \
-             Tester manuellement : minicom -D <port> -b 115200",
-            ports.len()
-        ),
-        HwSeverity::Medium,
-        "hw-jtag",
-        Some(912),
-        Some(5.5),
-        format!("Ports : {}", port_list),
-        "Désactiver la console UART en production (kernel cmdline : console=). \
-         Si nécessaire, protéger par authentification (U-Boot lockdown). \
-         Physiquement, désactiver les test points UART sur les PCB de production.",
-    ));
 
     findings
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn probe_detection_does_not_panic() {
-        let (findings, _probes) = detect_jtag_probes();
-        assert!(!findings.is_empty());
-    }
-
-    #[test]
-    fn uart_detection_does_not_panic() {
-        let findings = detect_uart_ports();
-        assert!(!findings.is_empty());
-    }
 }

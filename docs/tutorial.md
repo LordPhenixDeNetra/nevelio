@@ -2171,7 +2171,7 @@ make
 ./target/release/nevelio-hw scan --accept-legal --output nevelio-json
 ```
 
-**Modules disponibles (v0.5.0) :**
+**Modules disponibles (v0.6.0) :**
 
 | Module | Couverture |
 |---|---|
@@ -2182,6 +2182,20 @@ make
 | `hw-jtag` | Sondes JTAG/UART, STM32 RDP, firmware (binwalk+angr) |
 | `hw-memory` | Rowhammer, ECC, swap, KASLR, Volatility forensics |
 | `hw-dma-fpga` | leechcore FFI, Verilog TLP, IOMMU strict |
+
+**Internationalisation (i18n) :**
+
+Tous les messages de findings sont traduits via `rust-i18n v3`. La langue suit le
+flag `--lang` global de `nevelio-hw` (`fr` par défaut, `en`, `es` disponibles) :
+
+```bash
+./target/release/nevelio-hw scan --lang en --accept-legal
+./target/release/nevelio-hw scan --lang es --accept-legal
+```
+
+Les locales YAML sont dans `hardware/crates/hw-cli/locales/`. Chaque crate bibliothèque
+déclare `rust_i18n::i18n!("../hw-cli/locales", fallback = "fr")` dans son `lib.rs`
+pour résoudre les clés dans le scope du crate.
 
 Voir [hardware-security-extensions.md](hardware-security-extensions.md) pour la documentation complète,
 [hardware/INSTALL.md](../hardware/INSTALL.md) pour l'installation,

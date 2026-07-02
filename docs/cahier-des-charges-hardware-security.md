@@ -1,8 +1,8 @@
 # Cahier des charges — Module Sécurité Hardware (Nevelio Hardware Extension)
 
-> **Statut :** ✅ Partiellement implémenté — **v0.5.0** (72/85 tâches — 50 tests — 0 warning)
+> **Statut :** ✅ Partiellement implémenté — **v0.6.0** (52/92 tâches — 43 tests — 0 erreur)
 > **Binaire :** `nevelio-hw` — outil autonome dans `hardware/`
-> **Dernière mise à jour :** 2026-06-30
+> **Dernière mise à jour :** 2026-07-02
 
 ---
 
@@ -820,3 +820,54 @@ curl -L https://meltdown.ovh -o spectre-meltdown-checker.sh
 | `hw-dma` | ✅ | ✅ | — | — | ✅ | — | — | ✅ (P5) |
 | `hw-jtag` | ✅ | — | — | — | — | — | ✅ | — |
 | `hw-cli` | ✅ | — | — | — | — | — | — | — |
+
+---
+
+## 10. Internationalisation (i18n)
+
+### Architecture
+
+- **Moteur :** `rust-i18n v3` — macro procédurale compilant les locales au build
+- **Locales :** `hardware/crates/hw-cli/locales/{fr,en,es}.yml` — YAML hiérarchique
+- **Fallback :** `fr` (français)
+- **Sélection langue :** flag `--lang <code>` → `NEVELIO_LANG` → `LANG` → `fr`
+
+### Pattern d'intégration par crate
+
+Chaque crate bibliothèque déclare dans son `lib.rs` :
+
+```rust
+rust_i18n::i18n!("../hw-cli/locales", fallback = "fr");
+```
+
+Le chemin est relatif au répertoire du `Cargo.toml` de la crate. Cette macro
+génère `_rust_i18n_t()` dans le scope de la crate. Les sous-modules utilisent
+`use rust_i18n::t;` puis `t!("clé")` ou `t!("clé", param = valeur)`.
+
+### Hiérarchie des clés YAML
+
+```
+cpu.*          hw-cpu (Spectre, microcode, ASLR, KASLR...)
+firmware.*     hw-firmware (Secure Boot, flash, BIOS...)
+dma.*          hw-dma (IOMMU, Thunderbolt, PCIe, lockdown...)
+sidechannel.*  hw-sidechannel (timing, Flush+Reload, eBPF...)
+jtag.probe.*   hw-jtag / probe.rs (détection USB sondes, UART)
+jtag.openocd.* hw-jtag / openocd.rs (lancement OpenOCD, erreurs)
+jtag.firmware.* hw-jtag / openocd.rs (analyse firmware Python)
+fpga.*         hw-dma-fpga (IOMMU, Thunderbolt, leechcore)
+memory.*       hw-memory (avml, LiME, forensics, rowhammer, swap, KASLR, ECC...)
+vol.*          Python volatility_runner.py (findings Volatility 3)
+```
+
+### Couverture
+
+| Crate / Fichier | Strings traduits | Statut |
+|---|---|---|
+| hw-cpu (sysfs, microcode, memory_protection) | ~20 | ✅ |
+| hw-firmware (uefi, flash) | ~15 | ✅ |
+| hw-dma (iommu, thunderbolt, pcie) | ~18 | ✅ |
+| hw-sidechannel (timing, cache, checksec, ebpf) | ~22 | ✅ |
+| hw-jtag (probe, openocd) | ~25 | ✅ |
+| hw-memory (lib, avml, forensics, swap, rowhammer) | ~55 | ✅ |
+| hw-dma-fpga (pcileech, leechcore) | ~12 | ✅ |
+| Python volatility_runner.py | ~18 | ✅ |

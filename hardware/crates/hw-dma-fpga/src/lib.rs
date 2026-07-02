@@ -5,6 +5,11 @@
 pub mod leechcore;
 pub mod pcileech;
 
+rust_i18n::i18n!("../hw-cli/locales", fallback = "fr");
+
+#[cfg(feature = "leechcore")]
+use rust_i18n::t;
+
 pub use pcileech::{
     check_iommu_status,
     check_thunderbolt_dma,
@@ -32,15 +37,13 @@ impl HwModule for FpgaDmaModule {
             {
                 // Tests actifs leechcore (nécessite FPGA connecté)
                 findings.push(hw_core::HardwareFinding::new(
-                    "Test DMA actif — leechcore disponible",
-                    "La feature leechcore est activée. Un FPGA PCILeech connecté \
-                     permettrait de tester l'accès DMA à la mémoire physique. \
-                     Exécuter nevelio-hw scan --active --target fpga:// pour le test complet.",
+                    t!("fpga.leechcore.active.title"),
+                    t!("fpga.leechcore.active.desc"),
                     hw_core::HwSeverity::Informative,
                     "hw-dma-fpga",
                     None, None,
                     "feature=leechcore actif",
-                    "Connecter le FPGA et lancer le test DMA complet.",
+                    t!("fpga.leechcore.active.rem"),
                 ));
             }
         }

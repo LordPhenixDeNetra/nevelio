@@ -1,12 +1,12 @@
 _version: 2
 
 cli:
-  dry_run_warning: "Modo --dry-run activo: las comprobaciones destructivas (flashrom, tests de memoria) están desactivadas."
+  dry_run_warning: "Modo dry-run activo: las comprobaciones destructivas (flashrom, tests de memoria) están desactivadas."
   target_label: "Objetivo del oráculo de timing"
   banner: "Nevelio Hardware Security v0.1.0"
   modules_selected: "módulo(s) seleccionado(s)"
   findings_elapsed: "%{count} hallazgo(s) [%{elapsed} ms]"
-  audit_save_error: "Registro de auditoría no guardado"
+  audit_save_error: "No se pudo guardar el registro de auditoría"
   audit_saved: "Registro de auditoría"
   report_written: "Informe escrito en"
   modules_available: "Módulos disponibles"
@@ -14,7 +14,7 @@ cli:
   modules_list_hint: "Módulos disponibles"
 
 output:
-  report_title: "Nevelio Hardware Security — Informe de auditoría"
+  report_title: "Nevelio Hardware Security — Informe de Auditoría"
   host_label: "Host"
   generated_label: "Generado el"
   summary_label: "Resumen"
@@ -27,7 +27,7 @@ output:
 
 disclaimer:
   title: "AVISO LEGAL — Nevelio Hardware Security"
-  active_word: "activas"
+  active_word: "activos"
   intro: "Esta herramienta realiza pruebas de seguridad %{kind} en el hardware y firmware del sistema local."
   usage_title: "Uso autorizado únicamente:"
   usage_1: "En hardware de su propiedad"
@@ -36,12 +36,621 @@ disclaimer:
   legal_title: "Marco legal:"
   legal_fr: "Francia : Artículos 323-1 a 323-8 del Código Penal"
   legal_eu: "UE      : Directiva NIS2 + RGPD"
-  legal_us: "EE.UU.  : Computer Fraud and Abuse Act (CFAA)"
+  legal_us: "EEUU    : Computer Fraud and Abuse Act (CFAA)"
   confirm_prompt: "Escriba %{yes} para continuar o %{cancel} para cancelar:"
   confirm_word: "si"
-  rejected: "Aviso legal no aceptado — abortando."
+  rejected: "Aviso legal no aceptado — cancelando."
 
 audit:
   header_title: "# Nevelio Hardware Security — Audit log"
   header_chain: "# Each entry contains SHA-256(previous_entry || data)"
   header_format: "# Format: TIMESTAMP|ACTION|FINDINGS|MAX_SEVERITY|ELAPSED_MS|HASH"
+
+# ══════════════════════════════════════════════════════════════════
+# hw-cpu
+# ══════════════════════════════════════════════════════════════════
+cpu:
+  aslr:
+    partial:
+      title: "ASLR parcialmente activado (nivel 1)"
+      desc: "ASLR está activado en modo parcial (nivel 1): solo el stack y las bibliotecas compartidas se aleatorizan. El heap no se aleatoriza, lo que facilita los ataques heap spray."
+      rem: "Definir `kernel.randomize_va_space = 2` en `/etc/sysctl.conf` y ejecutar `sysctl -p`."
+    disabled:
+      title: "ASLR desactivado — CWE-119"
+      desc: "La aleatorización del espacio de direcciones (ASLR) está completamente desactivada. Las direcciones de memoria son predecibles, lo que facilita exploits de tipo buffer overflow, ROP chains y heap spray."
+      rem: "Activar ASLR completo: `echo 2 > /proc/sys/kernel/randomize_va_space` y persistir con `sysctl kernel.randomize_va_space=2`."
+
+  kaslr:
+    kallsyms_exposed:
+      title: "KASLR — /proc/kallsyms expone direcciones del kernel"
+      desc: "El archivo `/proc/kallsyms` es legible por un usuario sin privilegios y revela las direcciones reales de los símbolos del kernel. Un atacante local puede eludir KASLR sin privilegios elevados."
+      rem: "Restringir acceso: `echo 2 > /proc/sys/kernel/kptr_restrict` y persistir con `sysctl kernel.kptr_restrict=2`."
+    kptr_disabled:
+      title: "kptr_restrict desactivado — direcciones de punteros del kernel expuestas"
+      desc: "`kptr_restrict = 0` permite a cualquier usuario leer las direcciones de punteros del kernel via `/proc/kallsyms`, `/proc/modules` y otras interfaces. Facilita exploits de escalada de privilegios."
+      rem: "Definir `kernel.kptr_restrict = 2` en `/etc/sysctl.conf`."
+    dmesg_exposes:
+      title: "dmesg expone direcciones de memoria del kernel"
+      desc: "`dmesg_restrict = 0` y dmesg contiene direcciones de memoria del kernel legibles sin privilegios elevados. Estas direcciones facilitan la elusión de KASLR."
+      rem: "Definir `kernel.dmesg_restrict = 1` en `/etc/sysctl.conf`."
+
+  microcode:
+    not_readable:
+      title: "Versión de microcódigo CPU no legible"
+      desc: "La versión del microcódigo CPU no pudo leerse desde `/proc/cpuinfo`. Es imposible verificar si el microcódigo está actualizado para las mitigaciones Spectre/Meltdown/MDS."
+      rem: "Verificar manualmente con `dmidecode -t processor` (requiere root) o `rdmsr 0x8b` (msr-tools)."
+    late_load:
+      title: "Microcódigo CPU cargado tardíamente (sin early load)"
+      desc: "El microcódigo CPU no se carga en el early initramfs. Se carga tardíamente por el sistema, lo que significa que el kernel arranca sin los últimos parches de microcódigo durante unos segundos."
+      rem: "Instalar el paquete `intel-microcode` o `amd64-microcode` y reconstruir el initramfs: `update-initramfs -u`."
+    no_eibrs:
+      title: "CPU Intel sin Enhanced IBRS — mitigación Spectre v2 menos efectiva"
+      desc: "Este procesador Intel no soporta Enhanced IBRS (EIBRS). La mitigación Spectre v2 depende de retpolines software con mayor coste de rendimiento y menor cobertura."
+      rem: "Considerar actualizar a una generación de CPU que soporte EIBRS (Intel Cascade Lake o posterior, familia 6 modelo >= 85)."
+
+  flags:
+    no_nx:
+      title: "Bit NX/XD (No-Execute) ausente en los flags de CPU"
+      desc: "El flag NX (Intel XD) no está presente en `/proc/cpuinfo`. Este bit permite al CPU marcar páginas de memoria como no ejecutables, bloqueando ataques clásicos de shellcode."
+      rem: "Activar el bit NX/XD en la configuración BIOS/UEFI (generalmente llamado 'Execute Disable Bit', 'XD Technology', o 'No Execute Memory Protect')."
+    no_smep:
+      title: "SMEP (Supervisor Mode Execution Prevention) no soportado"
+      desc: "SMEP impide al kernel ejecutar código en páginas de espacio de usuario. Sin SMEP, un exploit del kernel puede redirigir la ejecución hacia shellcode en espacio de usuario."
+      rem: "SMEP es una función hardware (Intel Ivy Bridge+ / AMD Excavator+). Si el CPU no lo soporta, considerar una actualización de hardware."
+
+  vuln:
+    desc: "El kernel Linux reporta una vulnerabilidad CPU no mitigada: {content}"
+    spectre_v1:
+      title: "Spectre v1 — Bounds Check Bypass"
+      rem: "Actualizar el microcódigo CPU y el kernel Linux. Aplicar parches SWAPGS y usercopy barriers. Verificar que el kernel sea >= 5.2."
+    spectre_v2:
+      title: "Spectre v2 — Branch Target Injection"
+      rem: "Activar IBRS/IBPB/STIBP mediante microcódigo Intel/AMD actualizado. Verificar que `/sys/devices/system/cpu/vulnerabilities/spectre_v2` muestre 'Mitigation: Retpolines'."
+    meltdown:
+      title: "Meltdown — Rogue Data Cache Load"
+      rem: "Activar KPTI (Kernel Page-Table Isolation). Actualizar el kernel Linux a >= 4.15. Verificar que `/proc/cpuinfo` contenga el flag 'pti'."
+    mds:
+      title: "MDS — Microarchitectural Data Sampling"
+      rem: "Actualizar el microcódigo Intel (mayo 2019 o posterior). Activar el vaciado de buffers CPU via 'mds=full,nosmt' en los parámetros del kernel."
+    l1tf:
+      title: "L1TF — L1 Terminal Fault"
+      rem: "Aplicar el microcódigo Intel de agosto 2018. Activar 'l1tf=full,force' en los parámetros del kernel. Desactivar Hyper-Threading si el riesgo es alto."
+    tsx_async_abort:
+      title: "TAA — TSX Asynchronous Abort"
+      rem: "Actualizar el microcódigo Intel (noviembre 2019). Desactivar TSX via 'tsx=off' si el microcódigo no está disponible."
+    retbleed:
+      title: "Retbleed — Return Stack Buffer Underflow"
+      rem: "Actualizar el kernel Linux a >= 5.19. Aplicar los parches Retbleed (IBPB-on-entry o SRSO para AMD)."
+    spec_store_bypass:
+      title: "Spectre v4 — Speculative Store Bypass"
+      rem: "Activar SSBD (Speculative Store Bypass Disable) mediante microcódigo y el parámetro del kernel 'spec_store_bypass_disable=seccomp'."
+    mmio_stale_data:
+      title: "MMIO Stale Data — Intel MMIO Information Disclosure"
+      rem: "Actualizar el microcódigo Intel (junio 2022). Aplicar los parches del kernel MMIO Stale Data (Linux >= 5.18)."
+    srbds:
+      title: "SRBDS — Special Register Buffer Data Sampling"
+      rem: "Actualizar el microcódigo Intel (junio 2020). Verificar que `/sys/devices/system/cpu/vulnerabilities/srbds` muestre 'Mitigation'."
+
+# ══════════════════════════════════════════════════════════════════
+# hw-dma
+# ══════════════════════════════════════════════════════════════════
+dma:
+  iommu:
+    disabled:
+      title: "IOMMU explícitamente desactivado — CWE-284"
+      desc: "El IOMMU está explícitamente desactivado mediante un parámetro del kernel (`iommu=off` o `intel_iommu=off`). Sin IOMMU, cualquier dispositivo con capacidad DMA (tarjeta de red, disco NVMe, dispositivo Thunderbolt) puede acceder libremente a toda la RAM física."
+      rem: "Eliminar los parámetros `iommu=off` e `intel_iommu=off` del gestor de arranque. Añadir `intel_iommu=on` (Intel) o `amd_iommu=on` (AMD) en su lugar."
+    passthrough:
+      title: "IOMMU en modo passthrough — protección DMA reducida"
+      desc: "El IOMMU está activo pero configurado en modo passthrough (`iommu=pt`). Este modo optimiza el rendimiento de VMs pero no protege los dispositivos passthrough de ataques DMA. Menos seguro que el modo estricto."
+      rem: "Considerar `iommu=strict` en lugar de `iommu=pt` si la seguridad tiene prioridad sobre el rendimiento de virtualización."
+    inactive:
+      title: "IOMMU inactivo — riesgo de ataque DMA — CWE-284"
+      desc: "El IOMMU (Intel VT-d o AMD-Vi) no parece estar activo. Sin IOMMU, un dispositivo malicioso conectado (Thunderbolt, PCIe, ExpressCard) puede leer y escribir libremente en toda la RAM via DMA, permitiendo la extracción de claves de cifrado, contraseñas o inyección de código en el kernel."
+      rem_intel: "Añadir `intel_iommu=on iommu=strict` a los parámetros del kernel en GRUB (`/etc/default/grub`, línea GRUB_CMDLINE_LINUX). Activar VT-d en la configuración UEFI/BIOS."
+      rem_amd: "Añadir `amd_iommu=on iommu=strict` a los parámetros del kernel. Activar AMD-Vi en la configuración UEFI/BIOS."
+
+  pcie:
+    busmaster_no_iommu:
+      title: "{count} dispositivos PCIe con BusMaster sin aislamiento IOMMU"
+      desc: "{count} dispositivos PCIe tienen BusMaster activado sin aislamiento IOMMU. Estos dispositivos pueden realizar accesos DMA directos a toda la RAM física."
+      rem: "Activar IOMMU (`intel_iommu=on` o `amd_iommu=on`) y verificar que existen grupos IOMMU en `/sys/kernel/iommu_groups`."
+    dma_capable:
+      title: "Dispositivo PCIe con capacidad DMA detectado: {keyword}"
+      desc: "Se detectó un dispositivo PCIe de tipo {keyword} {desc}. Este tipo de dispositivo es capaz de acceso DMA directo. Sin IOMMU activo, representa un riesgo de acceso no autorizado a la memoria."
+      rem: "Verificar que el IOMMU está activo y que este dispositivo está aislado en su propio grupo IOMMU. Usar `lspci -vvv` para inspeccionar las capacidades DMA."
+
+  thunderbolt:
+    none:
+      title: "Thunderbolt Security Level: none — DMA sin protección — CWE-284"
+      desc: "El nivel de seguridad Thunderbolt es 'none'. Cualquier dispositivo Thunderbolt/USB4 conectado es autorizado automáticamente sin confirmación. Un dispositivo malicioso puede realizar ataques DMA directos en memoria (Evil Maid, Thunderclap, Thunderspy)."
+      rem: "Configurar el nivel de seguridad Thunderbolt en 'user' o 'secure' en la configuración UEFI (Thunderbolt Security Level). O activar IOMMU estricto para limitar el impacto."
+    user:
+      title: "Thunderbolt Security Level: user — autorización manual requerida"
+      desc: "El nivel de seguridad Thunderbolt es 'user'. Los dispositivos deben ser autorizados manualmente en la primera conexión. Un ataque 'Evil Maid' puede explotar una breve ventana de descuido o abusar de una autorización preexistente."
+      rem: "Considerar el nivel 'secure' o 'dponly' para mayor seguridad. Activar IOMMU para limitar el acceso DMA incluso si un dispositivo está autorizado."
+    secure:
+      title: "Thunderbolt Security Level: {level} — protegido"
+      desc: "El nivel de seguridad Thunderbolt es '{level}'. Los dispositivos son verificados criptográficamente antes de ser autorizados."
+      rem: "No se requiere ninguna acción."
+    unknown:
+      title: "Thunderbolt Security Level desconocido: {level}"
+      desc: "El nivel de seguridad Thunderbolt tiene un valor no reconocido ({level})."
+      rem: "Consultar la documentación del kernel Linux para este nivel de seguridad Thunderbolt."
+
+# ══════════════════════════════════════════════════════════════════
+# hw-firmware
+# ══════════════════════════════════════════════════════════════════
+firmware:
+  flash:
+    flashrom_missing:
+      title: "flashrom no disponible — auditoría de flash SPI imposible"
+      desc: "flashrom es necesario para leer y verificar el estado de protección de escritura del flash SPI. Sin flashrom, no se puede verificar el estado de protección del firmware."
+      rem: "apt install flashrom"
+    access_denied:
+      title: "Acceso al flash SPI denegado — reiniciar como root"
+      desc: "flashrom necesita privilegios de root para acceder al chip flash SPI interno. El comando falló por permisos insuficientes."
+      rem: "sudo flashrom -p internal --flash-name"
+    wp_disabled:
+      title: "Protección de escritura del flash SPI desactivada — CWE-1266"
+      desc: "La protección de escritura del flash SPI está desactivada. Un atacante con acceso al sistema (o mediante un exploit del kernel) puede modificar persistentemente el firmware BIOS/UEFI, incluyendo la implantación de un bootkit."
+      rem: "Activar la WP hardware mediante el jumper SPI WP# en la placa base y configurar la protección software en el firmware UEFI (SPI Lock, BIOS Lock Enable)."
+    wp_enabled:
+      title: "Protección de escritura del flash SPI activada"
+      desc: "La protección de escritura del flash SPI está activada. El firmware BIOS/UEFI está protegido contra modificaciones no autorizadas."
+      rem: "No se requiere ninguna acción. Mantener la WP activada."
+    wp_not_checkable:
+      title: "Estado de protección de escritura del flash SPI indeterminado"
+      desc: "flashrom accedió al chip flash pero no pudo determinar el estado de la protección de escritura. Algunos chipsets no admiten esta consulta sin los derechos o módulo del kernel apropiados."
+      rem: "Usar `flashrom --wp-status` con el chip exacto identificado por `flashrom --flash-name`. Comprobar la configuración UEFI para 'SPI Lock' o 'BIOS Lock Enable'."
+
+  secure_boot:
+    disabled:
+      title: "Secure Boot desactivado — CWE-494"
+      desc: "Secure Boot está desactivado. Un atacante con acceso físico (o explotando un bootloader vulnerable) puede cargar un bootkit o un driver del kernel no firmado que persiste tras la reinstalación del OS."
+      rem: "Activar Secure Boot en la configuración UEFI. En Linux, registrar claves MOK via `mokutil --import <clave.der>` si es necesario."
+    ms_keys_only:
+      title: "Secure Boot activo solo con claves Microsoft"
+      desc: "Secure Boot está activado pero utiliza únicamente las claves Microsoft predeterminadas. Los bootkits firmados por Microsoft (o mediante certificados comprometidos) podrían eludir la protección."
+      rem: "Considerar añadir una clave personalizada via MOK Manager para reforzar la cadena de confianza."
+    efi_not_accessible:
+      title: "Variables EFI no accesibles — Secure Boot no verificable"
+      desc: "El sistema no admite variables EFI o no arrancó en modo UEFI. Secure Boot no puede verificarse. El sistema puede estar arrancando en modo Legacy BIOS sin protección."
+      rem: "Arrancar el sistema en modo UEFI nativo (desactivar Legacy/CSM en la configuración BIOS). Verificar que `/sys/firmware/efi` existe."
+    efi_var_disabled:
+      title: "Secure Boot desactivado (variable EFI) — CWE-494"
+      desc: "La variable UEFI SecureBoot indica que Secure Boot está desactivado."
+      rem: "Activar Secure Boot en la configuración UEFI."
+    legacy_bios:
+      title: "Arranque en modo Legacy BIOS (sin UEFI)"
+      desc: "El sistema arrancó en modo Legacy BIOS. Las protecciones UEFI (Secure Boot, variables EFI seguras) no están disponibles. Un atacante con acceso físico puede instalar un bootkit MBR."
+      rem: "Convertir el disco de MBR a GPT y activar el modo UEFI nativo en la configuración BIOS."
+
+  bios:
+    dmidecode_missing:
+      title: "dmidecode no disponible — auditoría BIOS incompleta"
+      desc: "`dmidecode` está ausente o requiere privilegios de root. La versión del firmware BIOS/UEFI y la fecha de publicación no pueden verificarse."
+      rem: "Instalar `dmidecode` (`apt install dmidecode`) y reiniciar con sudo."
+    outdated:
+      title: "Firmware BIOS/UEFI potencialmente obsoleto"
+      desc: "El firmware BIOS/UEFI data de {date} ({vendor}). Un firmware antiguo puede carecer de parches de seguridad críticos para vulnerabilidades de CPU (Spectre, Meltdown, MDS) y ataques de firmware (BootHole, ThinkPwn, etc.)."
+      rem: "Verificar actualizaciones de firmware en el sitio del fabricante de la placa base o via `fwupdmgr update`. Hacer una copia de seguridad del firmware actual antes de cualquier actualización."
+    vm_detected:
+      title: "Sistema ejecutándose en una máquina virtual"
+      desc: "El firmware detectado corresponde a una máquina virtual (QEMU/VirtualBox/VMware). Algunas comprobaciones de hardware no se aplican en este contexto. Los tests Rowhammer y DMA no tendrán efecto."
+      rem: "No se requiere ninguna acción — información contextual."
+
+  uefi_shell:
+    detected:
+      title: "UEFI Shell detectado en las entradas de arranque — CWE-276"
+      desc: "Se encontró una entrada de arranque apuntando a un UEFI Shell. Un atacante con acceso físico puede arrancar en el UEFI Shell y eludir las protecciones del OS, leer/modificar el flash SPI, o desactivar Secure Boot."
+      rem: "Eliminar la entrada UEFI Shell: `efibootmgr -b <XXXX> -B`. Activar una contraseña UEFI para proteger la configuración de arranque."
+
+  updates:
+    available:
+      title: "Actualizaciones de firmware disponibles via LVFS"
+      desc: "Hay actualizaciones de firmware disponibles via el Linux Vendor Firmware Service (LVFS). Estas actualizaciones pueden contener parches de seguridad críticos para el BIOS, SSDs o controladores de red."
+      rem: "Aplicar actualizaciones: `sudo fwupdmgr update`. Hacer copia de seguridad de datos importantes antes de actualizar el firmware."
+
+# ══════════════════════════════════════════════════════════════════
+# hw-jtag
+# ══════════════════════════════════════════════════════════════════
+jtag:
+  probe:
+    lsusb_missing:
+      title: "lsusb no disponible — detección de sonda JTAG omitida"
+      desc: "lsusb es necesario para detectar sondas JTAG conectadas. Instalar: apt-get install usbutils"
+      rem: "sudo apt-get install usbutils"
+    none_detected:
+      title: "Ninguna sonda JTAG detectada via USB"
+      desc: "lsusb no detectó ninguna sonda JTAG/SWD conocida. Esto no garantiza la ausencia de sondas: las sondas PCIe o internas no se detectan por este método."
+      rem: "Para una auditoría completa, inspeccionar físicamente los conectores JTAG/SWD en las tarjetas objetivo."
+    detected:
+      title: "Sonda JTAG detectada: {name}"
+      desc: "Una sonda JTAG/SWD está conectada a la máquina ({name}). Si este es un sistema de producción, esta sonda permite a un atacante con acceso físico depurar, leer la flash o modificar la ejecución de cualquier firmware conectado."
+      rem: "Retirar las sondas JTAG de los sistemas de producción. Si es necesario para desarrollo, mantenerlas en un laboratorio aislado. Activar RDP Level 2 en objetivos STM32 en producción."
+    uart_none:
+      title: "Ningún puerto serie UART detectado"
+      desc: "No se encontró ningún /dev/ttyUSB*, /dev/ttyACM* ni /dev/ttyS*. Conectar un adaptador USB-serie para detectar consolas UART en los objetivos."
+      rem: "Conectar un adaptador USB-serie (FTDI, CP2102, CH340)."
+    uart_found:
+      title: "Puerto(s) serie UART disponible(s): {ports}"
+      desc: "{count} puerto(s) serie detectado(s). Si están conectados a un dispositivo embebido, estos puertos pueden exponer una consola de depuración o un shell root. Probar manualmente: minicom -D <puerto> -b 115200"
+      rem: "Desactivar la consola UART en producción (kernel cmdline: console=). Si es necesario, proteger con autenticación (U-Boot lockdown). Físicamente, desactivar los test points UART en los PCB de producción."
+  openocd:
+    missing:
+      title: "OpenOCD no instalado — auditoría JTAG omitida"
+      desc: "OpenOCD es necesario para la auditoría JTAG/SWD. Instalar: apt-get install openocd"
+      rem: "sudo apt-get install openocd"
+    launch_failed:
+      title: "Fallo al lanzar OpenOCD"
+      desc: "openocd no pudo iniciarse. Verificar la interfaz y el target configurados."
+      evidence: "interface={interface}, target={target}"
+      rem: "Verificar el cableado y los archivos de configuración de OpenOCD."
+    conn_error:
+      title: "OpenOCD: error de conexión al target"
+      desc: "OpenOCD se inició pero no pudo comunicarse con el target JTAG. Verificar el cableado, la tensión y la configuración."
+      rem: "Consultar la documentación de OpenOCD para la interfaz y el target."
+  firmware:
+    missing:
+      title: "Firmware no encontrado"
+      desc: "El archivo {path} no existe."
+      rem: "Proporcionar la ruta a un archivo de firmware válido."
+    python_missing:
+      title: "Python no disponible — análisis de firmware omitido"
+      desc: "python3 es necesario para firmware_analyzer.py."
+      rem: "sudo apt-get install python3"
+    script_failed:
+      title: "Error en el script firmware_analyzer.py"
+      desc: "El script Python no produjo salida."
+      rem: "Verificar que firmware_analyzer.py sea accesible y que las dependencias estén instaladas."
+    json_error:
+      title: "Error de análisis JSON en firmware_analyzer"
+      desc: "El script devolvió JSON inválido: {error}"
+      rem: "Verificar la salida de firmware_analyzer.py manualmente."
+
+# ══════════════════════════════════════════════════════════════════
+# hw-sidechannel
+# ══════════════════════════════════════════════════════════════════
+side:
+  cache:
+    platform_not_supported:
+      title: "Flush+Reload: comprobación no disponible en esta plataforma"
+      desc: "La comprobación Flush+Reload via CLFLUSH solo está disponible en Linux x86_64. En ARM64, usar el timer CNTVCT_EL0."
+      rem: "Ejecutar esta comprobación en una máquina Linux x86_64."
+    no_clflush:
+      title: "CLFLUSH no soportado por este CPU"
+      desc: "La instrucción CLFLUSH no está disponible. Los ataques Flush+Reload no son aplicables en este sistema."
+      rem: "No se requiere ninguna acción."
+    flush_reload_feasible:
+      title: "Flush+Reload factible en espacio de usuario (CWE-1342)"
+      desc: "La diferencia de latencia entre cache miss (tras CLFLUSH) y cache hit es suficientemente grande para ser explotable por un ataque Flush+Reload. Este tipo de ataque permite deducir los patrones de acceso a memoria de otros procesos que comparten páginas físicas (bibliotecas compartidas, OpenSSL, etc.)."
+      rem: "Activar Kernel Page-Table Isolation (KPTI) y verificar que `nosmt` se pasa al kernel para desactivar hyperthreading. Las mitigaciones Spectre v1/v2 reducen la ventana de ataque. Para aplicaciones críticas, usar primitivas de tiempo constante (libsodium, boringssl con -DOPENSSL_SMALL)."
+    delta_too_low:
+      title: "Flush+Reload: delta de ciclos demasiado bajo para explotación"
+      desc: "La diferencia de latencia cache miss/hit es insuficiente para un ataque Flush+Reload fiable en este sistema."
+      rem: "No se requiere ninguna acción inmediata."
+
+  checksec:
+    aslr_entropy_low:
+      title: "Entropía ASLR mmap insuficiente (CWE-330)"
+      desc: "mmap_rnd_bits = {bits} < 28 bits. Una entropía baja hace el ASLR vulnerable a fuerza bruta en unos pocos miles de intentos. El valor recomendado es >= 32 bits."
+      rem: "echo 32 > /proc/sys/vm/mmap_rnd_bits\nO en /etc/sysctl.d/99-hardening.conf:\nvm.mmap_rnd_bits = 32"
+    aslr_compat_low:
+      title: "Entropía ASLR compat 32-bit insuficiente (CWE-330)"
+      desc: "mmap_rnd_compat_bits = {bits} < 16 bits. Los procesos 32-bit emulados tienen una entropía ASLR muy baja."
+      rem: "echo 16 > /proc/sys/vm/mmap_rnd_compat_bits"
+    perf_permissive:
+      title: "perf_event_paranoid demasiado permisivo — canal lateral PMU posible (CWE-1342)"
+      desc: "perf_event_paranoid = {value} permite a un usuario sin privilegios acceder a los contadores de rendimiento hardware (PMU). Estos contadores pueden explotarse para ataques de canal lateral (Spectre, cache timing)."
+      rem: "echo 3 > /proc/sys/kernel/perf_event_paranoid\nO en sysctl.conf: kernel.perf_event_paranoid = 3\nNota: esto desactiva perf para usuarios sin root."
+    perf_ok:
+      title: "perf_event_paranoid correctamente configurado"
+      desc: "Valor {value} >= 2: acceso PMU restringido a usuarios root."
+      rem: "Configuración óptima: 3 para desactivar completamente el acceso PMU para no-root."
+    smep_disabled:
+      title: "SMEP desactivado (checksec)"
+      desc: "Supervisor Mode Execution Prevention (SMEP) está desactivado. SMEP impide al kernel ejecutar código en espacio de usuario."
+      rem: "Activar SMEP añadiendo `smep` a las opciones del kernel. Verificar que el BIOS/UEFI no lo desactiva."
+    smap_disabled:
+      title: "SMAP desactivado (checksec)"
+      desc: "Supervisor Mode Access Prevention (SMAP) está desactivado. SMAP impide al kernel acceder accidentalmente al espacio de usuario."
+      rem: "Activar SMAP via las opciones del kernel (`smap`). Requiere CPU Intel Broadwell+ o AMD Zen+."
+    ptrace_unrestricted:
+      title: "ptrace sin restricciones — inyección de procesos posible (CWE-862)"
+      desc: "ptrace_scope = 0 permite a cualquier usuario rastrear cualquier proceso de su propiedad. Un atacante con un shell puede inyectar código en otros procesos (ej: navegador, cliente GPG)."
+      rem: "echo 1 > /proc/sys/kernel/yama/ptrace_scope\nO sysctl kernel.yama.ptrace_scope = 1\nValor 1 = solo el padre puede rastrear a sus hijos.\nValor 3 = ptrace totalmente desactivado (recomendado en producción)."
+    ptrace_partial:
+      title: "ptrace_scope = 1 (restricciones parciales)"
+      desc: "Solo el proceso padre puede rastrear a sus hijos. Protección suficiente para la mayoría de casos pero no óptima."
+      rem: "Considerar el valor 3 para desactivar ptrace completamente en producción."
+    ptrace_ok:
+      title: "ptrace_scope correctamente restringido"
+      desc: "ptrace_scope = {value}: solo root o procesos con CAP_SYS_PTRACE pueden rastrear."
+      rem: "Configuración óptima."
+    ptrace_unknown:
+      title: "ptrace_scope: valor desconocido"
+      desc: "Valor inesperado: {value}"
+      rem: "Consultar la documentación de Yama LSM."
+
+  ebpf:
+    linux_only:
+      title: "eBPF: disponible solo en Linux"
+      desc: "Las comprobaciones eBPF (latencia syscall, detección de acceso a memoria) solo están disponibles en Linux con kernel >= 5.4."
+      rem: "Ejecutar nevelio-hw en una máquina Linux."
+    bpf_not_mounted:
+      title: "eBPF: subsistema BPF no montado"
+      desc: "El punto de montaje /sys/fs/bpf está ausente. El kernel no soporta BPF o no está montado."
+      rem: "Montar bpffs: mount -t bpf none /sys/fs/bpf\nVerificar kernel >= 5.4 y CONFIG_BPF_SYSCALL=y."
+    not_compiled:
+      title: "eBPF: comprobación no compilada"
+      desc: "Los programas eBPF no fueron compilados. Recompilar con: make build-release (en Linux con clang instalado)."
+      rem: "sudo apt-get install clang llvm libbpf-dev\nmake install-deps && make build-release"
+    load_failed:
+      title: "eBPF: fallo al cargar el programa"
+      desc: "No se pudo cargar el programa eBPF: {error}. Verificar que nevelio-hw se ejecuta como root (o con CAP_BPF + CAP_PERFMON)."
+      rem: "sudo ./nevelio-hw scan --accept-legal --active"
+    no_slow_syscalls:
+      title: "eBPF syscall latency: ninguna syscall lenta detectada"
+      desc: "Ninguna syscall superó el umbral de 1ms durante los 2s de observación. La distribución de latencia parece normal."
+      rem: "Continuar monitorizando en producción via un pipeline eBPF dedicado."
+    slow_syscalls:
+      title: "eBPF: {count} syscall(s) > 1ms detectada(s) en 2s — CWE-208"
+      desc: "Se observaron syscalls anormalmente lentas ({count} eventos en 2s). Una latencia elevada puede indicar un oráculo de timing en el kernel, congestión I/O explotable, o actividad de swap inesperada."
+      rem: "Analizar los procesos que generan syscalls lentas. Verificar kernel.perf_event_paranoid = 3 para limitar el acceso PMU. Monitorizar continuamente via Prometheus + exportador eBPF."
+
+  timing:
+    http_init_error:
+      title: "No se pudo inicializar el cliente HTTP"
+      desc: "Error reqwest: {error}"
+      rem: "Verificar la configuración de red."
+    unreachable:
+      title: "Oráculo de timing: objetivo inaccesible o muy pocas respuestas"
+      desc: "Solo {received}/{total} solicitudes tuvieron éxito para {url}."
+      rem: "Verificar la conectividad y la URL objetivo."
+    high_variance:
+      title: "Oráculo de timing detectado — varianza anormalmente alta (CWE-208)"
+      desc: "La diferencia p95-p5 = {variance}ms supera el umbral de {threshold}ms. Esta gran dispersión puede indicar procesamiento condicional en el servidor explotable mediante ataques de timing (enumeración de usuarios, blind SQLi temporal, canal lateral criptográfico)."
+      rem: "Implementar delays constantes (comparación en tiempo constante) para operaciones sensibles. Usar hmac::verify_slices_are_equal() en Rust, secrets.compare_digest() en Python. Añadir jitter aleatorio si la latencia variable es inherente al sistema."
+    slow_p95:
+      title: "Oráculo de timing: respuestas muy lentas (CWE-208 potencial)"
+      desc: "La latencia p95 es {p95}ms > umbral {threshold}ms. Las respuestas lentas pueden enmascarar procesamiento condicional o indicar un DoS latente."
+      rem: "Analizar los caminos de código lentos. Añadir perfiles de rendimiento y timeouts estrictos en el servidor."
+    ok:
+      title: "Oráculo de timing: ninguna anomalía detectada"
+      desc: "Varianza p95-p5 = {variance}ms por debajo del umbral de {threshold}ms. Ningún canal lateral de timing evidente en este endpoint."
+      rem: "Continuar monitorizando la latencia en producción."
+
+# ══════════════════════════════════════════════════════════════════
+# hw-dma-fpga
+# ══════════════════════════════════════════════════════════════════
+fpga:
+  iommu:
+    active:
+      title: "IOMMU activo — protección DMA en lugar"
+      desc: "El IOMMU (Intel VT-d o AMD-Vi) está habilitado en este sistema. Los ataques DMA vía PCILeech-FPGA serán parcial o totalmente bloqueados según la configuración de grupos IOMMU."
+      rem: "Configuración recomendada: activar modo estricto (iommu=force) y verificar que todos los dispositivos estén en grupos separados."
+    missing:
+      title: "IOMMU no detectado — DMA físico potencialmente accesible"
+      desc: "No se detectó ningún IOMMU (Intel VT-d / AMD-Vi) en este sistema. Un atacante con acceso físico PCIe puede leer la memoria física completa vía FPGA (PCILeech) o un adaptador Thunderbolt malicioso."
+      rem: "Habilitar Intel VT-d o AMD-Vi en BIOS/UEFI, luego añadir intel_iommu=on iommu=force al parámetro kernel en GRUB."
+    strict:
+      title: "IOMMU no configurado en modo estricto"
+      desc: "El parámetro kernel iommu=force o iommu=strict no está presente. En modo lazy (predeterminado), los mappings DMA pueden permanecer válidos tras la liberación, permitiendo a un dispositivo malicioso acceder a regiones de memoria liberadas recientemente."
+      rem: "Añadir intel_iommu=on iommu=strict a GRUB_CMDLINE_LINUX en /etc/default/grub."
+    unknown:
+      title: "Estado IOMMU no verificable en esta plataforma"
+      desc: "La verificación IOMMU solo está disponible en Linux. En macOS, el acceso DMA es controlado por la arquitectura Apple Silicon (T2/M-series)."
+      rem: "Verificar la configuración IOMMU/VT-d en un sistema Linux."
+  thunderbolt:
+    none_sec:
+      title: "Thunderbolt nivel de seguridad 'none' — DMA sin restricción"
+      rem: "Activar el nivel 'user' o 'secure' en BIOS: Thunderbolt Security Level → User Authorization"
+    user_sec:
+      title: "Thunderbolt nivel 'user' — aprobación manual requerida"
+      rem: "Suficiente para la mayoría de casos. Cambiar a 'secure' para impedir DMA durante el bloqueo."
+    secure_sec:
+      title: "Thunderbolt nivel seguro ('secure'/'dponly'/'usbonly')"
+    unknown_sec:
+      title: "Nivel Thunderbolt desconocido"
+      rem: "Verificar la configuración Thunderbolt en BIOS/UEFI."
+    desc: "Thunderbolt security level: {level}. Un dispositivo Thunderbolt malicioso puede realizar accesos DMA si el nivel es 'none' o si el IOMMU no está activo."
+    evidence: "{path}: {level}"
+  leechcore:
+    active:
+      title: "Test DMA activo — leechcore disponible"
+      desc: "La feature leechcore está habilitada. Un FPGA PCILeech conectado permitiría probar el acceso DMA a la memoria física. Ejecutar nevelio-hw scan --active --target fpga:// para el test completo."
+      rem: "Conectar el FPGA y lanzar el test DMA completo."
+
+# ══════════════════════════════════════════════════════════════════
+# hw-memory
+# ══════════════════════════════════════════════════════════════════
+memory:
+  dry_run:
+    title: "Tests activos de memoria omitidos (modo dry-run)"
+    desc: "En modo --dry-run, el dump de RAM (avml), el test Rowhammer y el análisis Volatility no se ejecutan. Usar --active en una máquina de laboratorio dedicada."
+    rem: "nevelio-hw scan --active  (solo laboratorio — nunca en producción)"
+  forensics_dump:
+    title: "Análisis forense del dump: {dump}"
+    desc: "Lanzando análisis Volatility sobre el dump de memoria proporcionado."
+  avml:
+    detected:
+      title: "avml (herramienta de dump de memoria) detectado"
+      desc: "avml está presente en el sistema. Esta herramienta puede volcar la RAM física completa en espacio de usuario (sin módulo kernel). Si está presente en un sistema de producción sin justificación, puede indicar una compromisión u operación forense no autorizada."
+      rem: "En sistemas de producción, avml no debería estar instalado. Usar un control de integridad (AIDE, auditd) para detectar su instalación."
+    missing:
+      title: "avml no instalado"
+      desc: "avml (Azure Volatile Memory Library) no está detectado. Para un dump de memoria forense: instalar avml desde GitHub (microsoft/avml)."
+      rem: "https://github.com/microsoft/avml — binario estático, sin instalación en el sistema requerida"
+    dump_skip:
+      title: "avml no encontrado — dump de memoria omitido"
+      desc: "avml no está en el PATH. Instalar: wget https://github.com/microsoft/avml/releases/latest/download/avml"
+      rem: "sudo install avml /usr/local/bin/avml"
+    failed:
+      title: "Dump de memoria avml fallido"
+      desc: "avml no pudo iniciarse. Verificar que la herramienta sea ejecutable y que los privilegios root estén disponibles."
+      rem: "Ejecutar nevelio-hw con sudo en modo --active."
+    ok:
+      title: "Dump de memoria física exitoso ({mb:.1} MB)"
+      desc: "avml capturó la RAM física en {path}. Analizar con Volatility3 para extraer procesos, conexiones de red, claves de cifrado y artefactos forenses."
+      evidence: "Archivo: {path} ({size} bytes)"
+      rem: "Analizar con: vol3 -f <dump> windows.pslist  o  vol3 -f <dump> linux.pslist"
+    unexpected:
+      title: "Dump de memoria avml — resultado inesperado"
+      desc: "avml produjo salida pero el archivo de dump está ausente."
+      rem: "Verificar el espacio en disco disponible y los permisos de escritura en /tmp."
+  lime:
+    missing:
+      title: "Módulo LiME ausente — dump del kernel omitido"
+      desc: "El módulo LiME (Linux Memory Extractor) no está presente. Compilar desde hardware/c/kernel/lime_wrapper.c o clonar lime-forensics."
+      rem: "cd hardware/c/kernel && make && sudo insmod lime.ko"
+    ok:
+      title: "Módulo LiME cargado — dump de memoria en curso"
+      rem: "Analizar con Volatility3 tras la descarga: sudo rmmod lime"
+    linux_only:
+      title: "LiME solo disponible en Linux"
+      desc: "El módulo LiME es un módulo del kernel Linux. No disponible en macOS/Windows."
+      rem: "Usar avml (multiplataforma) o LiME en un sistema Linux."
+  forensics:
+    dump_missing:
+      title: "Dump de memoria no encontrado para Volatility"
+      desc: "El archivo {path} no existe. Ejecutar primero avml o LiME."
+      rem: "nevelio-hw scan --active para crear un dump, luego --dump <archivo> para analizarlo."
+    python_missing:
+      title: "Python no disponible — análisis Volatility omitido"
+      desc: "python3 es necesario para volatility_runner.py."
+      rem: "sudo apt-get install python3 && pip3 install volatility3"
+    vol_empty:
+      title: "volatility_runner.py no produjo salida"
+      desc: "El script Python de análisis forense falló o devolvió vacío."
+      rem: "Ejecutar manualmente para diagnosticar: python3 hardware/python/volatility_runner.py --dump <dump>"
+    json_error:
+      title: "Error JSON en volatility_runner.py"
+      desc: "Análisis fallido: {error}"
+    vol_absent:
+      title: "Volatility 3 ausente — análisis forense parcial"
+      desc: "volatility3 no está instalado. El análisis DKOM, malfind y hashdump requiere Volatility 3."
+      rem: "pip install volatility3"
+    vol_ok:
+      title: "Análisis Volatility {ver} lanzado (dump {os} OS)"
+      desc: "Dump de memoria analizado vía Volatility 3 ({os} OS detectado)."
+  core:
+    active:
+      title: "Core dumps activos sin filtro — CWE-312"
+      desc: "Los core dumps están habilitados sin filtro de destino. El crash de un proceso privilegiado puede escribir un archivo core con secretos (claves, tokens, contraseñas) en el directorio de trabajo actual, potencialmente accesible."
+      rem: "Desactivar los core dumps en producción: ulimit -c 0 en los scripts de inicio. O redirigir a un destino seguro: echo '|/usr/share/apport/apport %p %s %c %d %P' > /proc/sys/kernel/core_pattern"
+    pipe:
+      title: "Core dumps redirigidos vía pipe"
+      desc: "Los core dumps se envían vía pipe: {pattern}. Verificar que el programa destino cifre o elimine los dumps tras el procesamiento."
+      rem: "Asegurarse de que systemd-coredump (o equivalente) no exponga los dumps."
+    linux_only:
+      title: "Verificación de core dumps disponible solo en Linux"
+      desc: "La auditoría /proc/sys/kernel/core_pattern requiere Linux."
+    disabled:
+      title: "Core dumps desactivados (ulimit -c 0)"
+      desc: "El tamaño máximo de core dumps es 0 para este proceso. Esta es la configuración segura recomendada en producción."
+    unlimited:
+      title: "Core dumps ilimitados (ulimit -c unlimited) — CWE-312"
+      desc: "El tamaño de los core dumps es ilimitado. Los crashes pueden escribir grandes archivos core exponiendo datos sensibles en memoria."
+      rem: "Añadir en /etc/security/limits.conf: * hard core 0"
+  swap:
+    inaccessible:
+      title: "/proc/swaps inaccesible"
+      desc: "No se puede leer la lista de particiones swap."
+      rem: "Verificar los permisos de lectura (se requiere root)."
+    none:
+      title: "Ningún swap activo detectado"
+      desc: "No hay ninguna partición o archivo swap activo. Si el sistema tiene RAM insuficiente, puede fallar sin swap. Si es intencional, es aceptable desde el punto de vista de seguridad de memoria."
+      rem: "Si se necesita swap, activar el cifrado con dm-crypt."
+    encrypted:
+      title: "Swap cifrado (dm-crypt/LUKS detectado)"
+      desc: "Las particiones swap activas usan un device mapper (dm-crypt). Los datos en swap están protegidos en reposo."
+      rem: "Mantener el cifrado dm-crypt en todas las particiones swap."
+    unencrypted:
+      title: "Swap no cifrado detectado: {n} partición(es) — CWE-311"
+      desc: "Hay particiones swap no cifradas activas. La memoria virtual puede contener secretos (claves, tokens, contraseñas) escritos en texto claro en el disco. Un análisis forense del disco puede recuperarlos incluso tras el apagado."
+      rem: "Cifrar el swap con dm-crypt: 1. swapoff <partición>  2. cryptsetup open --type plain --cipher aes-xts-plain64 <partición> cryptoswap  3. mkswap /dev/mapper/cryptoswap  4. swapon /dev/mapper/cryptoswap  Configurar /etc/crypttab para la persistencia."
+    linux_only:
+      title: "Verificación de swap disponible solo en Linux"
+      desc: "El análisis del cifrado swap y KASLR requiere Linux (/proc/swaps, sysfs)."
+      rem: "Ejecutar en un sistema Linux para un análisis completo."
+  kaslr:
+    ok:
+      title: "KASLR activo (randomize_va_space = 2)"
+      desc: "La randomización completa de direcciones de memoria está habilitada. KASLR hace significativamente más difícil explotar desbordamientos de búfer."
+      rem: "Mantener randomize_va_space = 2 en todos los sistemas de producción."
+    partial:
+      title: "KASLR parcial (randomize_va_space = 1) — CWE-330"
+      desc: "La randomización de direcciones es parcial (pila + VDSO pero no el heap). Se recomienda randomización completa (valor 2)."
+      rem: "echo 2 > /proc/sys/kernel/randomize_va_space\nAñadir kernel.randomize_va_space = 2 en /etc/sysctl.conf"
+    disabled:
+      title: "KASLR desactivado (randomize_va_space = 0) — CWE-330"
+      desc: "La randomización de direcciones de memoria está completamente desactivada. Las direcciones de carga de bibliotecas, del kernel y de la pila son predecibles, facilitando los ataques ROP/ret2libc."
+      rem: "Activar inmediatamente: echo 2 > /proc/sys/kernel/randomize_va_space\nVerificar que ninguna herramienta de depuración fuerce este valor a 0."
+  rowhammer:
+    dry_run:
+      title: "Test Rowhammer omitido (modo dry-run) — CWE-1278"
+      desc: "El test Rowhammer no se ejecuta en modo dry-run. Usar --active para lanzar el test en una máquina de prueba dedicada. ATENCIÓN: nunca lanzar en producción."
+      rem: "Ejecutar en una máquina de laboratorio dedicada: nevelio-hw scan --active"
+    active:
+      title: "Test Rowhammer lanzado — resultados pendientes"
+      desc: "El test de vulnerabilidad Rowhammer está activo. La DRAM se prueba con un patrón double-sided hammering. Este test requiere autorización escrita en cualquier sistema de terceros."
+      evidence: "Área probada: {mb}MB"
+    no_c:
+      title: "Rowhammer C no compilado — solo verificación por software"
+      desc: "El binario rowhammer.c no fue compilado en esta plataforma (gcc ausente, plataforma no Linux, o error de compilación). Ejecutar `make -C hardware/c/userspace` para un test completo."
+      evidence: "OS: {os}, Arch: {arch}"
+      rem: "cd hardware/c/userspace && make && sudo ./rowhammer_test"
+    unsupported:
+      title: "Rowhammer no soportado en esta plataforma"
+      desc: "El test Rowhammer solo está disponible en Linux x86_64/ARM64."
+      evidence: "OS: {os}"
+    mlock:
+      title: "Rowhammer: mlock() fallido — se requiere root"
+      desc: "No se puede bloquear la memoria en RAM física. El test puede producir falsos negativos si las páginas están en swap."
+      rem: "sudo nevelio-hw scan --active"
+    alloc:
+      title: "Rowhammer: asignación de memoria fallida"
+      desc: "mmap({mb} MB) falló."
+      rem: "Reducir el tamaño con un parámetro personalizado."
+    vuln:
+      title: "DRAM vulnerable a Rowhammer: {flips} bit flip(s) detectado(s) — CWE-1278"
+      desc: "El test Rowhammer detectó {flips} inversiones de bits en {bytes} bytes en {rows} pares de filas probados en {secs}s ({rate} hammer/s). Un atacante con acceso local puede explotar esta vulnerabilidad para escalar privilegios (ej: explotación de page tables EFI)."
+      rem: "1. Verificar la disponibilidad de ECC en la placa base (requiere BIOS/UEFI compatible)\n2. Aplicar actualizaciones de BIOS que activen TRR (Target Row Refresh)\n3. Reemplazar módulos DRAM por modelos DDR4 con TRR certificado\n4. Activar el patching kernel LKDTM si está disponible"
+    ecc_active:
+      title: "ECC activo — bit flips corregidos automáticamente"
+      desc: "El ECC (Error Correcting Code) ha corregido bit flips detectados. La vulnerabilidad Rowhammer está presente pero mitigada por ECC. Nota: ECC corrige 1 flip/palabra, pero 2+ flips simultáneos pueden esquivarlo."
+      rem: "Mantener ECC activo. Monitorizar los logs EDAC del kernel."
+    ok:
+      title: "Ningún bit flip Rowhammer detectado ({rows} pares, {secs}s)"
+      desc: "El test Rowhammer no indujo bit flips con los parámetros probados. Un resultado negativo no garantiza la ausencia de vulnerabilidad: aumentar las iteraciones o la duración para un test más exhaustivo."
+      rem: "Para un test exhaustivo: ./rowhammer_test --size 512 --iters 5000000 --time 120"
+    error:
+      title: "Rowhammer: error inesperado (rc={rc})"
+      desc: "El test Rowhammer devolvió un código de error no reconocido."
+  edac:
+    ue:
+      title: "EDAC: {ue} error(es) de memoria no corregible(s) — CWE-1278"
+      desc: "Se detectaron errores de memoria no corregibles (UE = Uncorrectable Errors) por EDAC. Esto indica una degradación hardware seria o un intento exitoso de explotación Rowhammer."
+      rem: "Reemplazo inmediato de los módulos DRAM defectuosos. Analizar los logs EDAC: dmesg | grep EDAC"
+    ok:
+      title: "ECC / EDAC activo — 0 errores no corregibles"
+      desc: "El subsistema EDAC detecta y corrige errores de memoria. No se reportaron errores no corregibles."
+      rem: "Monitorizar regularmente: cat /sys/devices/system/edac/mc/mc0/ce_count"
+    missing:
+      title: "ECC/EDAC no detectado — DRAM probablemente sin ECC"
+      desc: "El subsistema EDAC está ausente. La DRAM instalada no parece ser de tipo ECC, o el soporte EDAC no está compilado en este kernel. Sin ECC, los bit flips Rowhammer no son detectados ni corregidos."
+      rem: "Para servidores y sistemas sensibles, usar módulos ECC RDIMM.\nVerificar que el BIOS habilite ECC y que el driver EDAC esté cargado."
+  ddr5:
+    title: "DRAM DDR5 detectada — mitigaciones Rowhammer mejoradas"
+    desc: "DDR5 integra una tasa de refresco más alta (32ms vs 64ms en DDR4) y mecanismos RFM (Refresh Management) estandarizados. Rowhammer sigue siendo teóricamente posible pero significativamente más difícil."
+    rem: "Mantener el firmware DRAM actualizado (SPD/XMP). Activar RFM si está disponible en el BIOS."
+  ddr4:
+    title: "DRAM DDR4 detectada — TRR presente pero potencialmente evitable"
+    desc: "DDR4 con TRR (Target Row Refresh) se presume resistente al Rowhammer clásico. Sin embargo, TRRespass (IEEE S&P 2020) demostró que TRR es evitable mediante patrones multi-sided (N-sided hammering). El test nevelio-hw usa solo double-sided; TRRespass requiere acceso a direcciones físicas (root + huge pages)."
+    rem: "Actualizar el firmware DRAM. Activar ECC si la placa base lo soporta. Referencia: frigo et al., 'TRRespass: Exploiting TRR Mitigations' (IEEE S&P 2020)"
+  dmidecode:
+    missing:
+      title: "dmidecode ausente — tipo DRAM desconocido"
+      desc: "No se puede determinar el tipo de DRAM y las mitigaciones disponibles."
+      rem: "sudo apt-get install dmidecode"

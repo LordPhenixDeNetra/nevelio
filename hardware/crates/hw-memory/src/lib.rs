@@ -1,4 +1,7 @@
 use hw_core::{HardwareFinding, HwModule, HwScanContext, HwSeverity};
+use rust_i18n::t;
+
+rust_i18n::i18n!("../hw-cli/locales", fallback = "fr");
 
 pub mod avml;
 pub mod forensics;
@@ -38,14 +41,13 @@ impl HwModule for MemoryModule {
         if ctx.dry_run {
             // Mode passif : pas de dump ni de rowhammer
             findings.push(HardwareFinding::new(
-                "Tests actifs mémoire ignorés (mode dry-run)",
-                "En mode --dry-run, le dump RAM (avml), le test Rowhammer et l'analyse \
-                 Volatility ne sont pas exécutés. Utiliser --active sur une machine de lab dédiée.",
+                t!("memory.dry_run.title"),
+                t!("memory.dry_run.desc"),
                 HwSeverity::Informative,
                 "hw-memory",
                 None, None,
                 "dry_run = true",
-                "nevelio-hw scan --active  (lab uniquement — jamais en production)",
+                t!("memory.dry_run.rem"),
             ));
         } else {
             // Mode actif : dump mémoire
@@ -65,8 +67,8 @@ impl HwModule for MemoryModule {
         if let Some(dump) = &ctx.target {
             if dump.ends_with(".lime") || dump.ends_with(".raw") || dump.ends_with(".mem") {
                 findings.push(HardwareFinding::new(
-                    format!("Analyse forensique du dump : {}", dump),
-                    "Lancement de l'analyse Volatility sur le dump mémoire fourni.",
+                    t!("memory.forensics_dump.title", dump = dump.as_str()),
+                    t!("memory.forensics_dump.desc"),
                     HwSeverity::Informative,
                     "hw-memory",
                     None, None,

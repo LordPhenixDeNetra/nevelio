@@ -1,0 +1,248 @@
+_version: 2
+
+# ══════════════════════════════════════════════════════════════════
+# firmware_analyzer.py
+# ══════════════════════════════════════════════════════════════════
+fw:
+  report_written: "[✓] Informe escrito en {path} ({n} hallazgo(s))"
+
+  error:
+    not_found: "Firmware no encontrado: {path}"
+    cmd_missing: "Comando no encontrado: {cmd}"
+    timeout: "Timeout ({timeout}s): {cmd}"
+
+  help:
+    firmware: "Ruta hacia la imagen de firmware"
+    output: "Archivo JSON de salida (predeterminado: stdout)"
+    no_r2: "Desactivar el análisis radare2/r2pipe"
+    no_extract: "No extraer el firmware con binwalk"
+    extract_dir: "Directorio de extracción (predeterminado: tempdir automático)"
+    no_angr: "Desactivar el análisis simbólico angr"
+
+  secret:
+    private_key: "Clave privada embebida en el firmware"
+    aws_key: "Clave AWS IAM Access Key detectada"
+    credential: "Credencial en texto claro detectada"
+    passwd_entry: "Entrada /etc/passwd (cuenta root/admin)"
+    backdoor: "Referencia a backdoor o modo de fábrica"
+    remote_service: "Servicio de red remoto detectado en el firmware"
+    api_token: "Token o clave API en texto claro"
+    hardcoded_url: "URL remota embebida (posible C2 o endpoint de confianza)"
+
+  strings:
+    desc: "Detectado por análisis `strings` sobre la imagen de firmware bruta. {n} ocurrencia(s) (truncado a 3 para la visualización)."
+    rem: "No embeber secretos en texto claro en el firmware. Usar almacenamiento seguro (eFuse, secure enclave, TPM). Implementar un mecanismo de aprovisionamiento post-producción."
+
+  binwalk:
+    missing:
+      title: "binwalk no instalado — análisis de firmware incompleto"
+      desc: "La herramienta binwalk es necesaria para la extracción y detección de firmas. Instalar: pip install binwalk  o  apt-get install binwalk"
+      rem: "pip install binwalk"
+    filesystems:
+      title: "Sistema(s) de archivos detectado(s): {fs}"
+      desc: "binwalk detectó {n} tipo(s) de contenedor(es) en la imagen de firmware. La extracción puede revelar binarios analizables, scripts de arranque y archivos de configuración."
+      rem: "Extraer y analizar cada sistema de archivos individualmente."
+    partial:
+      title: "Extracción binwalk parcial o fallida"
+      desc: "Código de retorno: {rc}. La extracción puede haber tenido éxito parcialmente."
+      rem: "Verificar los permisos de escritura en el directorio de extracción."
+
+  magic:
+    title: "Magic bytes detectados: {n} contenedor(es)"
+    desc: "Se encontraron firmas de sistemas de archivos o formatos comprimidos en la imagen bruta. Usar binwalk para la extracción completa."
+    rem: "binwalk --extract --matryoshka firmware.bin"
+
+  entropy:
+    low:
+      title: "Entropía baja detectada — firmware potencialmente no cifrado"
+      desc: "La entropía media del firmware es {entropy:.2f} (< 0.5). Un firmware no cifrado expone su contenido al análisis estático completo, facilitando la extracción de secretos, claves y código propietario."
+      evidence: "Entropía media: {entropy:.2f}"
+      rem: "Cifrar el firmware con AES-256 (boot ROM decrypt). Activar Secure Boot para verificar la autenticidad."
+
+  r2:
+    missing:
+      title: "radare2 no instalado — análisis ELF omitido"
+      desc: "El análisis de protecciones binarias (NX, PIE, Canary, RELRO) requiere radare2. Instalar: apt-get install radare2"
+      rem: "apt-get install radare2  # o pip install r2pipe"
+
+  elf:
+    unprotected:
+      title: "Binarios ELF sin protecciones: {n} encontrado(s) — CWE-1209"
+      desc: "{n} binario(s) extraído(s) del firmware carecen de protecciones de memoria críticas. Un atacante con acceso al shell del dispositivo puede explotar más fácilmente vulnerabilidades de buffer overflow."
+      rem: "Recompilar con: -fstack-protector-strong -fPIE -pie -Wl,-z,relro,-z,now\nVerificar las opciones del toolchain (Buildroot, Yocto) para activar estas protecciones por defecto."
+    ok:
+      title: "Binarios ELF correctamente protegidos ({n} analizados)"
+      desc: "Todos los binarios ELF analizados tienen las protecciones de memoria estándar."
+
+  angr:
+    missing:
+      title: "angr no instalado — análisis simbólico omitido"
+      desc: "angr (análisis simbólico) no está instalado. Para detectar buffer overflows en binarios ARM/MIPS/x86: pip install angr (instalación ~5 min, ~500MB)"
+    execstack:
+      title: "Pila ejecutable en {bin} — CWE-119"
+      desc: "El binario fue compilado con una pila ejecutable (GNU_STACK RWX). Un atacante puede inyectar y ejecutar shellcode directamente en la pila."
+      rem: "Recompilar con: -Wl,-z,noexecstack"
+    dangerous:
+      title: "Funciones peligrosas en {bin} — {funcs}"
+      desc: "angr detectó {n} función(es) peligrosa(s) importada(s) en {bin}. Estas funciones son vulnerables a buffer overflows e inyecciones de comandos si las entradas no se validan."
+      rem: "Reemplazar con alternativas seguras: strncpy/strlcpy, fgets, snprintf, strncat. Activar sanitizers en la compilación: -fsanitize=address,undefined"
+    done:
+      title: "Análisis simbólico angr completado ({n} binario(s))"
+      desc: "angr analizó {analyzed} binario(s) ELF. {vulns} binario(s) contienen funciones potencialmente peligrosas."
+
+  func:
+    strcpy: "Posible buffer overflow via strcpy()"
+    gets: "Buffer overflow via gets() — CWE-120"
+    sprintf: "Format string u overflow via sprintf()"
+    strcat: "Posible buffer overflow via strcat()"
+    scanf: "Entrada no acotada via scanf()"
+    system: "Ejecución de comandos arbitrarios via system()"
+    popen: "Ejecución de comandos via popen()"
+    printf: "Posible format string via printf()"
+    memcpy: "Posible overflow de memoria no acotado"
+
+
+# ══════════════════════════════════════════════════════════════════
+# volatility_runner.py
+# ══════════════════════════════════════════════════════════════════
+vol:
+  report_written: "[✓] Informe forense: {path} ({n} hallazgo(s))"
+
+  error:
+    not_found: "Dump no encontrado: {path}"
+    tool_missing: "{tool} no encontrado"
+    timeout: "Timeout ({timeout}s) para {plugin}"
+
+  help:
+    dump: "Ruta hacia el dump de memoria física (LiME, avml, raw)"
+    os: "OS del dump: linux, windows o auto-detección"
+    output: "Archivo JSON de salida (- = stdout)"
+    plugins: "Plugins de Volatility a ejecutar (predeterminado: all)"
+
+  missing:
+    title: "Volatility 3 no instalado — análisis forense omitido"
+    desc: "vol3 / volatility3 es necesario para el análisis del dump de memoria. Instalar: pip install volatility3"
+    rem: "pip install volatility3"
+    evidence: "vol3 no está en el PATH"
+
+  dkom:
+    title: "DKOM detectado: {n} proceso(s) oculto(s) — CWE-693"
+    desc: "psscan detectó {n} proceso(s) no listados por pslist. Esta divergencia indica probablemente una manipulación de las estructuras de lista de procesos del kernel (Direct Kernel Object Manipulation — técnica rootkit). PIDs sospechosos: {pids}"
+    rem: "Analizar cada PID sospechoso con malfind y dlllist. Comparar con las conexiones de red (netscan). El indicador de compromiso más fiable es la presencia de conexiones de red activas desde un PID oculto."
+    ok:
+      title: "Ningún proceso oculto detectado ({n} procesos analizados)"
+      desc: "pslist y psscan son coherentes — sin indicios de DKOM."
+
+  malfind:
+    title: "Código inyectado detectado: {n} región(es) sospechosa(s) — CWE-94"
+    desc: "malfind identificó {n} región(es) de memoria con características de inyección de código (cabecera PE fuera de su ubicación normal, o páginas RWX con patrones de shellcode). Técnicas típicas: process hollowing, reflective DLL injection, shellcode injection."
+    rem: "Extraer las regiones sospechosas con malfind --dump para análisis estático. Analizar con YARA (yargen) o VirusTotal. Correlacionar con las conexiones de red para identificar los C2."
+    ok:
+      title: "Ninguna inyección de código detectada por malfind"
+      desc: "malfind no encontró regiones de memoria con firmas de inyección."
+
+  hashdump:
+    title: "Hashes NTLM extraídos de la memoria: {n} cuenta(s) — CWE-312"
+    desc: "Se extrajeron {n} hash(es) NTLM de la RAM. Estos hashes permiten ataques Pass-the-Hash sin descifrar la contraseña. La presencia de hashes NTLM en memoria es normal pero representa un riesgo si el sistema está comprometido (estilo Mimikatz)."
+    rem: "Activar Windows Credential Guard (Virtualization-Based Security). Configurar lsass en modo protegido (Protected Process Light). Aplicar la política 'Network security: Do not store LAN Manager hash value'."
+
+  syscall:
+    title: "Hooks de syscall detectados: {n} entrada(s) modificada(s) — CWE-693"
+    desc: "La tabla de syscalls de Linux contiene {n} hook(s). Este patrón es característico de un rootkit de kernel (LKM rootkit). Los hooks permiten interceptar llamadas al sistema para ocultar procesos, archivos y conexiones de red."
+    rem: "Sistema considerado comprometido. Acciones inmediatas:\n1. Aislar el sistema de la red\n2. Crear un dump completo con avml/LiME\n3. Analizar con un segundo kernel (live boot USB)\n4. Reinstalar desde una imagen conocida como segura"
+
+  network:
+    title: "Conexiones de red sospechosas: {n} en puerto(s) C2 conocidos"
+    desc: "Se detectaron conexiones en puertos típicamente utilizados por herramientas ofensivas (Metasploit, puertas traseras netcat, botnets IRC)."
+    rem: "Analizar los procesos asociados a estas conexiones. Comparar con los procesos ocultos (DKOM). Bloquear estas conexiones en el firewall y analizar los destinos."
+
+
+# ══════════════════════════════════════════════════════════════════
+# chipwhisperer_acq.py
+# ══════════════════════════════════════════════════════════════════
+cw:
+  banner: "\n  Nevelio ChipWhisperer Acquisition v{version}"
+  info_scope: "  Scope: {scope}  |  Objetivo: {target}"
+  info_traces: "  Trazas solicitadas: {n}\n"
+  simulate_forced: "  [i] Modo simulación activado (--simulate)."
+  simulate_fallback: "  [!] ChipWhisperer no detectado — modo simulación."
+  generating: "  Generando {n} trazas simuladas..."
+  scope_ok: "  [✓] Scope conectado: {scope}"
+  target_ok: "  [✓] Objetivo conectado: {target}\n"
+  acq_error: "  [✗] Error de adquisición: {error}"
+  fallback_sim: "  Cambiando al modo simulación..."
+  timeout: "  [!] Timeout en la traza {i}/{n}"
+  progress: "  [*] {i}/{n} trazas adquiridas"
+  done: "\n  [✓] {n} trazas adquiridas y guardadas."
+  saved: "[✓] Trazas guardadas: {path}"
+  meta_saved: "[✓] Metadatos       : {path}"
+
+  error:
+    cw_missing: "chipwhisperer no instalado. Instalar con: pip install chipwhisperer"
+    target_conn: "chipwhisperer requerido para la conexión del objetivo"
+    unknown_target: "Tipo de objetivo desconocido: {target}"
+    numpy_sim: "numpy requerido para la simulación: pip install numpy"
+    numpy_save: "numpy requerido para guardar: pip install numpy"
+    numpy_load: "numpy requerido: pip install numpy"
+    format: "Formato soportado: solo .npz"
+
+  help:
+    n: "Número de trazas a adquirir (predeterminado: 500)"
+    scope: "Tipo de scope ChipWhisperer"
+    target_type: "Protocolo objetivo (SimpleSerial v1 o v2)"
+    gain: "Ganancia AFE en dB (predeterminado: {default})"
+    samples: "Muestras por traza (predeterminado: {default})"
+    output: "Archivo de salida .npz (predeterminado: traces.npz)"
+    simulate: "Modo simulación — no requiere hardware"
+
+
+# ══════════════════════════════════════════════════════════════════
+# cpa_analysis.py
+# ══════════════════════════════════════════════════════════════════
+cpa:
+  banner: "\n  Nevelio CPA Analysis v{version}\n"
+  simulate_info: "  [i] Modo simulación — generando {n} trazas AES-128..."
+  secret_key: "  Clave secreta simulada: {key}\n"
+  loading: "  Cargando trazas: {path}"
+  shape: "  {n} trazas x {s} muestras\n"
+  running: "  [*] Ataque CPA en curso..."
+  byte_result: "  Byte {idx:2d} -> 0x{key:02X}  (correlación máx: {corr:.4f})"
+  key_recovered: "\n  Clave recuperada: {key}"
+  key_correct: "  [✓] ¡Clave correctamente recuperada!"
+  key_wrong: "  [!] {n}/16 bytes incorrectos"
+  tvla_running: "\n  [*] TVLA en curso..."
+  tvla_result: "  TVLA -> |t|_max = {t:.2f}  ({status})"
+  tvla_leak: "FUGA DETECTADA"
+  tvla_ok: "Sin fuga detectada"
+  tvla_error: "  [!] TVLA no disponible: {error}"
+  key_saved: "\n  [✓] Clave guardada: {path}"
+  json_saved: "  [✓] Informe JSON: {path}"
+  plot_saved: "  [✓] Gráfico guardado: {path}"
+  cpa_saved: "  [✓] Resultados CPA guardados: {path}"
+  tvla_saved: "  [✓] TVLA guardado: {path}"
+
+  error:
+    numpy_missing: "[✗] numpy requerido: pip install numpy"
+    traces_required: "[✗] --traces requerido (o --simulate)"
+    matplotlib_missing: "  [!] matplotlib no disponible — visualización omitida."
+
+  help:
+    traces: "Archivo .npz de trazas (generado por chipwhisperer_acq.py)"
+    simulate: "Generar trazas simuladas con fuga AES realista (demo sin hardware)"
+    n: "Número de trazas simuladas (con --simulate)"
+    tvla: "Ejecutar TVLA (Test Vector Leakage Assessment)"
+    plot: "Generar gráficos matplotlib"
+    plot_dir: "Directorio para los gráficos (predeterminado: .)"
+    output_key: "Archivo de salida para la clave recuperada (.hex)"
+    output_json: "Informe JSON completo de resultados"
+
+
+# ══════════════════════════════════════════════════════════════════
+# Gráficos matplotlib (cpa_analysis.py)
+# ══════════════════════════════════════════════════════════════════
+plot:
+  amplitude: "Amplitud"
+  cpa_title: "CPA — Correlación máxima por hipótesis de clave"
+  tvla_title: "TVLA — t de Welch (|t| > 4.5 = fuga significativa)"
+  tvla_leak_label: "Fuga detectada"
+  byte_label: "Byte {idx} -> 0x{key:02X}"

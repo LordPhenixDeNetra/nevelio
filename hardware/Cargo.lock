@@ -629,6 +629,7 @@ name = "hw-cpu"
 version = "0.1.0"
 dependencies = [
  "hw-core",
+ "rust-i18n",
  "serde",
  "serde_json",
 ]
@@ -638,6 +639,7 @@ name = "hw-dma"
 version = "0.1.0"
 dependencies = [
  "hw-core",
+ "rust-i18n",
  "serde",
  "serde_json",
 ]
@@ -648,6 +650,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "hw-core",
+ "rust-i18n",
  "serde",
  "serde_json",
 ]
@@ -657,6 +660,7 @@ name = "hw-firmware"
 version = "0.1.0"
 dependencies = [
  "hw-core",
+ "rust-i18n",
  "serde",
  "serde_json",
 ]
@@ -667,6 +671,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "hw-core",
+ "rust-i18n",
  "serde",
  "serde_json",
 ]
@@ -678,6 +683,7 @@ dependencies = [
  "anyhow",
  "cc",
  "hw-core",
+ "rust-i18n",
  "serde",
  "serde_json",
 ]
@@ -690,6 +696,7 @@ dependencies = [
  "hw-core",
  "libbpf-rs",
  "reqwest",
+ "rust-i18n",
  "serde",
  "serde_json",
 ]

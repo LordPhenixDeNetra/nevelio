@@ -1,4 +1,5 @@
 use hw_core::{HardwareFinding, HwSeverity};
+use rust_i18n::t;
 
 // ── FFI vers rowhammer.c ─────────────────────────────────────────────────────
 
@@ -35,30 +36,26 @@ pub fn run_rowhammer_test(mem_size_mb: u32, dry_run: bool) -> Vec<HardwareFindin
 
     if dry_run {
         findings.push(HardwareFinding::new(
-            "Test Rowhammer ignoré (mode dry-run) — CWE-1278",
-            "Le test Rowhammer n'est pas exécuté en mode dry-run. \
-             Utiliser --active pour lancer le test sur une machine de test dédiée. \
-             ATTENTION : ne jamais lancer en production.",
+            t!("memory.rowhammer.dry_run.title"),
+            t!("memory.rowhammer.dry_run.desc"),
             HwSeverity::Informative,
             "hw-memory",
             Some(1278),
             None,
             "dry_run = true",
-            "Exécuter sur une machine de lab dédiée : nevelio-hw scan --active",
+            t!("memory.rowhammer.dry_run.rem"),
         ));
         return findings;
     }
 
     // Ajouter une note légale systématique en mode actif
     findings.push(HardwareFinding::new(
-        "Test Rowhammer lancé — résultats en cours",
-        "Le test de vulnérabilité Rowhammer est actif. \
-         La DRAM est testée avec un pattern double-sided hammering. \
-         Ce test nécessite une autorisation écrite sur tout système tiers.",
+        t!("memory.rowhammer.active.title"),
+        t!("memory.rowhammer.active.desc"),
         HwSeverity::Informative,
         "hw-memory",
         None, None,
-        format!("Zone testée : {}MB", mem_size_mb),
+        t!("memory.rowhammer.active.evidence", mb = mem_size_mb),
         "",
     ));
 
@@ -70,15 +67,13 @@ pub fn run_rowhammer_test(mem_size_mb: u32, dry_run: bool) -> Vec<HardwareFindin
     #[cfg(not(has_rowhammer))]
     {
         findings.push(HardwareFinding::new(
-            "Rowhammer C non compilé — vérification logicielle uniquement",
-            "Le binaire rowhammer.c n'a pas été compilé sur cette plateforme \
-             (gcc absent, plateforme non-Linux, ou erreur de compilation). \
-             Exécuter `make -C hardware/c/userspace` pour un test complet.",
+            t!("memory.rowhammer.no_c.title"),
+            t!("memory.rowhammer.no_c.desc"),
             HwSeverity::Informative,
             "hw-memory",
             Some(1278), None,
-            format!("OS: {}, Arch: {}", std::env::consts::OS, std::env::consts::ARCH),
-            "cd hardware/c/userspace && make && sudo ./rowhammer_test",
+            t!("memory.rowhammer.no_c.evidence", os = std::env::consts::OS, arch = std::env::consts::ARCH),
+            t!("memory.rowhammer.no_c.rem"),
         ));
 
         // Vérification logicielle : détecter si l'ECC est actif
@@ -114,36 +109,35 @@ fn run_rowhammer_ffi(mem_size_mb: u32) -> Vec<HardwareFinding> {
     match rc {
         -3 => {
             findings.push(HardwareFinding::new(
-                "Rowhammer non supporté sur cette plateforme",
-                "Le test Rowhammer n'est disponible que sur Linux x86_64/ARM64.",
+                t!("memory.rowhammer.unsupported.title"),
+                t!("memory.rowhammer.unsupported.desc"),
                 HwSeverity::Informative,
                 "hw-memory",
                 None, None,
-                format!("OS: {}", std::env::consts::OS),
+                t!("memory.rowhammer.unsupported.evidence", os = std::env::consts::OS),
                 "",
             ));
         }
         -2 => {
             findings.push(HardwareFinding::new(
-                "Rowhammer : mlock() échoué — root requis",
-                "Impossible de verrouiller la mémoire en RAM physique. \
-                 Le test peut produire des faux négatifs si des pages sont swappées.",
+                t!("memory.rowhammer.mlock.title"),
+                t!("memory.rowhammer.mlock.desc"),
                 HwSeverity::Informative,
                 "hw-memory",
                 None, None,
                 "mlock() → EPERM",
-                "sudo nevelio-hw scan --active",
+                t!("memory.rowhammer.mlock.rem"),
             ));
         }
         -1 => {
             findings.push(HardwareFinding::new(
-                "Rowhammer : allocation mémoire échouée",
-                format!("mmap({} MB) a échoué.", mem_size_mb),
+                t!("memory.rowhammer.alloc.title"),
+                t!("memory.rowhammer.alloc.desc", mb = mem_size_mb),
                 HwSeverity::Informative,
                 "hw-memory",
                 None, None,
                 "mmap → MAP_FAILED",
-                "Réduire la taille avec un paramètre personnalisé.",
+                t!("memory.rowhammer.alloc.rem"),
             ));
         }
         0 => {
@@ -157,21 +151,13 @@ fn run_rowhammer_ffi(mem_size_mb: u32) -> Vec<HardwareFinding> {
 
             if result.vulnerable != 0 {
                 findings.push(HardwareFinding::new(
-                    format!(
-                        "DRAM vulnérable à Rowhammer : {} bit flip(s) détecté(s) — CWE-1278",
-                        result.bit_flips
-                    ),
-                    format!(
-                        "Le test Rowhammer a détecté {} inversions de bits dans {} octets \
-                         sur {} paires de rows testées en {}s ({} hammer/s). \
-                         Un attaquant avec accès local peut exploiter cette vulnérabilité \
-                         pour escalader ses privilèges (ex: exploitation des page tables EFI).",
-                        result.bit_flips,
-                        result.bytes_flipped,
-                        result.rows_tested,
-                        duration_s,
-                        hammer_rate,
-                    ),
+                    t!("memory.rowhammer.vuln.title", flips = result.bit_flips),
+                    t!("memory.rowhammer.vuln.desc",
+                        flips = result.bit_flips,
+                        bytes = result.bytes_flipped,
+                        rows  = result.rows_tested,
+                        secs  = duration_s,
+                        rate  = hammer_rate),
                     HwSeverity::Critical,
                     "hw-memory",
                     Some(1278),
@@ -182,48 +168,38 @@ fn run_rowhammer_ffi(mem_size_mb: u32) -> Vec<HardwareFinding> {
                         result.rows_tested, result.duration_ms,
                         result.ecc_detected
                     ),
-                    "1. Vérifier la disponibilité de l'ECC sur la carte mère (nécessite un BIOS/UEFI compatible)\n\
-                     2. Appliquer les mises à jour BIOS qui activent TRR (Target Row Refresh)\n\
-                     3. Remplacer les modules DRAM par des modèles DDR4 avec TRR certifié\n\
-                     4. Activer le patching kernel LKDTM si disponible",
+                    t!("memory.rowhammer.vuln.rem"),
                 ));
 
                 if result.ecc_detected != 0 {
                     findings.push(HardwareFinding::new(
-                        "ECC actif — bit flips corrigés automatiquement",
-                        "L'ECC (Error Correcting Code) a corrigé des bit flips détectés. \
-                         La vulnérabilité Rowhammer est présente mais atténuée par l'ECC. \
-                         Note : l'ECC corrige 1 flip/mot, mais 2+ flips simultanés peuvent bypass.",
+                        t!("memory.rowhammer.ecc_active.title"),
+                        t!("memory.rowhammer.ecc_active.desc"),
                         HwSeverity::Medium,
                         "hw-memory",
                         Some(1278),
                         Some(4.7),
                         "ECC corrections détectées lors du second scan",
-                        "Maintenir l'ECC actif. Surveiller les logs EDAC du noyau.",
+                        t!("memory.rowhammer.ecc_active.rem"),
                     ));
                 }
             } else {
                 findings.push(HardwareFinding::new(
-                    format!(
-                        "Aucun bit flip Rowhammer détecté ({} paires, {}s)",
-                        result.rows_tested, duration_s
-                    ),
-                    "Le test Rowhammer n'a pas induit de bit flips avec les paramètres testés. \
-                     Un résultat négatif ne garantit pas l'absence de vulnérabilité : \
-                     augmenter les itérations ou la durée pour un test plus exhaustif.",
+                    t!("memory.rowhammer.ok.title", rows = result.rows_tested, secs = duration_s),
+                    t!("memory.rowhammer.ok.desc"),
                     HwSeverity::Informative,
                     "hw-memory",
                     None, None,
                     format!("rows={}, iter={}, duration={}ms",
                             result.rows_tested, result.iterations, result.duration_ms),
-                    "Pour un test exhaustif : ./rowhammer_test --size 512 --iters 5000000 --time 120",
+                    t!("memory.rowhammer.ok.rem"),
                 ));
             }
         }
         _ => {
             findings.push(HardwareFinding::new(
-                format!("Rowhammer : erreur inattendue (rc={})", rc),
-                "Le test Rowhammer a retourné un code d'erreur non reconnu.",
+                t!("memory.rowhammer.error.title", rc = rc),
+                t!("memory.rowhammer.error.desc"),
                 HwSeverity::Informative,
                 "hw-memory",
                 None, None,
@@ -263,44 +239,37 @@ pub fn check_ecc_availability() -> Vec<HardwareFinding> {
         if let Some(ue) = ue_count {
             if ue > 0 {
                 findings.push(HardwareFinding::new(
-                    format!("EDAC : {} erreur(s) mémoire non corrigeable(s) — CWE-1278", ue),
-                    "Des erreurs mémoire non corrigeables (UE = Uncorrectable Errors) \
-                     ont été détectées par EDAC. Cela indique une dégradation hardware \
-                     sérieuse ou une tentative d'exploitation Rowhammer réussie.",
+                    t!("memory.edac.ue.title", ue = ue),
+                    t!("memory.edac.ue.desc"),
                     HwSeverity::Critical,
                     "hw-memory",
                     Some(1278),
                     Some(8.8),
                     detail,
-                    "Remplacement immédiat des modules DRAM défaillants. \
-                     Analyser les logs EDAC : dmesg | grep EDAC",
+                    t!("memory.edac.ue.rem"),
                 ));
             } else {
                 findings.push(HardwareFinding::new(
-                    "ECC / EDAC actif — 0 erreur non corrigeable",
-                    "Le sous-système EDAC détecte et corrige les erreurs mémoire. \
-                     Aucune erreur non corrigeable rapportée.",
+                    t!("memory.edac.ok.title"),
+                    t!("memory.edac.ok.desc"),
                     HwSeverity::Informative,
                     "hw-memory",
                     None, None,
                     detail,
-                    "Surveiller régulièrement : cat /sys/devices/system/edac/mc/mc0/ce_count",
+                    t!("memory.edac.ok.rem"),
                 ));
             }
         }
     } else {
         findings.push(HardwareFinding::new(
-            "ECC/EDAC non détecté — DRAM probablement sans ECC",
-            "Le sous-système EDAC est absent. La DRAM installée ne semble pas être \
-             de type ECC, ou le support EDAC n'est pas compilé dans ce noyau. \
-             Sans ECC, les bit flips Rowhammer sont non détectés et non corrigés.",
+            t!("memory.edac.missing.title"),
+            t!("memory.edac.missing.desc"),
             HwSeverity::Medium,
             "hw-memory",
             Some(1278),
             Some(5.5),
             "/sys/devices/system/edac/mc absent",
-            "Pour les serveurs et systèmes sensibles, utiliser des modules ECC RDIMM.\n\
-             Vérifier que le BIOS active l'ECC et que le driver EDAC est chargé.",
+            t!("memory.edac.missing.rem"),
         ));
     }
 
@@ -330,43 +299,36 @@ pub fn check_trr_status() -> Vec<HardwareFinding> {
 
         if has_ddr5 {
             findings.push(HardwareFinding::new(
-                "DRAM DDR5 détectée — mitigations Rowhammer améliorées",
-                "DDR5 intègre un refresh rate plus élevé (32ms vs 64ms en DDR4) \
-                 et des mécanismes RFM (Refresh Management) standardisés. \
-                 Rowhammer reste théoriquement possible mais significativement plus difficile.",
+                t!("memory.ddr5.title"),
+                t!("memory.ddr5.desc"),
                 HwSeverity::Informative,
                 "hw-memory",
                 None, None,
                 "dmidecode : DDR5 détecté",
-                "Maintenir le firmware DRAM à jour (SPD/XMP). Activer RFM si disponible dans le BIOS.",
+                t!("memory.ddr5.rem"),
             ));
         } else if has_ddr4 {
             let severity = if has_ecc { HwSeverity::Low } else { HwSeverity::Medium };
             findings.push(HardwareFinding::new(
-                "DRAM DDR4 détectée — TRR présent mais potentiellement contournable",
-                "DDR4 avec TRR (Target Row Refresh) est présumé résistant à Rowhammer classique. \
-                 Cependant, TRRespass (IEEE S&P 2020) a démontré que TRR est contournable \
-                 via des patterns multi-sided (N-sided hammering). \
-                 Le test nevelio-hw utilise uniquement le double-sided ; \
-                 TRRespass nécessite un accès aux adresses physiques (root + huge pages).",
+                t!("memory.ddr4.title"),
+                t!("memory.ddr4.desc"),
                 severity,
                 "hw-memory",
                 Some(1278),
                 Some(5.5),
                 format!("DDR4 détecté, ECC: {}", has_ecc),
-                "Mettre à jour le firmware DRAM. Activer l'ECC si la carte mère le supporte. \
-                 Référence : frigo et al., 'TRRespass: Exploiting TRR Mitigations' (IEEE S&P 2020)",
+                t!("memory.ddr4.rem"),
             ));
         }
     } else {
         findings.push(HardwareFinding::new(
-            "dmidecode absent — type DRAM inconnu",
-            "Impossible de déterminer le type de DRAM et les mitigations disponibles.",
+            t!("memory.dmidecode.missing.title"),
+            t!("memory.dmidecode.missing.desc"),
             HwSeverity::Informative,
             "hw-memory",
             None, None,
             "dmidecode introuvable",
-            "sudo apt-get install dmidecode",
+            t!("memory.dmidecode.missing.rem"),
         ));
     }
 

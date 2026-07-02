@@ -1,4 +1,5 @@
 use hw_core::{HardwareFinding, HwSeverity, run_command, read_sysfs};
+use rust_i18n::t;
 
 // ── Secure Boot ───────────────────────────────────────────────────────────────
 
@@ -10,51 +11,41 @@ pub(super) fn check_secure_boot() -> Vec<HardwareFinding> {
         let lower = output.to_lowercase();
         if lower.contains("secure boot disabled") {
             findings.push(HardwareFinding::new(
-                "Secure Boot désactivé — CWE-494",
-                "Secure Boot est désactivé. Un attaquant ayant un accès physique \
-                 (ou exploitant un bootloader vulnérable) peut charger un bootkit \
-                 ou un driver noyau non signé qui persiste après réinstallation OS.",
+                t!("firmware.secure_boot.disabled.title").to_string(),
+                t!("firmware.secure_boot.disabled.desc").to_string(),
                 HwSeverity::High,
                 "hw-firmware",
                 Some(494),
                 Some(7.5),
                 format!("mokutil --sb-state : \"{}\"", output.trim()),
-                "Activer Secure Boot dans les paramètres UEFI. Sur Linux, enregistrer \
-                 les clés MOK via `mokutil --import <clé.der>` si nécessaire.",
+                t!("firmware.secure_boot.disabled.rem").to_string(),
             ));
         } else if lower.contains("secure boot enabled") {
             // Secure Boot actif — vérifier si en mode Setup (clés par défaut)
             if let Some(db_out) = run_command("mokutil", &["--db"]) {
                 if db_out.contains("Microsoft") && !db_out.contains("custom") {
                     findings.push(HardwareFinding::new(
-                        "Secure Boot actif avec clés Microsoft uniquement",
-                        "Secure Boot est activé mais utilise uniquement les clés \
-                         Microsoft par défaut. Des bootkits signés par Microsoft \
-                         (ou via des certificats compromis) pourraient contourner \
-                         la protection.",
+                        t!("firmware.secure_boot.ms_keys_only.title").to_string(),
+                        t!("firmware.secure_boot.ms_keys_only.desc").to_string(),
                         HwSeverity::Informative,
                         "hw-firmware",
                         Some(494),
                         Some(3.0),
                         "mokutil --db indique uniquement des clés Microsoft",
-                        "Envisager d'ajouter une clé personnalisée via MOK Manager \
-                         pour renforcer la chaîne de confiance.",
+                        t!("firmware.secure_boot.ms_keys_only.rem").to_string(),
                     ));
                 }
             }
         } else if lower.contains("efi variables are not supported") {
             findings.push(HardwareFinding::new(
-                "Variables EFI non accessibles — Secure Boot non vérifiable",
-                "Le système ne supporte pas les variables EFI ou le système \
-                 n'a pas démarré en mode UEFI. Secure Boot ne peut pas être vérifié. \
-                 Le système démarre peut-être en mode Legacy BIOS sans protection.",
+                t!("firmware.secure_boot.efi_not_accessible.title").to_string(),
+                t!("firmware.secure_boot.efi_not_accessible.desc").to_string(),
                 HwSeverity::Medium,
                 "hw-firmware",
                 Some(494),
                 Some(5.0),
                 format!("mokutil --sb-state : \"{}\"", output.trim()),
-                "Démarrer le système en mode UEFI natif (désactiver le Legacy/CSM \
-                 dans les paramètres BIOS). Vérifier que `/sys/firmware/efi` existe.",
+                t!("firmware.secure_boot.efi_not_accessible.rem").to_string(),
             ));
         }
         return findings;
@@ -67,30 +58,27 @@ pub(super) fn check_secure_boot() -> Vec<HardwareFinding> {
         // La variable SecureBoot est un binaire ; dernier octet = 0x01 si activé
         if sb_value.bytes().last() != Some(1) {
             findings.push(HardwareFinding::new(
-                "Secure Boot désactivé (variable EFI) — CWE-494",
-                "La variable UEFI SecureBoot indique que Secure Boot est désactivé.",
+                t!("firmware.secure_boot.efi_var_disabled.title").to_string(),
+                t!("firmware.secure_boot.efi_var_disabled.desc").to_string(),
                 HwSeverity::High,
                 "hw-firmware",
                 Some(494),
                 Some(7.5),
                 "Variable EFI SecureBoot : valeur ≠ 1",
-                "Activer Secure Boot dans les paramètres UEFI.",
+                t!("firmware.secure_boot.efi_var_disabled.rem").to_string(),
             ));
         }
     } else if !std::path::Path::new("/sys/firmware/efi").exists() {
         // Pas de firmware EFI du tout → démarrage Legacy BIOS
         findings.push(HardwareFinding::new(
-            "Démarrage en mode Legacy BIOS (pas de UEFI)",
-            "Le système a démarré en mode Legacy BIOS. Les protections UEFI \
-             (Secure Boot, variables EFI sécurisées) ne sont pas disponibles. \
-             Un attaquant avec accès physique peut installer un bootkit MBR.",
+            t!("firmware.secure_boot.legacy_bios.title").to_string(),
+            t!("firmware.secure_boot.legacy_bios.desc").to_string(),
             HwSeverity::Medium,
             "hw-firmware",
             Some(494),
             Some(5.5),
             "/sys/firmware/efi n'existe pas — démarrage Legacy BIOS confirmé",
-            "Convertir le disque de MBR vers GPT et activer le mode UEFI natif \
-             dans les paramètres BIOS.",
+            t!("firmware.secure_boot.legacy_bios.rem").to_string(),
         ));
     }
 
@@ -105,15 +93,14 @@ pub(super) fn check_bios_info() -> Vec<HardwareFinding> {
     let Some(output) = run_command("dmidecode", &["-t", "bios"]) else {
         // dmidecode absent ou pas de droits root
         findings.push(HardwareFinding::new(
-            "dmidecode non disponible — audit BIOS incomplet",
-            "`dmidecode` est absent ou nécessite des droits root. La version \
-             du firmware BIOS/UEFI et la date de publication ne peuvent pas être vérifiées.",
+            t!("firmware.bios.dmidecode_missing.title").to_string(),
+            t!("firmware.bios.dmidecode_missing.desc").to_string(),
             HwSeverity::Informative,
             "hw-firmware",
             None,
             None,
             "dmidecode non trouvé ou accès refusé",
-            "Installer `dmidecode` (`apt install dmidecode`) et relancer avec sudo.",
+            t!("firmware.bios.dmidecode_missing.rem").to_string(),
         ));
         return findings;
     };
@@ -130,15 +117,10 @@ pub(super) fn check_bios_info() -> Vec<HardwareFinding> {
             .unwrap_or(9999);
 
         if year < 2020 {
+            let vendor_str = vendor.as_deref().unwrap_or("vendeur inconnu").to_string();
             findings.push(HardwareFinding::new(
-                "Firmware BIOS/UEFI potentiellement obsolète",
-                format!(
-                    "Le firmware BIOS/UEFI date de {} ({}). Un firmware ancien \
-                     peut manquer de correctifs de sécurité critiques pour les \
-                     vulnérabilités CPU (Spectre, Meltdown, MDS) et les attaques \
-                     firmware (BootHole, ThinkPwn, etc.).",
-                    d, vendor.as_deref().unwrap_or("vendeur inconnu")
-                ),
+                t!("firmware.bios.outdated.title").to_string(),
+                t!("firmware.bios.outdated.desc", date = d.clone(), vendor = vendor_str.clone()).to_string(),
                 HwSeverity::Medium,
                 "hw-firmware",
                 Some(1395),
@@ -149,9 +131,7 @@ pub(super) fn check_bios_info() -> Vec<HardwareFinding> {
                     d,
                     vendor.as_deref().unwrap_or("?")
                 ),
-                "Vérifier les mises à jour firmware sur le site du fabricant de la \
-                 carte mère ou via `fwupdmgr update`. Sauvegarder le firmware actuel \
-                 avant toute mise à jour.",
+                t!("firmware.bios.outdated.rem").to_string(),
             ));
         }
     }
@@ -161,16 +141,14 @@ pub(super) fn check_bios_info() -> Vec<HardwareFinding> {
              || output.contains("VMware") || output.contains("SeaBIOS");
     if is_vm {
         findings.push(HardwareFinding::new(
-            "Système exécuté dans une machine virtuelle",
-            "Le firmware détecté correspond à une machine virtuelle (QEMU/VirtualBox/VMware). \
-             Certains checks hardware ne s'appliquent pas dans ce contexte. \
-             Les tests Rowhammer et DMA seront sans effet.",
+            t!("firmware.bios.vm_detected.title").to_string(),
+            t!("firmware.bios.vm_detected.desc").to_string(),
             HwSeverity::Informative,
             "hw-firmware",
             None,
             None,
             format!("dmidecode Vendor/Version : {}", output.lines().take(10).collect::<Vec<_>>().join(" | ")),
-            "Aucune action requise — information contextuelle.",
+            t!("firmware.bios.vm_detected.rem").to_string(),
         ));
     }
 
@@ -194,11 +172,8 @@ pub(super) fn check_uefi_shell() -> Vec<HardwareFinding> {
 
     if has_uefi_shell {
         findings.push(HardwareFinding::new(
-            "UEFI Shell détecté dans les entrées boot — CWE-276",
-            "Une entrée boot pointant vers un UEFI Shell a été trouvée. \
-             Un attaquant avec accès physique peut démarrer sur le UEFI Shell \
-             et contourner les protections OS, lire/modifier le flash SPI, \
-             ou désactiver Secure Boot.",
+            t!("firmware.uefi_shell.detected.title").to_string(),
+            t!("firmware.uefi_shell.detected.desc").to_string(),
             HwSeverity::Medium,
             "hw-firmware",
             Some(276),
@@ -210,8 +185,7 @@ pub(super) fn check_uefi_shell() -> Vec<HardwareFinding> {
                     .collect::<Vec<_>>()
                     .join("\n")
             ),
-            "Supprimer l'entrée UEFI Shell : `efibootmgr -b <XXXX> -B`. \
-             Activer un mot de passe UEFI pour protéger les paramètres de démarrage.",
+            t!("firmware.uefi_shell.detected.rem").to_string(),
         ));
     }
 
@@ -233,17 +207,14 @@ pub(super) fn check_firmware_updates() -> Vec<HardwareFinding> {
             .collect();
 
         findings.push(HardwareFinding::new(
-            "Mises à jour firmware disponibles via LVFS",
-            "Des mises à jour de firmware sont disponibles via le Linux Vendor \
-             Firmware Service (LVFS). Ces mises à jour peuvent contenir des correctifs \
-             de sécurité critiques pour le BIOS, les SSD, ou les contrôleurs réseau.",
+            t!("firmware.updates.available.title").to_string(),
+            t!("firmware.updates.available.desc").to_string(),
             HwSeverity::Medium,
             "hw-firmware",
             Some(1395),
             Some(5.0),
             updates.join("\n"),
-            "Appliquer les mises à jour : `sudo fwupdmgr update`. \
-             Sauvegarder les données importantes avant la mise à jour firmware.",
+            t!("firmware.updates.available.rem").to_string(),
         ));
     }
 

@@ -1,5 +1,7 @@
 use hw_core::{HardwareFinding, HwModule, HwScanContext};
 
+rust_i18n::i18n!("../hw-cli/locales", fallback = "fr");
+
 mod uefi;
 mod flash;
 

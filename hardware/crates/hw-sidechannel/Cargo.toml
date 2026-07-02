@@ -17,6 +17,7 @@ ebpf    = ["dep:libbpf-rs"]
 
 [dependencies]
 hw-core     = { path = "../hw-core" }
+rust-i18n   = { workspace = true }
 serde       = { workspace = true }
 serde_json  = { workspace = true }
 anyhow      = { workspace = true }

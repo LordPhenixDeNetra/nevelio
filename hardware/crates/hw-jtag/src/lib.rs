@@ -1,10 +1,12 @@
 use hw_core::{HardwareFinding, HwModule, HwScanContext};
 
+rust_i18n::i18n!("../hw-cli/locales", fallback = "fr");
+
 pub mod openocd;
 pub mod probe;
 
 pub use openocd::{run_firmware_analyzer, run_openocd_audit};
-pub use probe::{detect_jtag_probes, detect_uart_ports};
+use probe::check_jtag_probes;
 
 // Chemins par défaut (relatifs au répertoire courant d'exécution)
 const TCL_SCRIPT: &str = "hardware/tcl/jtag_audit.tcl";
@@ -22,14 +24,11 @@ impl HwModule for JtagModule {
     fn run(&self, ctx: &HwScanContext) -> Vec<HardwareFinding> {
         let mut findings = Vec::new();
 
-        // 1. Détection de sondes JTAG via lsusb
-        let (probe_findings, probes) = detect_jtag_probes();
+        // 1. Détection de sondes JTAG + UART via lsusb
+        let (probe_findings, probes) = check_jtag_probes();
         findings.extend(probe_findings);
 
-        // 2. Détection de ports UART
-        findings.extend(detect_uart_ports());
-
-        // 3. Audit OpenOCD (seulement si une sonde est détectée et non dry-run)
+        // 2. Audit OpenOCD (seulement si une sonde est détectée et non dry-run)
         if !ctx.dry_run && !probes.is_empty() {
             let (iface, target_cfg, target_name) = pick_openocd_config(&probes);
             findings.extend(run_openocd_audit(
@@ -95,7 +94,7 @@ mod tests {
             verbose: false,
         };
         let findings = JtagModule.run(&ctx);
-        let fw_finding = findings.iter().find(|f| f.title.contains("Firmware introuvable"));
+        let fw_finding = findings.iter().find(|f| matches!(f.severity, hw_core::HwSeverity::Informative));
         assert!(fw_finding.is_some());
     }
 }

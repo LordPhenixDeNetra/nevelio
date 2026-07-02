@@ -1,4 +1,5 @@
 use hw_core::{run_command, HardwareFinding, HwSeverity};
+use rust_i18n::t;
 
 const VOL_SCRIPT: &str = "hardware/python/volatility_runner.py";
 
@@ -8,13 +9,13 @@ pub fn run_volatility_analysis(dump_path: &str) -> Vec<HardwareFinding> {
 
     if !std::path::Path::new(dump_path).exists() {
         findings.push(HardwareFinding::new(
-            "Dump mémoire introuvable pour Volatility",
-            format!("Le fichier {} n'existe pas. Lancer d'abord avml ou LiME.", dump_path),
+            t!("memory.forensics.dump_missing.title"),
+            t!("memory.forensics.dump_missing.desc", path = dump_path),
             HwSeverity::Informative,
             "hw-memory",
             None, None,
             dump_path.to_string(),
-            "nevelio-hw scan --active pour créer un dump, puis --dump <fichier> pour l'analyser.",
+            t!("memory.forensics.dump_missing.rem"),
         ));
         return findings;
     }
@@ -23,13 +24,13 @@ pub fn run_volatility_analysis(dump_path: &str) -> Vec<HardwareFinding> {
                  else if run_command("python", &["--version"]).is_some() { "python" }
                  else {
                      findings.push(HardwareFinding::new(
-                         "Python non disponible — analyse Volatility ignorée",
-                         "python3 est requis pour volatility_runner.py.",
+                         t!("memory.forensics.python_missing.title"),
+                         t!("memory.forensics.python_missing.desc"),
                          HwSeverity::Informative,
                          "hw-memory",
                          None, None,
                          "python3 absent du PATH",
-                         "sudo apt-get install python3 && pip3 install volatility3",
+                         t!("memory.forensics.python_missing.rem"),
                      ));
                      return findings;
                  };
@@ -40,13 +41,13 @@ pub fn run_volatility_analysis(dump_path: &str) -> Vec<HardwareFinding> {
         Some(o) if !o.trim().is_empty() => o,
         _ => {
             findings.push(HardwareFinding::new(
-                "volatility_runner.py n'a pas produit de sortie",
-                "Le script Python d'analyse forensique a échoué ou retourné vide.",
+                t!("memory.forensics.vol_empty.title"),
+                t!("memory.forensics.vol_empty.desc"),
                 HwSeverity::Informative,
                 "hw-memory",
                 None, None,
                 format!("{} --dump {}", VOL_SCRIPT, dump_path),
-                "Exécuter manuellement pour diagnostiquer : python3 hardware/python/volatility_runner.py --dump <dump>",
+                t!("memory.forensics.vol_empty.rem"),
             ));
             return findings;
         }
@@ -55,8 +56,8 @@ pub fn run_volatility_analysis(dump_path: &str) -> Vec<HardwareFinding> {
     match serde_json::from_str::<serde_json::Value>(&json_str) {
         Err(e) => {
             findings.push(HardwareFinding::new(
-                "Erreur JSON volatility_runner.py",
-                format!("Parsing échoué : {}", e),
+                t!("memory.forensics.json_error.title"),
+                t!("memory.forensics.json_error.desc", error = e),
                 HwSeverity::Informative,
                 "hw-memory",
                 None, None,
@@ -77,19 +78,18 @@ pub fn run_volatility_analysis(dump_path: &str) -> Vec<HardwareFinding> {
 
             if vol_version == "absent" {
                 findings.push(HardwareFinding::new(
-                    "Volatility 3 absent — analyse forensique partielle",
-                    "volatility3 n'est pas installé. L'analyse DKOM, malfind et hashdump \
-                     nécessitent Volatility 3.",
+                    t!("memory.forensics.vol_absent.title"),
+                    t!("memory.forensics.vol_absent.desc"),
                     HwSeverity::Informative,
                     "hw-memory",
                     None, None,
                     "vol3 introuvable",
-                    "pip install volatility3",
+                    t!("memory.forensics.vol_absent.rem"),
                 ));
             } else {
                 findings.push(HardwareFinding::new(
-                    format!("Analyse Volatility {} lancée (dump {} OS)", vol_version, os_name),
-                    format!("Dump mémoire analysé via Volatility 3 ({} OS détecté).", os_name),
+                    t!("memory.forensics.vol_ok.title", ver = vol_version, os = os_name),
+                    t!("memory.forensics.vol_ok.desc", os = os_name),
                     HwSeverity::Informative,
                     "hw-memory",
                     None, None,
@@ -140,36 +140,25 @@ pub fn check_core_dumps() -> Vec<HardwareFinding> {
 
         if core_pattern.is_empty() || core_pattern == "core" {
             findings.push(HardwareFinding::new(
-                "Core dumps actifs sans filtre — CWE-312",
-                "Les core dumps sont activés sans filtre de destination. \
-                 Un crash d'un processus privilégié peut écrire un fichier core \
-                 contenant des secrets (clés, tokens, mots de passe) dans le \
-                 répertoire de travail courant, potentiellement accessible.",
+                t!("memory.core.active.title"),
+                t!("memory.core.active.desc"),
                 HwSeverity::Medium,
                 "hw-memory",
                 Some(312),
                 Some(5.5),
                 format!("/proc/sys/kernel/core_pattern = '{}'", core_pattern),
-                "Désactiver les core dumps en production :\n\
-                 echo 0 > /proc/sys/kernel/core_size_pattern  # non standard\n\
-                 ulimit -c 0  # dans les scripts de démarrage\n\
-                 Ou rediriger vers une destination sécurisée :\n\
-                 echo '|/usr/share/apport/apport %p %s %c %d %P' > /proc/sys/kernel/core_pattern",
+                t!("memory.core.active.rem"),
             ));
         } else if core_pattern.starts_with('|') {
             // Core dump via pipe (systemd-coredump, apport, etc.)
             findings.push(HardwareFinding::new(
-                "Core dumps redirigés via pipe",
-                format!(
-                    "Les core dumps sont envoyés via pipe : {}. \
-                     Vérifier que le programme cible chiffre ou supprime les dumps après traitement.",
-                    core_pattern
-                ),
+                t!("memory.core.pipe.title"),
+                t!("memory.core.pipe.desc", pattern = core_pattern),
                 HwSeverity::Informative,
                 "hw-memory",
                 None, None,
                 format!("/proc/sys/kernel/core_pattern = '{}'", core_pattern),
-                "S'assurer que systemd-coredump (ou l'équivalent) n'expose pas les dumps.",
+                t!("memory.core.pipe.rem"),
             ));
         }
 
@@ -185,8 +174,8 @@ pub fn check_core_dumps() -> Vec<HardwareFinding> {
     #[cfg(not(target_os = "linux"))]
     {
         findings.push(HardwareFinding::new(
-            "Vérification core dumps disponible sur Linux uniquement",
-            "L'audit /proc/sys/kernel/core_pattern nécessite Linux.",
+            t!("memory.core.linux_only.title"),
+            t!("memory.core.linux_only.desc"),
             HwSeverity::Informative,
             "hw-memory",
             None, None,
@@ -210,9 +199,8 @@ fn check_ulimit_core(findings: &mut Vec<HardwareFinding>) {
             if let Some(soft) = parts.get(4) {
                 if *soft == "0" {
                     findings.push(HardwareFinding::new(
-                        "Core dumps désactivés (ulimit -c 0)",
-                        "La taille maximale des core dumps est 0 pour ce processus. \
-                         C'est la configuration sécurisée recommandée en production.",
+                        t!("memory.core.disabled.title"),
+                        t!("memory.core.disabled.desc"),
                         HwSeverity::Informative,
                         "hw-memory",
                         None, None,
@@ -222,17 +210,14 @@ fn check_ulimit_core(findings: &mut Vec<HardwareFinding>) {
                     return;
                 } else if *soft == "unlimited" {
                     findings.push(HardwareFinding::new(
-                        "Core dumps illimités (ulimit -c unlimited) — CWE-312",
-                        "La taille des core dumps est illimitée. \
-                         Les crashs peuvent écrire de grands fichiers core exposant \
-                         les données sensibles en mémoire.",
+                        t!("memory.core.unlimited.title"),
+                        t!("memory.core.unlimited.desc"),
                         HwSeverity::Medium,
                         "hw-memory",
                         Some(312),
                         Some(4.4),
                         "ulimit -c unlimited",
-                        "Ajouter dans /etc/security/limits.conf :\n\
-                         * hard core 0",
+                        t!("memory.core.unlimited.rem"),
                     ));
                 }
             }
@@ -248,7 +233,7 @@ mod tests {
     fn volatility_missing_dump_returns_finding() {
         let findings = run_volatility_analysis("/nonexistent/memory.lime");
         assert!(!findings.is_empty());
-        assert!(findings[0].title.contains("introuvable"));
+        assert!(findings[0].severity == HwSeverity::Informative);
     }
 
     #[test]

@@ -83,9 +83,9 @@ def run_vol(vol_bin: str, dump_path: str, plugin: str, timeout: int = 120) -> tu
         r = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
         return r.returncode, r.stdout, r.stderr
     except FileNotFoundError:
-        return -1, '', f'{vol_bin} introuvable'
+        return -1, '', t("vol.error.tool_missing", tool=vol_bin)
     except subprocess.TimeoutExpired:
-        return -2, '', f'Timeout ({timeout}s) pour {plugin}'
+        return -2, '', t("vol.error.timeout", timeout=timeout, plugin=plugin)
 
 
 def find_volatility() -> str | None:
@@ -369,7 +369,7 @@ def main():
             t("vol.missing.title"),
             t("vol.missing.desc"),
             "INFORMATIVE",
-            evidence="vol3 absent du PATH",
+            evidence=t("vol.missing.evidence"),
             remediation=t("vol.missing.rem"),
         ))
     else:

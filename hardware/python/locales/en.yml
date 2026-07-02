@@ -1,0 +1,248 @@
+_version: 2
+
+# ══════════════════════════════════════════════════════════════════
+# firmware_analyzer.py
+# ══════════════════════════════════════════════════════════════════
+fw:
+  report_written: "[✓] Report written to {path} ({n} finding(s))"
+
+  error:
+    not_found: "Firmware not found: {path}"
+    cmd_missing: "Command not found: {cmd}"
+    timeout: "Timeout ({timeout}s): {cmd}"
+
+  help:
+    firmware: "Path to the firmware image"
+    output: "JSON output file (default: stdout)"
+    no_r2: "Disable radare2/r2pipe analysis"
+    no_extract: "Do not extract firmware with binwalk"
+    extract_dir: "Extraction directory (default: auto tempdir)"
+    no_angr: "Disable angr symbolic analysis"
+
+  secret:
+    private_key: "Private key embedded in firmware"
+    aws_key: "AWS IAM Access Key detected"
+    credential: "Plaintext credential detected"
+    passwd_entry: "/etc/passwd entry (root/admin account)"
+    backdoor: "Reference to backdoor or factory mode"
+    remote_service: "Remote network service detected in firmware"
+    api_token: "Plaintext token or API key"
+    hardcoded_url: "Hardcoded remote URL (potential C2 or trusted endpoint)"
+
+  strings:
+    desc: "Detected by `strings` analysis on raw firmware image. {n} occurrence(s) (truncated to 3 for display)."
+    rem: "Do not embed plaintext secrets in firmware. Use secure storage (eFuse, secure enclave, TPM). Implement a post-production provisioning mechanism."
+
+  binwalk:
+    missing:
+      title: "binwalk not installed — incomplete firmware analysis"
+      desc: "The binwalk tool is required for extraction and signature detection. Install: pip install binwalk  or  apt-get install binwalk"
+      rem: "pip install binwalk"
+    filesystems:
+      title: "Filesystem(s) detected: {fs}"
+      desc: "binwalk detected {n} container type(s) in the firmware image. Extraction may reveal analyzable binaries, startup scripts, and configuration files."
+      rem: "Extract and analyze each filesystem individually."
+    partial:
+      title: "Partial or failed binwalk extraction"
+      desc: "Return code: {rc}. Extraction may have partially succeeded."
+      rem: "Check write permissions on the extraction directory."
+
+  magic:
+    title: "Magic bytes detected: {n} container(s)"
+    desc: "Filesystem or compressed format signatures were found in the raw image. Use binwalk for full extraction."
+    rem: "binwalk --extract --matryoshka firmware.bin"
+
+  entropy:
+    low:
+      title: "Low entropy detected — firmware potentially unencrypted"
+      desc: "The average firmware entropy is {entropy:.2f} (< 0.5). An unencrypted firmware exposes its content to full static analysis, facilitating secret extraction, key extraction, and proprietary code exposure."
+      evidence: "Average entropy: {entropy:.2f}"
+      rem: "Encrypt firmware with AES-256 (boot ROM decrypt). Enable Secure Boot to verify authenticity."
+
+  r2:
+    missing:
+      title: "radare2 not installed — ELF analysis skipped"
+      desc: "Binary protection analysis (NX, PIE, Canary, RELRO) requires radare2. Install: apt-get install radare2"
+      rem: "apt-get install radare2  # or pip install r2pipe"
+
+  elf:
+    unprotected:
+      title: "ELF binaries without protections: {n} found — CWE-1209"
+      desc: "{n} binary(ies) extracted from firmware lack critical memory protections. An attacker with device shell access can more easily exploit buffer overflow vulnerabilities."
+      rem: "Recompile with: -fstack-protector-strong -fPIE -pie -Wl,-z,relro,-z,now\nCheck toolchain options (Buildroot, Yocto) to enable these protections by default."
+    ok:
+      title: "ELF binaries properly protected ({n} analyzed)"
+      desc: "All analyzed ELF binaries have standard memory protections."
+
+  angr:
+    missing:
+      title: "angr not installed — symbolic analysis skipped"
+      desc: "angr (symbolic analysis) is not installed. To detect buffer overflows in ARM/MIPS/x86 binaries: pip install angr (installation ~5 min, ~500MB)"
+    execstack:
+      title: "Executable stack in {bin} — CWE-119"
+      desc: "The binary was compiled with an executable stack (GNU_STACK RWX). An attacker can inject and execute shellcode directly on the stack."
+      rem: "Recompile with: -Wl,-z,noexecstack"
+    dangerous:
+      title: "Dangerous functions in {bin} — {funcs}"
+      desc: "angr detected {n} dangerous imported function(s) in {bin}. These functions are known to be vulnerable to buffer overflows and command injections if inputs are not validated."
+      rem: "Replace with secure alternatives: strncpy/strlcpy, fgets, snprintf, strncat. Enable sanitizers at compilation: -fsanitize=address,undefined"
+    done:
+      title: "angr symbolic analysis complete ({n} binary(ies))"
+      desc: "angr analyzed {analyzed} ELF binary(ies). {vulns} binary(ies) contain potentially dangerous functions."
+
+  func:
+    strcpy: "Potential buffer overflow via strcpy()"
+    gets: "Buffer overflow via gets() — CWE-120"
+    sprintf: "Format string or overflow via sprintf()"
+    strcat: "Potential buffer overflow via strcat()"
+    scanf: "Unbounded input via scanf()"
+    system: "Arbitrary command execution via system()"
+    popen: "Command execution via popen()"
+    printf: "Potential format string via printf()"
+    memcpy: "Possible unbounded memory overflow"
+
+
+# ══════════════════════════════════════════════════════════════════
+# volatility_runner.py
+# ══════════════════════════════════════════════════════════════════
+vol:
+  report_written: "[✓] Forensic report: {path} ({n} finding(s))"
+
+  error:
+    not_found: "Dump not found: {path}"
+    tool_missing: "{tool} not found"
+    timeout: "Timeout ({timeout}s) for {plugin}"
+
+  help:
+    dump: "Path to physical memory dump (LiME, avml, raw)"
+    os: "Dump OS: linux, windows, or auto-detect"
+    output: "JSON output file (- = stdout)"
+    plugins: "Volatility plugins to run (default: all)"
+
+  missing:
+    title: "Volatility 3 not installed — forensic analysis skipped"
+    desc: "vol3 / volatility3 is required for memory dump analysis. Install: pip install volatility3"
+    rem: "pip install volatility3"
+    evidence: "vol3 not in PATH"
+
+  dkom:
+    title: "DKOM detected: {n} hidden process(es) — CWE-693"
+    desc: "psscan detected {n} process(es) not listed by pslist. This discrepancy likely indicates kernel process list manipulation (Direct Kernel Object Manipulation — rootkit technique). Suspicious PIDs: {pids}"
+    rem: "Analyze each suspicious PID with malfind and dlllist. Compare with network connections (netscan). The most reliable indicator of compromise is the presence of active network connections from a hidden PID."
+    ok:
+      title: "No hidden processes detected ({n} processes analyzed)"
+      desc: "pslist and psscan are consistent — no indication of DKOM."
+
+  malfind:
+    title: "Injected code detected: {n} suspicious region(s) — CWE-94"
+    desc: "malfind identified {n} memory region(s) with code injection characteristics (PE header outside normal location, or RWX pages with shellcode patterns). Typical techniques: process hollowing, reflective DLL injection, shellcode injection."
+    rem: "Extract suspicious regions with malfind --dump for static analysis. Analyze with YARA (yargen) or VirusTotal. Correlate with network connections to identify C2."
+    ok:
+      title: "No code injection detected by malfind"
+      desc: "malfind found no memory regions with injection signatures."
+
+  hashdump:
+    title: "NTLM hashes extracted from memory: {n} account(s) — CWE-312"
+    desc: "{n} NTLM hash(es) were extracted from RAM. These hashes enable Pass-the-Hash attacks without cracking the password. NTLM hashes in memory are normal but represent a risk if the system is compromised (Mimikatz-style)."
+    rem: "Enable Windows Credential Guard (Virtualization-Based Security). Configure lsass in protected mode (Protected Process Light). Apply the 'Network security: Do not store LAN Manager hash value' policy."
+
+  syscall:
+    title: "Syscall hooks detected: {n} modified entry(ies) — CWE-693"
+    desc: "The Linux syscall table contains {n} hook(s). This pattern is characteristic of a kernel rootkit (LKM rootkit). Hooks allow intercepting system calls to hide processes, files, and network connections."
+    rem: "System considered compromised. Immediate actions:\n1. Isolate the system from the network\n2. Create a full dump with avml/LiME\n3. Analyze with a second kernel (live USB boot)\n4. Reinstall from a known-good image"
+
+  network:
+    title: "Suspicious network connections: {n} on known C2 port(s)"
+    desc: "Connections on ports typically used by offensive tools (Metasploit, netcat backdoors, IRC botnets) were detected."
+    rem: "Analyze processes associated with these connections. Compare with hidden processes (DKOM). Block these connections at the firewall and analyze destinations."
+
+
+# ══════════════════════════════════════════════════════════════════
+# chipwhisperer_acq.py
+# ══════════════════════════════════════════════════════════════════
+cw:
+  banner: "\n  Nevelio ChipWhisperer Acquisition v{version}"
+  info_scope: "  Scope: {scope}  |  Target: {target}"
+  info_traces: "  Traces requested: {n}\n"
+  simulate_forced: "  [i] Simulation mode activated (--simulate)."
+  simulate_fallback: "  [!] ChipWhisperer not detected — simulation mode."
+  generating: "  Generating {n} simulated traces..."
+  scope_ok: "  [✓] Scope connected: {scope}"
+  target_ok: "  [✓] Target connected: {target}\n"
+  acq_error: "  [✗] Acquisition error: {error}"
+  fallback_sim: "  Switching to simulation mode..."
+  timeout: "  [!] Timeout at trace {i}/{n}"
+  progress: "  [*] {i}/{n} traces acquired"
+  done: "\n  [✓] {n} traces acquired and saved."
+  saved: "[✓] Traces saved: {path}"
+  meta_saved: "[✓] Metadata        : {path}"
+
+  error:
+    cw_missing: "chipwhisperer not installed. Install with: pip install chipwhisperer"
+    target_conn: "chipwhisperer required for target connection"
+    unknown_target: "Unknown target type: {target}"
+    numpy_sim: "numpy required for simulation: pip install numpy"
+    numpy_save: "numpy required for saving: pip install numpy"
+    numpy_load: "numpy required: pip install numpy"
+    format: "Supported format: .npz only"
+
+  help:
+    n: "Number of traces to acquire (default: 500)"
+    scope: "ChipWhisperer scope type"
+    target_type: "Target protocol (SimpleSerial v1 or v2)"
+    gain: "AFE gain in dB (default: {default})"
+    samples: "Samples per trace (default: {default})"
+    output: "Output file .npz (default: traces.npz)"
+    simulate: "Simulation mode — no hardware required"
+
+
+# ══════════════════════════════════════════════════════════════════
+# cpa_analysis.py
+# ══════════════════════════════════════════════════════════════════
+cpa:
+  banner: "\n  Nevelio CPA Analysis v{version}\n"
+  simulate_info: "  [i] Simulation mode — generating {n} AES-128 traces..."
+  secret_key: "  Simulated secret key: {key}\n"
+  loading: "  Loading traces: {path}"
+  shape: "  {n} traces x {s} samples\n"
+  running: "  [*] CPA attack in progress..."
+  byte_result: "  Byte {idx:2d} -> 0x{key:02X}  (max correlation: {corr:.4f})"
+  key_recovered: "\n  Recovered key: {key}"
+  key_correct: "  [✓] Key correctly recovered!"
+  key_wrong: "  [!] {n}/16 bytes incorrect"
+  tvla_running: "\n  [*] TVLA in progress..."
+  tvla_result: "  TVLA -> |t|_max = {t:.2f}  ({status})"
+  tvla_leak: "LEAK DETECTED"
+  tvla_ok: "No leak detected"
+  tvla_error: "  [!] TVLA not available: {error}"
+  key_saved: "\n  [✓] Key saved: {path}"
+  json_saved: "  [✓] JSON report: {path}"
+  plot_saved: "  [✓] Plot saved: {path}"
+  cpa_saved: "  [✓] CPA results saved: {path}"
+  tvla_saved: "  [✓] TVLA saved: {path}"
+
+  error:
+    numpy_missing: "[✗] numpy required: pip install numpy"
+    traces_required: "[✗] --traces required (or --simulate)"
+    matplotlib_missing: "  [!] matplotlib not available — visualization skipped."
+
+  help:
+    traces: ".npz trace file (generated by chipwhisperer_acq.py)"
+    simulate: "Generate simulated traces with realistic AES leakage (demo without hardware)"
+    n: "Number of simulated traces (with --simulate)"
+    tvla: "Run TVLA (Test Vector Leakage Assessment)"
+    plot: "Generate matplotlib plots"
+    plot_dir: "Directory for plots (default: .)"
+    output_key: "Output file for recovered key (.hex)"
+    output_json: "Full JSON report of results"
+
+
+# ══════════════════════════════════════════════════════════════════
+# matplotlib plots (cpa_analysis.py)
+# ══════════════════════════════════════════════════════════════════
+plot:
+  amplitude: "Amplitude"
+  cpa_title: "CPA — Max correlation per key hypothesis"
+  tvla_title: "TVLA — Welch t-test (|t| > 4.5 = significant leak)"
+  tvla_leak_label: "Leak detected"
+  byte_label: "Byte {idx} -> 0x{key:02X}"

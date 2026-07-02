@@ -1,4 +1,5 @@
 use hw_core::{HardwareFinding, HwSeverity, run_command, read_sysfs};
+use rust_i18n::t;
 
 pub(super) fn check_microcode() -> Vec<HardwareFinding> {
     let mut findings = Vec::new();
@@ -36,17 +37,14 @@ fn check_microcode_version() -> Vec<HardwareFinding> {
     match &microcode_version {
         None => {
             findings.push(HardwareFinding::new(
-                "Version microcode CPU non lisible",
-                "La version du microcode CPU n'a pas pu être lue depuis `/proc/cpuinfo`. \
-                 Il est impossible de vérifier si le microcode est à jour pour les \
-                 mitigations Spectre/Meltdown/MDS.",
+                t!("cpu.microcode.not_readable.title").to_string(),
+                t!("cpu.microcode.not_readable.desc").to_string(),
                 HwSeverity::Informative,
                 "hw-cpu",
                 None,
                 None,
                 "Champ 'microcode' absent de /proc/cpuinfo",
-                "Vérifier manuellement avec `dmidecode -t processor` (root requis) \
-                 ou `rdmsr 0x8b` (msr-tools).",
+                t!("cpu.microcode.not_readable.rem").to_string(),
             ));
         }
         Some(version) => {
@@ -54,17 +52,14 @@ fn check_microcode_version() -> Vec<HardwareFinding> {
             let microcode_loaded = check_early_microcode_load(&cpuinfo);
             if !microcode_loaded {
                 findings.push(HardwareFinding::new(
-                    "Microcode CPU chargé tardivement (pas d'early load)",
-                    "Le microcode CPU n'est pas chargé en early initramfs. Il est chargé \
-                     tardivement par le système, ce qui signifie que le noyau démarre \
-                     sans les derniers correctifs microcode pendant quelques secondes.",
+                    t!("cpu.microcode.late_load.title").to_string(),
+                    t!("cpu.microcode.late_load.desc").to_string(),
                     HwSeverity::Low,
                     "hw-cpu",
                     Some(1395),
                     Some(3.0),
                     format!("CPU : {} | Microcode : {}", model_name, version),
-                    "Installer le paquet `intel-microcode` ou `amd64-microcode` \
-                     et reconstruire l'initramfs : `update-initramfs -u`.",
+                    t!("cpu.microcode.late_load.rem").to_string(),
                 ));
             }
 
@@ -111,17 +106,14 @@ fn check_intel_speculative_vuln(cpuinfo: &str, findings: &mut Vec<HardwareFindin
         // Famille 6, modèles < 78 (Skylake+) → pas d'EIBRS natif
         if cpu_family == 6 && model < 78 {
             findings.push(HardwareFinding::new(
-                "CPU Intel sans Enhanced IBRS — mitigation Spectre v2 moins efficace",
-                "Ce processeur Intel ne supporte pas Enhanced IBRS (EIBRS). \
-                 La mitigation Spectre v2 repose sur des retpolines logicielles \
-                 qui ont un coût performance plus élevé et couvrent moins de cas.",
+                t!("cpu.microcode.no_eibrs.title").to_string(),
+                t!("cpu.microcode.no_eibrs.desc").to_string(),
                 HwSeverity::Low,
                 "hw-cpu",
                 Some(1342),
                 Some(4.0),
                 format!("CPU family: {}, model: {} — EIBRS non supporté", cpu_family, model),
-                "Envisager la mise à niveau vers une génération CPU supportant EIBRS \
-                 (Intel Cascade Lake ou ultérieur, famille 6 modèle ≥ 85).",
+                t!("cpu.microcode.no_eibrs.rem").to_string(),
             ));
         }
     }
@@ -134,17 +126,14 @@ fn check_cpu_flags() -> Vec<HardwareFinding> {
     // NX/XD bit — prévention d'exécution de données
     if !cpuinfo.contains(" nx ") && !cpuinfo.contains(" xd ") {
         findings.push(HardwareFinding::new(
-            "Bit NX/XD (No-Execute) absent des flags CPU",
-            "Le flag NX (Intel XD) n'est pas présent dans `/proc/cpuinfo`. \
-             Ce bit permet au CPU de marquer des pages mémoire comme non-exécutables, \
-             bloquant les attaques de type shellcode classiques.",
+            t!("cpu.flags.no_nx.title").to_string(),
+            t!("cpu.flags.no_nx.desc").to_string(),
             HwSeverity::High,
             "hw-cpu",
             Some(284),
             Some(7.0),
             "Flags CPU depuis /proc/cpuinfo ne contiennent pas 'nx' ou 'xd'",
-            "Activer le bit NX/XD dans les paramètres BIOS/UEFI (souvent appelé \
-             'Execute Disable Bit', 'XD Technology', ou 'No Execute Memory Protect').",
+            t!("cpu.flags.no_nx.rem").to_string(),
         ));
     }
 
@@ -152,17 +141,14 @@ fn check_cpu_flags() -> Vec<HardwareFinding> {
     // SMEP/SMAP — supervisor mode execution/access prevention
     if !cpuinfo.contains(" smep ") {
         findings.push(HardwareFinding::new(
-            "SMEP (Supervisor Mode Execution Prevention) non supporté",
-            "SMEP empêche le noyau d'exécuter du code situé dans les pages utilisateur. \
-             Sans SMEP, un exploit noyau peut rediriger l'exécution vers du shellcode \
-             placé dans l'espace utilisateur.",
+            t!("cpu.flags.no_smep.title").to_string(),
+            t!("cpu.flags.no_smep.desc").to_string(),
             HwSeverity::Medium,
             "hw-cpu",
             Some(284),
             Some(5.5),
             "Flag 'smep' absent de /proc/cpuinfo",
-            "SMEP est une fonctionnalité hardware (Intel Ivy Bridge+ / AMD Excavator+). \
-             Si le CPU ne le supporte pas, envisager une mise à niveau matérielle.",
+            t!("cpu.flags.no_smep.rem").to_string(),
         ));
     }
 

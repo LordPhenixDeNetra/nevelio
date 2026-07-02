@@ -1,5 +1,7 @@
 use hw_core::{HardwareFinding, HwModule, HwScanContext};
 
+rust_i18n::i18n!("../hw-cli/locales", fallback = "fr");
+
 mod iommu;
 mod thunderbolt;
 mod pcie;
@@ -17,7 +19,7 @@ impl HwModule for DmaModule {
         let mut findings = Vec::new();
         findings.extend(iommu::check_iommu());
         findings.extend(thunderbolt::check_thunderbolt());
-        findings.extend(pcie::check_pcie_devices());
+        findings.extend(pcie::check_pcie_dma());
         findings.extend(check_kernel_lockdown());
         findings
     }

@@ -2,6 +2,7 @@
 // Documente les patterns d'attaque DMA pour l'audit de sécurité.
 
 use hw_core::{HardwareFinding, HwSeverity};
+use rust_i18n::t;
 
 /// Résultat d'un scan DMA.
 pub struct DmaScanResult {
@@ -30,16 +31,13 @@ pub fn check_iommu_status() -> Vec<HardwareFinding> {
 
         if iommu_active {
             findings.push(HardwareFinding::new(
-                "IOMMU actif — protection DMA en place",
-                "L'IOMMU (Intel VT-d ou AMD-Vi) est activé sur ce système. \
-                 Les attaques DMA via PCILeech-FPGA seront partiellement ou \
-                 totalement bloquées selon la configuration des groupes IOMMU.",
+                t!("fpga.iommu.active.title"),
+                t!("fpga.iommu.active.desc"),
                 HwSeverity::Informative,
                 "hw-dma-fpga",
                 None, None,
                 "dmesg: IOMMU enabled",
-                "Configuration recommandée : activer strict mode (iommu=force) \
-                 et vérifier que tous les devices sont dans des groupes distincts.",
+                t!("fpga.iommu.active.rem"),
             ));
         } else {
             // Vérifier via /sys
@@ -49,17 +47,14 @@ pub fn check_iommu_status() -> Vec<HardwareFinding> {
 
             if !iommu_sys {
                 findings.push(HardwareFinding::new(
-                    "IOMMU non détecté — DMA physique potentiellement accessible",
-                    "Aucun IOMMU (Intel VT-d / AMD-Vi) n'a été détecté sur ce système. \
-                     Un attaquant avec accès physique PCIe peut lire la mémoire physique \
-                     complète via un FPGA (PCILeech) ou un adaptateur Thunderbolt malveillant.",
+                    t!("fpga.iommu.missing.title"),
+                    t!("fpga.iommu.missing.desc"),
                     HwSeverity::High,
                     "hw-dma-fpga",
                     Some(1274),
                     Some(7.6),
                     "dmesg: IOMMU non mentionné; /sys/class/iommu: vide",
-                    "Activer Intel VT-d ou AMD-Vi dans le BIOS/UEFI, puis ajouter \
-                     intel_iommu=on iommu=force au paramètre kernel dans GRUB.",
+                    t!("fpga.iommu.missing.rem"),
                 ));
             }
         }
@@ -68,31 +63,27 @@ pub fn check_iommu_status() -> Vec<HardwareFinding> {
         let cmdline = std::fs::read_to_string("/proc/cmdline").unwrap_or_default();
         if !cmdline.contains("iommu=force") && !cmdline.contains("iommu=strict") {
             findings.push(HardwareFinding::new(
-                "IOMMU non configuré en mode strict",
-                "Le paramètre kernel iommu=force ou iommu=strict n'est pas présent. \
-                 En mode lazy (défaut), les mappings DMA peuvent rester valides après \
-                 libération, permettant à un device malveillant d'accéder à des zones \
-                 mémoire libérées récemment.",
+                t!("fpga.iommu.strict.title"),
+                t!("fpga.iommu.strict.desc"),
                 HwSeverity::Medium,
                 "hw-dma-fpga",
                 Some(1274),
                 Some(5.9),
                 &cmdline,
-                "Ajouter intel_iommu=on iommu=strict à GRUB_CMDLINE_LINUX dans /etc/default/grub.",
+                t!("fpga.iommu.strict.rem"),
             ));
         }
     }
 
     #[cfg(not(target_os = "linux"))]
     findings.push(HardwareFinding::new(
-        "Statut IOMMU non vérifiable sur cette plateforme",
-        "La vérification IOMMU est disponible uniquement sur Linux. \
-         Sur macOS, l'accès DMA est contrôlé par l'architecture Apple Silicon (T2/M-series).",
+        t!("fpga.iommu.unknown.title"),
+        t!("fpga.iommu.unknown.desc"),
         HwSeverity::Informative,
         "hw-dma-fpga",
         None, None,
         "plateforme non-Linux",
-        "Vérifier la configuration IOMMU/VT-d sur un système Linux.",
+        t!("fpga.iommu.unknown.rem"),
     ));
 
     findings
@@ -114,42 +105,38 @@ pub fn check_thunderbolt_dma() -> Vec<HardwareFinding> {
         for path in &tb_paths {
             if let Ok(level) = std::fs::read_to_string(path) {
                 let level = level.trim();
-                let (sev, msg, rem) = match level {
+                let (sev, title_key, rem_key): (HwSeverity, &str, &str) = match level {
                     "none" => (
                         HwSeverity::Critical,
-                        "Thunderbolt niveau sécurité 'none' — DMA sans restriction",
-                        "Activer le niveau 'user' ou 'secure' dans le BIOS : \
-                         Thunderbolt Security Level → User Authorization",
+                        "fpga.thunderbolt.none_sec.title",
+                        "fpga.thunderbolt.none_sec.rem",
                     ),
                     "user" => (
                         HwSeverity::Medium,
-                        "Thunderbolt niveau 'user' — approbation manuelle requise",
-                        "Niveau suffisant pour la plupart des cas. Passer à 'secure' \
-                         pour empêcher le DMA pendant le verrouillage.",
+                        "fpga.thunderbolt.user_sec.title",
+                        "fpga.thunderbolt.user_sec.rem",
                     ),
                     "secure" | "dponly" | "usbonly" => (
                         HwSeverity::Informative,
-                        "Thunderbolt niveau sécurisé ('secure'/'dponly'/'usbonly')",
+                        "fpga.thunderbolt.secure_sec.title",
                         "",
                     ),
                     _ => (
                         HwSeverity::Low,
-                        "Niveau Thunderbolt inconnu",
-                        "Vérifier la configuration Thunderbolt dans le BIOS/UEFI.",
+                        "fpga.thunderbolt.unknown_sec.title",
+                        "fpga.thunderbolt.unknown_sec.rem",
                     ),
                 };
 
                 findings.push(HardwareFinding::new(
-                    msg,
-                    format!("Thunderbolt security level : {}. \
-                             Un device Thunderbolt malveillant peut effectuer des accès DMA \
-                             si le niveau est 'none' ou si l'IOMMU n'est pas actif.", level),
+                    t!(title_key),
+                    t!("fpga.thunderbolt.desc", level = level),
                     sev,
                     "hw-dma-fpga",
                     Some(284),
                     None,
-                    format!("{}: {}", path, level),
-                    rem,
+                    t!("fpga.thunderbolt.evidence", path = path, level = level),
+                    if rem_key.is_empty() { String::new() } else { t!(rem_key) },
                 ));
                 break;
             }

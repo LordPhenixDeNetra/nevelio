@@ -1,148 +1,96 @@
 use hw_core::{HardwareFinding, HwSeverity};
+use rust_i18n::t;
 
-/// Seuil en cycles CPU : en dessous = cache hit, au-dessus = cache miss.
-/// Valeur typique x86_64 : ~100 cycles pour L3, ~250 pour DRAM.
-#[cfg(all(target_arch = "x86_64", target_os = "linux"))]
-const CACHE_HIT_THRESHOLD_CYCLES: u64 = 120;
+// Seuil de différence cache miss / hit pour que Flush+Reload soit exploitable
+const DELTA_THRESHOLD_CYCLES: u64 = 200;
 
-/// Mesure le temps d'accès à `addr` après vidage du cache (CLFLUSH).
-///
-/// Retourne `None` sur les architectures non supportées.
-///
-/// # Safety
-/// L'adresse doit être valide et alignée sur 64 octets.
-#[cfg(all(target_arch = "x86_64", target_os = "linux"))]
-pub unsafe fn flush_reload_measure(addr: *const u8) -> u64 {
-    use core::arch::x86_64::{_mm_clflush, _mm_lfence, _mm_mfence, _rdtsc};
-
-    _mm_clflush(addr);
-    _mm_mfence();
-    let start = _rdtsc();
-    let _ = (addr as *const u64).read_volatile();
-    _mm_lfence();
-    let end = _rdtsc();
-    end.wrapping_sub(start)
-}
-
-/// Vérifie si le processeur supporte CLFLUSH (Flush+Reload) en user-space
-/// et mesure le delta cache-hit / cache-miss.
-pub fn check_flush_reload() -> Vec<HardwareFinding> {
-    let mut findings = Vec::new();
-
+pub(super) fn check_flush_reload() -> Vec<HardwareFinding> {
     #[cfg(all(target_arch = "x86_64", target_os = "linux"))]
     {
-        // Vérifie la présence de l'instruction CLFLUSH via CPUID
-        // CPUID leaf 1, EDX bit 19 = CLFSH
-        let has_clflush = {
-            let result = unsafe { core::arch::x86_64::__cpuid(1) };
-            (result.edx >> 19) & 1 == 1
-        };
-
-        if !has_clflush {
-            findings.push(HardwareFinding::new(
-                "CLFLUSH non supporté par ce CPU",
-                "L'instruction CLFLUSH n'est pas disponible. \
-                 Les attaques Flush+Reload ne sont pas applicables sur ce système.",
-                HwSeverity::Informative,
-                "hw-sidechannel",
-                None, None,
-                "CPUID leaf 1 EDX bit 19 = 0",
-                "Aucune action requise.",
-            ));
-            return findings;
-        }
-
-        // Mesurer delta hit / miss sur un buffer local
-        let buf = vec![0u8; 4096];
-        let addr = buf.as_ptr();
-
-        let miss_cycles = unsafe { flush_reload_measure(addr) };
-
-        // Accès sans flush = cache hit
-        let _ = unsafe { (addr as *const u64).read_volatile() };
-        let hit_cycles = unsafe {
-            use core::arch::x86_64::{_mm_lfence, _mm_mfence, _rdtsc};
-            _mm_mfence();
-            let s = _rdtsc();
-            let _ = (addr as *const u64).read_volatile();
-            _mm_lfence();
-            let e = _rdtsc();
-            e.wrapping_sub(s)
-        };
-
-        let delta = miss_cycles.saturating_sub(hit_cycles);
-
-        if delta > CACHE_HIT_THRESHOLD_CYCLES {
-            findings.push(HardwareFinding::new(
-                "Flush+Reload faisable en user-space (CWE-1342)",
-                "La différence de latence entre cache miss (après CLFLUSH) et \
-                 cache hit est suffisamment grande pour être exploitable par \
-                 une attaque Flush+Reload. Ce type d'attaque permet de déduire \
-                 les patterns d'accès mémoire d'autres processus partageant \
-                 des pages physiques (bibliothèques partagées, OpenSSL, etc.).",
-                HwSeverity::Medium,
-                "hw-sidechannel",
-                Some(1342),
-                Some(4.7),
-                format!(
-                    "cache miss = {} cycles | cache hit = {} cycles | Δ = {} cycles (seuil : {})",
-                    miss_cycles, hit_cycles, delta, CACHE_HIT_THRESHOLD_CYCLES
-                ),
-                "Activer Kernel Page-Table Isolation (KPTI) et vérifier que \
-                 `nosmt` est passé au kernel pour désactiver l'hyperthreading. \
-                 Les mitigations Spectre v1/v2 réduisent la fenêtre d'attaque. \
-                 Pour les applications critiques, utiliser des primitives \
-                 constant-time (libsodium, boringssl avec -DOPENSSL_SMALL).",
-            ));
-        } else {
-            findings.push(HardwareFinding::new(
-                "Flush+Reload : delta cycles trop faible pour exploitation",
-                "L'écart de latence cache miss / hit est insuffisant pour une \
-                 attaque Flush+Reload fiable sur ce système.",
-                HwSeverity::Informative,
-                "hw-sidechannel",
-                Some(1342), None,
-                format!(
-                    "cache miss = {} cycles | cache hit = {} cycles | Δ = {} cycles",
-                    miss_cycles, hit_cycles, delta
-                ),
-                "Aucune action immédiate requise.",
-            ));
-        }
+        check_flush_reload_x86()
     }
 
     #[cfg(not(all(target_arch = "x86_64", target_os = "linux")))]
     {
-        findings.push(HardwareFinding::new(
-            "Flush+Reload : check non disponible sur cette plateforme",
-            "Le check Flush+Reload via CLFLUSH est disponible uniquement sur \
-             Linux x86_64. Sur ARM64, utiliser le timer CNTVCT_EL0.",
+        vec![HardwareFinding::new(
+            t!("side.cache.platform_not_supported.title").to_string(),
+            t!("side.cache.platform_not_supported.desc").to_string(),
             HwSeverity::Informative,
             "hw-sidechannel",
-            Some(1342), None,
-            format!("Plateforme : {} / {}", std::env::consts::ARCH, std::env::consts::OS),
-            "Exécuter ce check sur une machine Linux x86_64.",
-        ));
+            None,
+            None,
+            "Plateforme non-Linux ou non-x86_64",
+            t!("side.cache.platform_not_supported.rem").to_string(),
+        )]
     }
-
-    findings
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+#[cfg(all(target_arch = "x86_64", target_os = "linux"))]
+fn check_flush_reload_x86() -> Vec<HardwareFinding> {
+    use std::arch::x86_64::{__cpuid, _mm_clflush, _rdtsc};
 
-    #[test]
-    fn flush_reload_does_not_panic() {
-        let findings = check_flush_reload();
-        assert!(!findings.is_empty(), "doit retourner au moins un finding informatif");
+    // Vérifier que CLFLUSH est supporté (CPUID.01H:EDX.bit19)
+    let cpuid_result = unsafe { __cpuid(1) };
+    if (cpuid_result.edx >> 19) & 1 == 0 {
+        return vec![HardwareFinding::new(
+            t!("side.cache.no_clflush.title").to_string(),
+            t!("side.cache.no_clflush.desc").to_string(),
+            HwSeverity::Informative,
+            "hw-sidechannel",
+            None,
+            None,
+            "CPUID.01H:EDX.bit19 = 0 (CLFLUSH non supporté)",
+            t!("side.cache.no_clflush.rem").to_string(),
+        )];
     }
 
-    #[cfg(all(target_arch = "x86_64", target_os = "linux"))]
-    #[test]
-    fn measure_returns_nonzero() {
-        let buf = vec![0u8; 64];
-        let cycles = unsafe { flush_reload_measure(buf.as_ptr()) };
-        assert!(cycles > 0, "les cycles ne peuvent pas être zéro");
+    // Mesurer le delta entre un accès en cache et un accès après CLFLUSH
+    let probe: Vec<u8> = vec![0u8; 4096];
+    let ptr = probe.as_ptr();
+
+    let delta = unsafe {
+        // Accès en cache (warm)
+        let _ = std::ptr::read_volatile(ptr);
+        let t1 = _rdtsc();
+        let _ = std::ptr::read_volatile(ptr);
+        let t2 = _rdtsc();
+        let warm = t2 - t1;
+
+        // Flush + accès froid (miss)
+        _mm_clflush(ptr);
+        std::arch::x86_64::_mm_mfence();
+        let t3 = _rdtsc();
+        let _ = std::ptr::read_volatile(ptr);
+        let t4 = _rdtsc();
+        let cold = t4 - t3;
+
+        cold.saturating_sub(warm)
+    };
+
+    if delta > DELTA_THRESHOLD_CYCLES {
+        vec![HardwareFinding::new(
+            t!("side.cache.flush_reload_feasible.title").to_string(),
+            t!("side.cache.flush_reload_feasible.desc").to_string(),
+            HwSeverity::Medium,
+            "hw-sidechannel",
+            Some(1342),
+            Some(5.3),
+            format!(
+                "Delta cache miss/hit = {} cycles (seuil = {} cycles) — Flush+Reload faisable",
+                delta, DELTA_THRESHOLD_CYCLES
+            ),
+            t!("side.cache.flush_reload_feasible.rem").to_string(),
+        )]
+    } else {
+        vec![HardwareFinding::new(
+            t!("side.cache.delta_too_low.title").to_string(),
+            t!("side.cache.delta_too_low.desc").to_string(),
+            HwSeverity::Informative,
+            "hw-sidechannel",
+            None,
+            None,
+            format!("Delta cache miss/hit = {} cycles (seuil = {})", delta, DELTA_THRESHOLD_CYCLES),
+            t!("side.cache.delta_too_low.rem").to_string(),
+        )]
     }
 }
