@@ -6,6 +6,7 @@ mod ai_suggestions;
 mod args;
 mod commands;
 mod config;
+mod config_cmd;
 mod diff;
 mod issue;
 mod legal;

@@ -54,6 +54,7 @@ pub async fn run() -> Result<()> {
         Commands::Serve(args)   => crate::serve::handle_serve(args).await,
         Commands::Notify(args)  => crate::notify::handle_notify(args).await,
         Commands::Issue(args)   => crate::issue::handle_issue(args).await,
+        Commands::Config(args)  => crate::config_cmd::handle_config(args),
     }
 }
 

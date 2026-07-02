@@ -72,6 +72,7 @@ pub enum Commands {
     Serve(ServeArgs),
     Notify(NotifyArgs),
     Issue(IssueArgs),
+    Config(crate::config_cmd::ConfigArgs),
 }
 
 #[derive(Debug, clap::Args)]

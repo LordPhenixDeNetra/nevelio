@@ -16,6 +16,7 @@ name = "nevelio"
 path = "src/main.rs"
 
 [dependencies]
+nevelio-config                = { path = "../nevelio-config",        version = "0.1" }
 nevelio-core                  = { path = "../core",                  version = "0.1" }
 nevelio-recon                 = { path = "../recon",                 version = "0.1" }
 nevelio-reporting             = { path = "../reporting",             version = "0.1" }

@@ -2,6 +2,7 @@
 members = [
     "crates/cli",
     "crates/core",
+    "crates/nevelio-config",
     "crates/modules/auth",
     "crates/modules/injection",
     "crates/modules/access-control",
@@ -70,6 +71,8 @@ toml               = "0.8"
 ratatui            = "0.29"
 crossterm          = { version = "0.28", features = ["event-stream"] }
 rust-i18n          = "3"
+dirs               = "5"
+toml_edit          = "0.22"
 rhai               = { version = "1", features = ["sync"] }
 wasmtime           = { version = "28", default-features = false, features = ["cranelift", "runtime"] }
 futures-util       = "0.3"
