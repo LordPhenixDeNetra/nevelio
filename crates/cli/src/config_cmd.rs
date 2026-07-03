@@ -43,6 +43,8 @@ pub enum AiAction {
         /// Tester un provider spécifique
         provider: Option<String>,
     },
+    /// Liste tous les providers disponibles et leur statut de configuration
+    Providers,
 }
 
 // ── Entry point ───────────────────────────────────────────────────────────────
@@ -57,6 +59,7 @@ pub fn handle_config(args: ConfigArgs) -> Result<()> {
         ConfigAction::Reset         => cmd_reset(),
         ConfigAction::Ai { action } => match action {
             AiAction::Ping { provider } => cmd_ai_ping(provider.as_deref()),
+            AiAction::Providers         => cmd_ai_providers(),
         },
     }
 }
@@ -328,6 +331,102 @@ fn cmd_ai_ping(provider_filter: Option<&str>) -> Result<()> {
             println!("{}", t!("config.ai.ping_fail", provider = name, error = "connexion refusée").red());
         }
     }
+
+    Ok(())
+}
+
+// ── ai providers (A.14) ──────────────────────────────────────────────────────
+
+fn cmd_ai_providers() -> Result<()> {
+    const KNOWN: &[(&str, &str, &str)] = &[
+        ("anthropic", "ANTHROPIC_API_KEY", "https://api.anthropic.com"),
+        ("openai",    "OPENAI_API_KEY",    "https://api.openai.com"),
+        ("mistral",   "MISTRAL_API_KEY",   "https://api.mistral.ai"),
+        ("groq",      "GROQ_API_KEY",      "https://api.groq.com"),
+        ("ollama",    "",                  "http://localhost:11434"),
+    ];
+
+    let cfg = load_global().unwrap_or_default();
+    let active = cfg.ai.active_provider_name().to_string();
+
+    println!();
+    println!("{}", "  Providers IA disponibles".bold());
+    println!("  {}", "─".repeat(68));
+    println!(
+        "  {:<12} {:<12} {:<14} {:<24} {}",
+        "Provider", "Configuré", "Clé API", "Modèle", "Statut"
+    );
+    println!("  {}", "─".repeat(68));
+
+    for &(name, key_env, _base_url) in KNOWN {
+        let prov_cfg = cfg.ai.providers.get(name);
+        let configured = prov_cfg.is_some();
+
+        let (_key_status, key_colored) = if name == "ollama" {
+            ("N/A (local)", "N/A (local)".dimmed().to_string())
+        } else if let Some(prov) = prov_cfg {
+            let env = prov.api_key_env.as_deref().unwrap_or(key_env);
+            if std::env::var(env).is_ok() {
+                ("présente", format!("{} ({})", "✓".green(), env))
+            } else {
+                ("absente", format!("{} ({})", "✗".red(), env))
+            }
+        } else {
+            let set = std::env::var(key_env).is_ok();
+            if set {
+                ("présente", format!("{} ({})", "●".yellow(), key_env))
+            } else {
+                ("non définie", "—".dimmed().to_string())
+            }
+        };
+
+        let model_str = prov_cfg
+            .map(|p| if p.model.is_empty() { "—".to_string() } else { p.model.clone() })
+            .unwrap_or_else(|| "—".to_string());
+
+        let status = if name == active && configured {
+            "← ACTIF".cyan().bold().to_string()
+        } else if !configured {
+            "non configuré".dimmed().to_string()
+        } else {
+            "configuré".green().to_string()
+        };
+
+        let configured_str = if configured {
+            "✓".green().to_string()
+        } else {
+            "✗".dimmed().to_string()
+        };
+
+        println!(
+            "  {:<12} {:<12} {:<26} {:<24} {}",
+            name,
+            configured_str,
+            key_colored,
+            model_str,
+            status,
+        );
+    }
+
+    // ── Routing config ────────────────────────────────────────────────────────
+    println!();
+    println!("  {}", "Routing (ai.routing.*)".bold());
+    println!("  {}", "─".repeat(40));
+
+    let routing = &cfg.ai.routing;
+    let fmt = |opt: &Option<String>| opt.as_deref().unwrap_or("(actif par défaut)").to_string();
+
+    println!("  {:<14} {}", "Triage :", fmt(&routing.triage));
+    println!("  {:<14} {}", "Rapport :", fmt(&routing.report));
+    println!("  {:<14} {}", "Payloads :", fmt(&routing.payloads));
+    println!(
+        "  {:<14} {}",
+        "Fallback :",
+        routing.fallback.as_deref().unwrap_or("(non configuré)").yellow().to_string()
+    );
+
+    println!();
+    println!("  {}", "Configurez via : nevelio config set ai.routing.triage groq".dimmed());
 
     Ok(())
 }

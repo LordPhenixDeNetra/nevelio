@@ -77,7 +77,7 @@
 |---|---|---|---|---|---|---|
 | A.12 | [x] | 🟠 | `nevelio config ai ping` — teste tous les providers configurés | 3h | A.3 | Affiche latence + modèle + statut clé API |
 | A.13 | [x] | 🟠 | `nevelio config ai ping <provider>` — teste un provider | 1h | A.12 | |
-| A.14 | [ ] | 🟡 | `nevelio ai providers` — liste les providers disponibles et leur statut | 2h | A.3 | |
+| A.14 | [x] | 🟡 | `nevelio ai providers` — liste les providers disponibles et leur statut | 2h | A.3 | `nevelio config ai providers` — table + routing + statut clé API |
 
 ### i18n `nevelio-ai`
 
@@ -92,8 +92,8 @@
 | # | Statut | Priorité | Tâche | Effort | Dépend de | Notes |
 |---|---|---|---|---|---|---|
 | A.18 | [x] | 🔴 | Tests unitaires trait + factory (mock provider) | 4h | A.3 | 5 tests dans `lib.rs` — MockProvider, complete, complete_json, tools, constructors |
-| A.19 | [ ] | 🟠 | Tests d'intégration Ollama (CI local uniquement) | 3h | A.8 | Skip si `OLLAMA_HOST` absent |
-| A.20 | [ ] | 🟡 | Tests d'intégration Anthropic (optionnel, coût tokens) | 2h | A.6 | Gated par `ANTHROPIC_API_KEY` + `RUN_AI_INTEGRATION_TESTS=1` |
+| A.19 | [x] | 🟠 | Tests d'intégration Ollama (CI local uniquement) | 3h | A.8 | `tests/integration_ollama.rs` — 4 tests, skip si `OLLAMA_HOST` absent |
+| A.20 | [x] | 🟡 | Tests d'intégration Anthropic (optionnel, coût tokens) | 2h | A.6 | `tests/integration_anthropic.rs` — gated `ANTHROPIC_API_KEY` + `RUN_AI_INTEGRATION_TESTS=1` |
 
 ---
 
@@ -193,12 +193,12 @@
 
 | Phase | Tâches | Terminées | Prérequis |
 |---|---|---|---|
-| **1 — Config globale** | 18 | 17 | Aucun |
-| **2 — Multi-provider** | 20 | 14 | Phase 1 |
-| **3 — LLM ponctuel** | 13 | 10 | Phase 2 |
-| **4 — Agent autonome** | 12 | 10 (G.1–G.9, G.12) | Phases 2 + 3 |
-| **Transversal** | 6 | 6 (I.1–I.6) | — |
-| **TOTAL** | **69** | **67 / 69** | |
+| **1 — Config globale** | 18 | 17 (C.6 en cours) | Aucun |
+| **2 — Multi-provider** | 20 | 19 (A.11 reste) | Phase 1 |
+| **3 — LLM ponctuel** | 13 | 13 ✓ | Phase 2 |
+| **4 — Agent autonome** | 12 | 10 (G.10–G.11 restent) | Phases 2 + 3 |
+| **Transversal** | 6 | 6 ✓ | — |
+| **TOTAL** | **69** | **65 / 69** | |
 
 ---
 
