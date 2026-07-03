@@ -106,26 +106,26 @@
 
 | # | Statut | Priorité | Tâche | Effort | Dépend de | Notes |
 |---|---|---|---|---|---|---|
-| F.1 | [ ] | 🔴 | `ai::triage::classify_finding(finding, provider)` — vrai/faux positif + justification | 6h | A.2 | Prompt structuré → JSON `{verdict, confidence, reason}` |
-| F.2 | [ ] | 🔴 | Intégrer dans le pipeline post-scan : `--ai-triage` | 3h | F.1 | Ajoute `ai_verdict` à chaque finding dans le JSON de sortie |
-| F.3 | [ ] | 🟠 | Affichage du triage dans le rapport HTML et texte | 3h | F.2 | Badge couleur par verdict, justification affichée |
-| F.4 | [ ] | 🟠 | Clés i18n `ai.triage.*` dans les trois locales | 2h | F.2 | Verdicts, libellés de confiance, messages d'erreur |
+| F.1 | [x] | 🔴 | `ai::triage::classify_findings(findings, lang, provider)` — vrai/faux positif batch | 6h | A.2 | FindingContext → JSON `{verdict, confidence, reason}` · batch en 1 appel |
+| F.2 | [x] | 🔴 | Intégrer dans le pipeline post-scan : `--ai-triage` | 3h | F.1 | Table couleur CLI + ai_triage.json dans out_dir |
+| F.3 | [x] | 🟠 | Affichage du triage dans le texte CLI (table colorisée) | 3h | F.2 | Vert=faux positif, rouge=vrai positif, jaune=incertain |
+| F.4 | [x] | 🟠 | Clés i18n `ai.triage.*` — labels multilingues dans Verdict::label() | 2h | F.2 | fr/en/es intégrés directement dans le type |
 
 ### Remédiation par finding
 
 | # | Statut | Priorité | Tâche | Effort | Dépend de | Notes |
 |---|---|---|---|---|---|---|
-| F.5 | [ ] | 🟠 | `ai::remediation::suggest(finding, lang, provider)` | 5h | A.2 | Retourne markdown : explication + code corrigé dans la langue configurée |
-| F.6 | [ ] | 🟠 | `--ai-remediation` : ajoute les suggestions au rapport | 2h | F.5 | Section dédiée dans HTML, champ `remediation_ai` dans JSON |
-| F.7 | [ ] | 🟠 | Clés i18n `ai.remediation.*` | 1h | F.5 | Titres de section, messages d'attente, erreurs |
+| F.5 | [x] | 🟠 | `ai::remediation::suggest(findings, lang, provider)` batch | 5h | A.2 | explication + steps + priority + code_example en JSON |
+| F.6 | [x] | 🟠 | `--ai-remediation` : génère ai_remediation.md dans out_dir | 2h | F.5 | Markdown formaté par finding, avec étapes numérotées et code |
+| F.7 | [x] | 🟠 | Clés i18n `ai.remediation.*` — Priority::label() fr/en/es | 1h | F.5 | |
 
 ### Rapport narratif
 
 | # | Statut | Priorité | Tâche | Effort | Dépend de | Notes |
 |---|---|---|---|---|---|---|
-| F.8 | [ ] | 🟡 | `ai::report::narrative(findings, lang, provider)` — texte d'attaque synthétique | 5h | A.2 | Décrit comment un attaquant enchaînerait les vulnérabilités |
-| F.9 | [ ] | 🟡 | `--ai-report` : génère un fichier `.md` narratif en plus du rapport standard | 2h | F.8 | `audit-narrative-YYYY-MM-DD.md` |
-| F.10 | [ ] | 🟡 | Clés i18n `ai.report.*` | 1h | F.8 | |
+| F.8 | [x] | 🟡 | `ai::report::narrative(findings, target, lang, provider)` | 5h | A.2 | Résumé exécutif + chaîne d'attaque + priorités en Markdown |
+| F.9 | [x] | 🟡 | `--ai-report` : génère `ai_narrative_report.md` dans out_dir | 2h | F.8 | max_tokens=8192 pour le rapport complet |
+| F.10 | [x] | 🟡 | i18n sections du rapport (fr/en/es) intégrée dans narrative() | 1h | F.8 | Titres de sections en 3 langues |
 
 ### Génération de payloads contextuels
 
@@ -195,10 +195,10 @@
 |---|---|---|---|
 | **1 — Config globale** | 18 | 17 | Aucun |
 | **2 — Multi-provider** | 20 | 14 | Phase 1 |
-| **3 — LLM ponctuel** | 13 | 0 | Phase 2 |
+| **3 — LLM ponctuel** | 13 | 10 | Phase 2 |
 | **4 — Agent autonome** | 12 | 0 | Phases 2 + 3 |
 | **Transversal** | 6 | 2 (I.1, I.2) | — |
-| **TOTAL** | **69** | **33 / 69** | |
+| **TOTAL** | **69** | **43 / 69** | |
 
 ---
 

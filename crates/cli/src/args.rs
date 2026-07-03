@@ -131,6 +131,15 @@ pub struct ScanArgs {
     #[arg(long)]
     pub ai_suggestions: bool,
 
+    #[arg(long)]
+    pub ai_triage: bool,
+
+    #[arg(long)]
+    pub ai_remediation: bool,
+
+    #[arg(long)]
+    pub ai_report: bool,
+
     #[arg(long, value_name = "SCRIPT")]
     pub scripts: Vec<String>,
 

@@ -1,4 +1,7 @@
 pub mod provider;
+pub mod remediation;
+pub mod report;
+pub mod triage;
 
 rust_i18n::i18n!("locales", fallback = "fr");
 
@@ -7,6 +10,7 @@ pub use provider::{
     ToolCall, ToolCallResponse, ToolDefinition,
 };
 pub use provider::factory::build_provider;
+pub use triage::FindingContext;
 
 #[cfg(test)]
 mod tests {

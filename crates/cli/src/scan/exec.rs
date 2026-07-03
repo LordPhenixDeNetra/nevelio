@@ -5,8 +5,9 @@ use anyhow::{Context, Result};
 use colored::Colorize;
 use indicatif::{ProgressBar, ProgressStyle};
 use rust_i18n::t;
+use std::path::Path;
 
-use nevelio_core::types::Endpoint;
+use nevelio_core::types::{Endpoint, Finding};
 use nevelio_core::{AttackModule, HttpClient, ScanSession};
 use nevelio_reporting::{JsonReporter, ReportFormat};
 
@@ -16,18 +17,21 @@ use crate::tui::{self, ScanEvent};
 
 #[allow(clippy::too_many_arguments)]
 pub(super) async fn run_and_report(
-    session: &mut ScanSession,
-    http_client: &HttpClient,
+    session:        &mut ScanSession,
+    http_client:    &HttpClient,
     active_modules: &[&Box<dyn AttackModule>],
-    endpoints: &[Endpoint],
-    module_names: Vec<String>,
+    endpoints:      &[Endpoint],
+    module_names:   Vec<String>,
     completed_modules: &mut Vec<String>,
-    cfg_suppress: Vec<SuppressRule>,
-    script_paths: Vec<String>,
-    output_format: OutputFormat,
-    use_tui: bool,
+    cfg_suppress:   Vec<SuppressRule>,
+    script_paths:   Vec<String>,
+    output_format:  OutputFormat,
+    use_tui:        bool,
     ai_suggestions: bool,
-    fail_on: Option<FailOnArg>,
+    ai_triage:      bool,
+    ai_remediation: bool,
+    ai_report:      bool,
+    fail_on:        Option<FailOnArg>,
 ) -> Result<()> {
     let out_dir = session.config.out_dir.clone();
 
@@ -167,6 +171,164 @@ pub(super) async fn run_and_report(
         }
     }
 
+    // ── Phase 3 AI features ─────────────────────────────────────────────────
+    #[cfg(feature = "ai")]
+    if (ai_triage || ai_remediation || ai_report) && !session.findings.is_empty() {
+        run_ai_features(
+            &session.findings,
+            &session.config.target,
+            &session.config.locale,
+            &out_dir,
+            ai_triage,
+            ai_remediation,
+            ai_report,
+        ).await;
+    }
+    // suppress unused-variable warnings when feature = "ai" is off
+    let _ = (ai_triage, ai_remediation, ai_report);
+
     let exit_code = crate::commands::resolve_exit_code(&session.findings, fail_on);
     std::process::exit(exit_code);
+}
+
+// ── AI Phase 3 helper (compiled only when feature = "ai") ────────────────────
+
+#[cfg(feature = "ai")]
+async fn run_ai_features(
+    findings:      &[Finding],
+    target:        &str,
+    lang:          &str,
+    out_dir:       &Path,
+    ai_triage:     bool,
+    ai_remediation: bool,
+    ai_report:     bool,
+) {
+    use colored::Colorize;
+    use nevelio_ai::{build_provider, CompletionOpts, FindingContext};
+
+    // Convert CLI findings to nevelio-ai FindingContext
+    let contexts: Vec<FindingContext> = findings.iter().map(|f| FindingContext {
+        id:             f.id.clone(),
+        title:          f.title.clone(),
+        severity:       f.severity.to_string(),
+        module:         f.module.clone(),
+        endpoint:       f.endpoint.clone(),
+        method:         f.method.clone(),
+        description:    f.description.clone(),
+        recommendation: f.recommendation.clone(),
+        proof:          f.proof.clone(),
+    }).collect();
+
+    // Load provider from global config
+    let global_cfg = match nevelio_config::load_global() {
+        Ok(c)  => c,
+        Err(e) => { eprintln!("  {} Config IA : {}", "✗".red(), e); return; }
+    };
+
+    if !global_cfg.ai.enabled || global_cfg.ai.providers.is_empty() {
+        eprintln!("  {} IA désactivée. Lancez : nevelio config init", "⚠".yellow());
+        return;
+    }
+
+    let provider = match build_provider(&global_cfg.ai) {
+        Ok(p)  => p,
+        Err(e) => { eprintln!("  {} Provider IA : {}", "✗".red(), e); return; }
+    };
+
+    let opts = CompletionOpts::default();
+
+    // ── Triage ────────────────────────────────────────────────────────────────
+    if ai_triage {
+        println!();
+        println!("{}", "  IA · Triage des findings...".cyan());
+        match nevelio_ai::triage::classify_findings(&contexts, lang, provider.as_ref(), &opts).await {
+            Err(e) => eprintln!("  {} Triage : {}", "✗".red(), e),
+            Ok(results) => {
+                // Print triage table
+                println!("  {:<8} {:<20} {:>4}  {}", "Verdict", "Titre", "Conf", "Raison");
+                println!("  {}", "─".repeat(72));
+                for r in &results {
+                    let f = findings.iter().find(|f| f.id == r.id);
+                    let title = f.map(|f| f.title.as_str()).unwrap_or("?");
+                    let title_trunc = if title.len() > 20 { &title[..18] } else { title };
+                    let verdict_label = r.verdict.label(lang);
+                    let verdict_colored = match r.verdict {
+                        nevelio_ai::triage::Verdict::TruePositive  => verdict_label.red().to_string(),
+                        nevelio_ai::triage::Verdict::FalsePositive => verdict_label.green().to_string(),
+                        nevelio_ai::triage::Verdict::Uncertain      => verdict_label.yellow().to_string(),
+                    };
+                    let reason_trunc = if r.reason.len() > 38 {
+                        format!("{}...", &r.reason[..35])
+                    } else {
+                        r.reason.clone()
+                    };
+                    println!("  {:<8} {:<20} {:>3}%  {}", verdict_colored, title_trunc, r.confidence, reason_trunc);
+                }
+                // Save JSON
+                let path = out_dir.join("ai_triage.json");
+                if let Ok(json) = serde_json::to_string_pretty(&results) {
+                    let _ = std::fs::write(&path, json);
+                    println!("  {} ai_triage.json", "→".cyan());
+                }
+            }
+        }
+    }
+
+    // ── Remediation ───────────────────────────────────────────────────────────
+    if ai_remediation {
+        println!();
+        println!("{}", "  IA · Génération des remédiations...".cyan());
+        match nevelio_ai::remediation::suggest(&contexts, lang, provider.as_ref(), &opts).await {
+            Err(e) => eprintln!("  {} Remédiation : {}", "✗".red(), e),
+            Ok(results) => {
+                let path = out_dir.join("ai_remediation.md");
+                let mut md = format!(
+                    "# Remédiations IA — Nevelio\n\n> Provider : {} · Modèle : {}\n\n---\n\n",
+                    provider.name(), provider.model()
+                );
+                for r in &results {
+                    let f = findings.iter().find(|f| f.id == r.id);
+                    let title = f.map(|f| f.title.as_str()).unwrap_or(&r.id);
+                    let priority_label = r.priority.label(lang);
+                    md.push_str(&format!("## {}\n\n", title));
+                    md.push_str(&format!("**Priorité** : {}  \n\n", priority_label));
+                    md.push_str(&format!("{}\n\n", r.explanation));
+                    md.push_str("**Étapes** :\n\n");
+                    for (i, step) in r.steps.iter().enumerate() {
+                        md.push_str(&format!("{}. {}\n", i + 1, step));
+                    }
+                    if let Some(ref code) = r.code_example {
+                        md.push_str(&format!("\n```\n{}\n```\n", code));
+                    }
+                    md.push_str("\n---\n\n");
+                }
+                let _ = std::fs::write(&path, &md);
+                println!("  {} ai_remediation.md", "→".cyan());
+            }
+        }
+    }
+
+    // ── Narrative report ──────────────────────────────────────────────────────
+    if ai_report {
+        println!();
+        println!("{}", "  IA · Génération du rapport narratif...".cyan());
+        let mut report_opts = opts.clone();
+        report_opts.max_tokens = 8192;
+        match nevelio_ai::report::narrative(&contexts, target, lang, provider.as_ref(), &report_opts).await {
+            Err(e) => eprintln!("  {} Rapport narratif : {}", "✗".red(), e),
+            Ok(content) => {
+                use chrono::Utc;
+                let header = format!(
+                    "# Rapport Narratif — Nevelio\n\n> Cible : {}  \n> Généré le {}  \n> Provider : {} · Modèle : {}\n\n---\n\n",
+                    target,
+                    Utc::now().format("%Y-%m-%d %H:%M UTC"),
+                    provider.name(),
+                    provider.model()
+                );
+                let path = out_dir.join("ai_narrative_report.md");
+                let _ = std::fs::write(&path, format!("{}{}", header, content));
+                println!("  {} ai_narrative_report.md", "→".cyan());
+            }
+        }
+    }
 }
