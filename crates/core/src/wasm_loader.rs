@@ -143,7 +143,7 @@ impl WasmPlugin {
             .instance
             .get_typed_func::<u32, u32>(&mut self.store, "nevelio_alloc")
             .context("Plugin manquant : export 'nevelio_alloc'")?;
-        Ok(alloc_fn.call(&mut self.store, size)?)
+        alloc_fn.call(&mut self.store, size)
     }
 
     fn write_memory(&mut self, ptr: u32, data: &[u8]) -> Result<()> {

@@ -251,7 +251,7 @@ fn daemonize(out_dir: &std::path::Path) -> Result<()> {
                 // Redirect stdin/stdout/stderr to /dev/null
                 unsafe {
                     let dev_null = libc::open(
-                        b"/dev/null\0".as_ptr() as *const libc::c_char,
+                        c"/dev/null".as_ptr(),
                         libc::O_RDWR,
                     );
                     if dev_null >= 0 {

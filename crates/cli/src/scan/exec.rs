@@ -22,7 +22,7 @@ use crate::tui::{self, ScanEvent};
 pub(super) async fn run_and_report(
     session:        &mut ScanSession,
     http_client:    &HttpClient,
-    active_modules: &[&Box<dyn AttackModule>],
+    active_modules: &[&dyn AttackModule],
     endpoints:      &[Endpoint],
     module_names:   Vec<String>,
     completed_modules: &mut Vec<String>,
@@ -190,7 +190,7 @@ pub(super) async fn run_and_report(
     }
     #[cfg(feature = "ai")]
     if ai_payloads {
-        run_ai_payloads(&endpoints, &session.config.locale, &out_dir).await;
+        run_ai_payloads(endpoints, &session.config.locale, &out_dir).await;
     }
     // suppress unused-variable warnings when feature = "ai" is off
     let _ = (ai_triage, ai_remediation, ai_report, ai_payloads);
@@ -251,7 +251,7 @@ async fn run_ai_features(
         match nevelio_ai::triage::classify_findings(&contexts, lang, triage_provider.as_ref(), &opts).await {
             Err(e) => eprintln!("  {} Triage : {}", "✗".red(), e),
             Ok(results) => {
-                println!("  {:<8} {:<20} {:>4}  {}", "Verdict", "Titre", "Conf", "Raison");
+                println!("  {:<8} {:<20} {:>4}  Raison", "Verdict", "Titre", "Conf");
                 println!("  {}", "─".repeat(72));
                 for r in &results {
                     let f = findings.iter().find(|f| f.id == r.id);

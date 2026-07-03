@@ -353,8 +353,8 @@ fn cmd_ai_providers() -> Result<()> {
     println!("{}", "  Providers IA disponibles".bold());
     println!("  {}", "─".repeat(68));
     println!(
-        "  {:<12} {:<12} {:<14} {:<24} {}",
-        "Provider", "Configuré", "Clé API", "Modèle", "Statut"
+        "  {:<12} {:<12} {:<14} {:<24} Statut",
+        "Provider", "Configuré", "Clé API", "Modèle"
     );
     println!("  {}", "─".repeat(68));
 
@@ -422,7 +422,7 @@ fn cmd_ai_providers() -> Result<()> {
     println!(
         "  {:<14} {}",
         "Fallback :",
-        routing.fallback.as_deref().unwrap_or("(non configuré)").yellow().to_string()
+        routing.fallback.as_deref().unwrap_or("(non configuré)").yellow()
     );
 
     println!();
@@ -445,8 +445,8 @@ fn ping_provider(name: &str, prov: &nevelio_config::ProviderConfig) -> bool {
 
     // Simple TCP connect check (no HTTP request, no tokens consumed)
     use std::net::{TcpStream, ToSocketAddrs};
-    let host_port = if url.starts_with("https://") {
-        format!("{}:443", &url[8..])
+    let host_port = if let Some(rest) = url.strip_prefix("https://") {
+        format!("{rest}:443")
     } else {
         format!("{}:80", url.trim_start_matches("http://"))
     };

@@ -85,8 +85,8 @@ pub async fn run_agent(
 
     let tools = nevelio_tools();
     let mut messages = vec![
-        Message::system(&build_system_prompt(config)),
-        Message::user(&build_initial_message(config, endpoints)),
+        Message::system(build_system_prompt(config)),
+        Message::user(build_initial_message(config, endpoints)),
     ];
 
     let mut iterations = 0u32;

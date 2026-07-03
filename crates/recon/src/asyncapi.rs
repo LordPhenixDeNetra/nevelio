@@ -243,7 +243,7 @@ fn extract_channel_params(channel_def: &serde_json::Value) -> Vec<Parameter> {
 
 fn extract_binding_protocol(channel_def: &serde_json::Value) -> Option<&'static str> {
     if let Some(bindings) = channel_def.get("bindings").and_then(|b| b.as_object()) {
-        for key in bindings.keys() {
+        if let Some(key) = bindings.keys().next() {
             return Some(match key.as_str() {
                 "ws" | "websockets" => "websocket",
                 "mqtt" => "mqtt",

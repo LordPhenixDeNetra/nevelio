@@ -328,7 +328,7 @@ pub async fn handle_scan(args: ScanArgs, verbose: bool) -> Result<()> {
         }
     }
 
-    let active_modules: Vec<&Box<dyn AttackModule>> = all_modules
+    let active_modules: Vec<&dyn AttackModule> = all_modules
         .iter()
         .filter(|m| {
             let in_scope = session.config.modules.is_empty()
@@ -336,6 +336,7 @@ pub async fn handle_scan(args: ScanArgs, verbose: bool) -> Result<()> {
             let already_done = completed_modules.iter().any(|c| c == m.name());
             in_scope && !already_done
         })
+        .map(|m| m.as_ref())
         .collect();
 
     exec::run_and_report(
