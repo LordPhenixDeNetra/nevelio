@@ -15,8 +15,13 @@ readme.workspace      = true
 name = "nevelio"
 path = "src/main.rs"
 
+[features]
+default = ["ai"]
+ai      = ["dep:nevelio-ai"]
+
 [dependencies]
 nevelio-config                = { path = "../nevelio-config",        version = "0.1" }
+nevelio-ai                    = { path = "../nevelio-ai",            version = "0.1", optional = true }
 nevelio-core                  = { path = "../core",                  version = "0.1" }
 nevelio-recon                 = { path = "../recon",                 version = "0.1" }
 nevelio-reporting             = { path = "../reporting",             version = "0.1" }

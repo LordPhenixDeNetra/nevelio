@@ -1,0 +1,28 @@
+ai.error.no_key:       "API key missing for provider '%{provider}' — set %{env}"
+ai.error.api:          "API error %{provider} (%{status}): %{msg}"
+ai.error.parse:        "Failed to parse response from provider '%{provider}'"
+ai.error.connect:      "Cannot connect to provider '%{provider}': %{reason}"
+ai.error.no_provider:  "Provider '%{name}' not recognized — available: %{list}"
+ai.error.timeout:      "Timeout (%{secs}s) reached for provider '%{provider}'"
+
+ai.guardrail.scope:    "Out-of-scope request blocked: %{url} is not in the allowed domains"
+ai.guardrail.budget:   "Token budget reached (%{used}/%{max}) — stopping agent"
+ai.guardrail.requests: "Request limit reached (%{max}) — stopping agent"
+ai.guardrail.dry_run:  "Dry-run mode: simulated request not sent (%{method} %{url})"
+
+ai.agent.iteration:    "Iteration %{n}/%{max} — %{action}"
+ai.agent.done:         "Agent completed in %{n} iteration(s) — %{findings} finding(s) identified"
+ai.agent.aborted:      "Agent aborted: %{reason}"
+ai.agent.planning:     "Planning scan on %{target}..."
+ai.agent.tool_call:    "Tool called: %{tool}(%{args})"
+
+ai.triage.verdict.true_positive:  "True positive (%{confidence}%)"
+ai.triage.verdict.false_positive: "False positive (%{confidence}%)"
+ai.triage.verdict.uncertain:      "Uncertain (%{confidence}%)"
+ai.triage.error:       "AI triage unavailable: %{reason}"
+
+ai.remediation.title:  "Suggested remediation"
+ai.remediation.error:  "Cannot generate remediation: %{reason}"
+
+ai.report.generating:  "Generating narrative report..."
+ai.report.done:        "Narrative report written to %{path}"

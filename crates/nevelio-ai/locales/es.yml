@@ -1,0 +1,28 @@
+ai.error.no_key:       "Clave API ausente para el proveedor '%{provider}' — defina %{env}"
+ai.error.api:          "Error de API %{provider} (%{status}): %{msg}"
+ai.error.parse:        "No se pudo parsear la respuesta del proveedor '%{provider}'"
+ai.error.connect:      "No se puede conectar al proveedor '%{provider}': %{reason}"
+ai.error.no_provider:  "Proveedor '%{name}' no reconocido — disponibles: %{list}"
+ai.error.timeout:      "Tiempo de espera (%{secs}s) alcanzado para el proveedor '%{provider}'"
+
+ai.guardrail.scope:    "Solicitud fuera del alcance bloqueada: %{url} no está en los dominios permitidos"
+ai.guardrail.budget:   "Presupuesto de tokens alcanzado (%{used}/%{max}) — deteniendo agente"
+ai.guardrail.requests: "Límite de solicitudes alcanzado (%{max}) — deteniendo agente"
+ai.guardrail.dry_run:  "Modo dry-run: solicitud simulada no enviada (%{method} %{url})"
+
+ai.agent.iteration:    "Iteración %{n}/%{max} — %{action}"
+ai.agent.done:         "Agente completado en %{n} iteración(es) — %{findings} hallazgo(s) identificado(s)"
+ai.agent.aborted:      "Agente interrumpido: %{reason}"
+ai.agent.planning:     "Planificando escaneo en %{target}..."
+ai.agent.tool_call:    "Herramienta llamada: %{tool}(%{args})"
+
+ai.triage.verdict.true_positive:  "Verdadero positivo (%{confidence}%)"
+ai.triage.verdict.false_positive: "Falso positivo (%{confidence}%)"
+ai.triage.verdict.uncertain:      "Incierto (%{confidence}%)"
+ai.triage.error:       "Triaje IA no disponible: %{reason}"
+
+ai.remediation.title:  "Remediación sugerida"
+ai.remediation.error:  "No se puede generar remediación: %{reason}"
+
+ai.report.generating:  "Generando informe narrativo..."
+ai.report.done:        "Informe narrativo escrito en %{path}"

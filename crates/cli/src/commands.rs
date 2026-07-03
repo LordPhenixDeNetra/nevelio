@@ -43,6 +43,23 @@ pub async fn run() -> Result<()> {
         legal::display_banner();
     }
 
+    // First-run: if no global config exists and this isn't already `config init`, auto-launch it
+    if !nevelio_config::global_config_exists()
+        && !matches!(cli.command, Commands::Config(_))
+    {
+        use std::io::IsTerminal;
+        if std::io::stdin().is_terminal() {
+            println!("{}", t!("config.first_run.msg").yellow());
+            println!();
+            crate::config_cmd::handle_config(crate::config_cmd::ConfigArgs {
+                action: crate::config_cmd::ConfigAction::Init,
+            })?;
+            println!();
+        } else {
+            eprintln!("{}", t!("config.first_run.hint").yellow());
+        }
+    }
+
     match cli.command {
         Commands::Scan(args)    => crate::scan::handle_scan(args, cli.verbose).await,
         Commands::Report(args)  => handle_report(args).await,

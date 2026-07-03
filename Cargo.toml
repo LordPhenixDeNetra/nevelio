@@ -3,6 +3,7 @@ members = [
     "crates/cli",
     "crates/core",
     "crates/nevelio-config",
+    "crates/nevelio-ai",
     "crates/modules/auth",
     "crates/modules/injection",
     "crates/modules/access-control",

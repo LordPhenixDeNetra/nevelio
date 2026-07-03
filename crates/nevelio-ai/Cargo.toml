@@ -1,0 +1,23 @@
+[package]
+name              = "nevelio-ai"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[features]
+default = []
+bedrock = []
+
+[dependencies]
+nevelio-config = { path = "../nevelio-config", version = "0.1" }
+serde          = { workspace = true }
+serde_json     = { workspace = true }
+anyhow         = { workspace = true }
+reqwest        = { workspace = true }
+tokio          = { workspace = true }
+async-trait    = { workspace = true }
+rust-i18n      = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true }

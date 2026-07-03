@@ -27,7 +27,7 @@
 | # | Statut | Priorité | Tâche | Effort | Dépend de | Notes |
 |---|---|---|---|---|---|---|
 | C.8 | [x] | 🔴 | `nevelio config init` — assistant interactif post-install | 6h | C.3 | Crée le fichier s'il n'existe pas — questions minimales |
-| C.9 | [ ] | 🔴 | Lancement auto de `config init` à la première invocation | 2h | C.8 | Détecte l'absence de `~/.config/nevelio/config.toml` |
+| C.9 | [x] | 🔴 | Lancement auto de `config init` à la première invocation | 2h | C.8 | Auto-lance si stdin est un terminal et config absente |
 | C.10 | [x] | 🟠 | `nevelio config show` — affiche la config résolue | 2h | C.5 | Colorise par niveau d'origine (global / projet / flag) |
 | C.11 | [x] | 🟠 | `nevelio config get <clé>` | 2h | C.5 | Accès par chemin pointé `ai.provider` |
 | C.12 | [x] | 🟠 | `nevelio config set <clé> <valeur>` | 3h | C.3 | Modifie le fichier global en place (préserve commentaires via `toml_edit`) |
@@ -54,9 +54,9 @@
 
 | # | Statut | Priorité | Tâche | Effort | Dépend de | Notes |
 |---|---|---|---|---|---|---|
-| A.1 | [ ] | 🔴 | Créer crate `nevelio-ai` avec feature flag `ai` dans workspace | 2h | C.1 | `crates/nevelio-ai/` — feature optionnelle, zéro code sans elle |
-| A.2 | [ ] | 🔴 | Définir trait `AiProvider` : `complete`, `complete_json`, `complete_with_tools` | 4h | A.1 | `provider/mod.rs` — async-trait, types `Message`, `ToolDefinition`, `ToolCallResponse` |
-| A.3 | [ ] | 🔴 | Fonction `build_provider(cfg: &AiConfig) -> Box<dyn AiProvider>` | 2h | A.2 | `provider/factory.rs` — dispatch par `cfg.provider` |
+| A.1 | [x] | 🔴 | Créer crate `nevelio-ai` avec feature flag `ai` dans workspace | 2h | C.1 | `crates/nevelio-ai/` — `default = ["ai"]` dans CLI Cargo.toml |
+| A.2 | [x] | 🔴 | Définir trait `AiProvider` : `complete`, `complete_json`, `complete_with_tools` | 4h | A.1 | `provider/mod.rs` — async-trait, Message, Role, ToolDefinition, ToolCallResponse |
+| A.3 | [x] | 🔴 | Fonction `build_provider(cfg: &AiConfig) -> Box<dyn AiProvider>` | 2h | A.2 | `provider/factory.rs` — dispatch par `cfg.provider` |
 | A.4 | [ ] | 🟠 | Système de fallback : si provider actif échoue → tente `ai.routing.fallback` | 3h | A.3 | `provider/fallback.rs` — max 2 tentatives, log du basculement |
 | A.5 | [ ] | 🟠 | Système de routing par tâche (`ai.routing.report`, `ai.routing.payloads`…) | 3h | A.3 | `provider/router.rs` — sélectionne le provider selon le type de tâche |
 
@@ -64,11 +64,11 @@
 
 | # | Statut | Priorité | Tâche | Effort | Dépend de | Notes |
 |---|---|---|---|---|---|---|
-| A.6 | [ ] | 🔴 | `AnthropicProvider` — API Messages v1 + tool use | 6h | A.2 | `provider/anthropic.rs` — streaming optionnel, gestion rate-limit |
-| A.7 | [ ] | 🔴 | `OpenAiProvider` — API ChatCompletion + function calling | 5h | A.2 | `provider/openai.rs` — compatible aussi Azure OpenAI via `base_url` |
-| A.8 | [ ] | 🔴 | `OllamaProvider` — HTTP local + tool use (models compatibles) | 4h | A.2 | `provider/ollama.rs` — détection auto du modèle installé |
-| A.9 | [ ] | 🟠 | `MistralProvider` | 3h | A.2 | `provider/mistral.rs` |
-| A.10 | [ ] | 🟠 | `GroqProvider` | 2h | A.2 | `provider/groq.rs` — OpenAI-compatible, réutilise OpenAiProvider |
+| A.6 | [x] | 🔴 | `AnthropicProvider` — API Messages v1 + tool use | 6h | A.2 | `provider/anthropic.rs` — tool_use, system prompt, JSON mode |
+| A.7 | [x] | 🔴 | `OpenAiProvider` — API ChatCompletion + function calling | 5h | A.2 | `provider/openai.rs` — JSON mode + function_calling + base_url override |
+| A.8 | [x] | 🔴 | `OllamaProvider` — HTTP local + tool use (models compatibles) | 4h | A.2 | `provider/ollama.rs` — format json, tool_calls llama3.1+ |
+| A.9 | [x] | 🟠 | `MistralProvider` | 3h | A.2 | Réutilise `OpenAiProvider` avec base_url mistral.ai |
+| A.10 | [x] | 🟠 | `GroqProvider` | 2h | A.2 | Réutilise `OpenAiProvider` avec base_url groq.com |
 | A.11 | [ ] | 🟡 | `BedrockProvider` — AWS SDK | 8h | A.2 | `provider/bedrock.rs` — feature `bedrock` séparée, auth via env AWS |
 
 ### Commandes `nevelio config ai`
@@ -83,15 +83,15 @@
 
 | # | Statut | Priorité | Tâche | Effort | Dépend de | Notes |
 |---|---|---|---|---|---|---|
-| A.15 | [ ] | 🔴 | Créer `crates/nevelio-ai/locales/fr.yml` — clés `ai.error.*`, `ai.guardrail.*`, `config.ai.ping.*` | 3h | A.1 | |
-| A.16 | [ ] | 🔴 | Créer `en.yml` et `es.yml` | 2h | A.15 | |
-| A.17 | [ ] | 🔴 | `rust_i18n::i18n!("locales", fallback = "fr")` dans `lib.rs` | 1h | A.15 | |
+| A.15 | [x] | 🔴 | Créer `crates/nevelio-ai/locales/fr.yml` — clés `ai.error.*`, `ai.guardrail.*`, `ai.agent.*`, `ai.triage.*`, `ai.report.*` | 3h | A.1 | |
+| A.16 | [x] | 🔴 | Créer `en.yml` et `es.yml` | 2h | A.15 | |
+| A.17 | [x] | 🔴 | `rust_i18n::i18n!("locales", fallback = "fr")` dans `lib.rs` | 1h | A.15 | |
 
 ### Tests
 
 | # | Statut | Priorité | Tâche | Effort | Dépend de | Notes |
 |---|---|---|---|---|---|---|
-| A.18 | [ ] | 🔴 | Tests unitaires trait + factory (mock provider) | 4h | A.3 | `MockProvider` implémente `AiProvider` pour les tests — zéro appel réseau |
+| A.18 | [x] | 🔴 | Tests unitaires trait + factory (mock provider) | 4h | A.3 | 5 tests dans `lib.rs` — MockProvider, complete, complete_json, tools, constructors |
 | A.19 | [ ] | 🟠 | Tests d'intégration Ollama (CI local uniquement) | 3h | A.8 | Skip si `OLLAMA_HOST` absent |
 | A.20 | [ ] | 🟡 | Tests d'intégration Anthropic (optionnel, coût tokens) | 2h | A.6 | Gated par `ANTHROPIC_API_KEY` + `RUN_AI_INTEGRATION_TESTS=1` |
 
@@ -181,7 +181,7 @@
 | # | Statut | Priorité | Tâche | Effort | Dépend de | Notes |
 |---|---|---|---|---|---|---|
 | I.1 | [x] | 🔴 | Ajouter `rust-i18n = "3"` dans `[workspace.dependencies]` si pas déjà présent | 1h | — | Mutualisé avec les crates hardware |
-| I.2 | [x] | 🔴 | `nevelio-config` et `nevelio-ai` membres du workspace Cargo racine | 1h | C.1 A.1 | `nevelio-config` ajouté — `nevelio-ai` en Phase 2 |
+| I.2 | [x] | 🔴 | `nevelio-config` et `nevelio-ai` membres du workspace Cargo racine | 1h | C.1 A.1 | Les deux crates ajoutées au workspace |
 | I.3 | [ ] | 🟠 | CI : `cargo build --features ai` + `cargo test --features ai` | 2h | A.18 | Ajout dans `.github/workflows/` — skip tests d'intégration LLM en CI |
 | I.4 | [ ] | 🟠 | CI : `cargo build --no-default-features` — vérifie que le build sans IA compile | 1h | A.1 | |
 | I.5 | [ ] | 🟡 | Documentation `nevelio config init` dans `docs/tutorial.md` | 2h | C.8 | Section dédiée |
@@ -193,12 +193,12 @@
 
 | Phase | Tâches | Terminées | Prérequis |
 |---|---|---|---|
-| **1 — Config globale** | 18 | 16 | Aucun |
-| **2 — Multi-provider** | 20 | 2 (A.12, A.13) | Phase 1 |
+| **1 — Config globale** | 18 | 17 | Aucun |
+| **2 — Multi-provider** | 20 | 14 | Phase 1 |
 | **3 — LLM ponctuel** | 13 | 0 | Phase 2 |
 | **4 — Agent autonome** | 12 | 0 | Phases 2 + 3 |
 | **Transversal** | 6 | 2 (I.1, I.2) | — |
-| **TOTAL** | **69** | **20 / 69** | |
+| **TOTAL** | **69** | **33 / 69** | |
 
 ---
 

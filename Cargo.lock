@@ -1676,6 +1676,7 @@ dependencies = [
  "futures-util",
  "indicatif",
  "libc",
+ "nevelio-ai",
  "nevelio-config",
  "nevelio-core",
  "nevelio-module-access-control",
@@ -1702,6 +1703,20 @@ dependencies = [
  "toml",
  "tracing",
  "tracing-subscriber",
+]
+
+[[package]]
+name = "nevelio-ai"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "nevelio-config",
+ "reqwest",
+ "rust-i18n",
+ "serde",
+ "serde_json",
+ "tokio",
 ]
 
 [[package]]
