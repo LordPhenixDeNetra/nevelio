@@ -1,6 +1,7 @@
 pub mod loader;
 pub mod merge;
 pub mod types;
+pub mod validate;
 
 rust_i18n::i18n!("locales", fallback = "fr");
 
@@ -12,15 +13,25 @@ pub use types::{
     AiConfig, AiRoutingConfig, AuditConfig, GlobalConfig, NotifyConfig, OutputConfig,
     ProjectAiConfig, ProjectConfig, ProviderConfig, ResolvedConfig, ScanConfig, UserConfig,
 };
+pub use validate::{validate, ValidationError};
 
-use anyhow::Result;
+use anyhow::{bail, Result};
 
 /// Convenience: load + merge in one call.
 /// Returns a `ResolvedConfig` from global + optional project file + CLI overrides.
+/// Performs semantic validation after merging — returns an error if the config is invalid.
 pub fn load(overrides: CliOverrides) -> Result<ResolvedConfig> {
     let global  = loader::load_global()?;
     let project = loader::load_project(None)?;
-    Ok(merge::merge(global, project, overrides))
+    let resolved = merge::merge(global, project, overrides);
+
+    let errors = validate::validate(&resolved);
+    if !errors.is_empty() {
+        let msgs: Vec<String> = errors.iter().map(|e| format!("  • {}", e)).collect();
+        bail!("Configuration invalide :\n{}", msgs.join("\n"));
+    }
+
+    Ok(resolved)
 }
 
 #[cfg(test)]

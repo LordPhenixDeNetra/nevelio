@@ -19,7 +19,7 @@
 | C.3 | [x] | 🔴 | Implémenter chargement `~/.config/nevelio/config.toml` via crate `dirs` | 3h | C.2 | `config/loader.rs` — cross-platform (Linux/macOS/Windows) |
 | C.4 | [x] | 🔴 | Implémenter chargement `./nevelio.toml` projet | 2h | C.2 | Optionnel — absent = config globale seule |
 | C.5 | [x] | 🔴 | Implémenter fusion des trois niveaux (global < projet < flags CLI) | 4h | C.3 C.4 | `config/merge.rs` — priorité flags > projet > global > défauts |
-| C.6 | [~] | 🟠 | Validation de la config résolue (types, valeurs autorisées) | 3h | C.5 | Validation de base via serde — validation sémantique à compléter |
+| C.6 | [x] | 🟠 | Validation de la config résolue (types, valeurs autorisées) | 3h | C.5 | `validate.rs` — `validate()` + `ValidationError` · 14 règles sémantiques · 16 tests |
 | C.7 | [x] | 🟠 | Tests unitaires : chargement, fusion, priorités | 4h | C.5 | 4 tests dans `lib.rs` (default, lang, merge) |
 
 ### Commandes CLI
@@ -193,12 +193,12 @@
 
 | Phase | Tâches | Terminées | Prérequis |
 |---|---|---|---|
-| **1 — Config globale** | 18 | 17 (C.6 en cours) | Aucun |
+| **1 — Config globale** | 18 | 18 ✓ | Aucun |
 | **2 — Multi-provider** | 20 | 19 (A.11 reste) | Phase 1 |
 | **3 — LLM ponctuel** | 13 | 13 ✓ | Phase 2 |
 | **4 — Agent autonome** | 12 | 10 (G.10–G.11 restent) | Phases 2 + 3 |
 | **Transversal** | 6 | 6 ✓ | — |
-| **TOTAL** | **69** | **65 / 69** | |
+| **TOTAL** | **69** | **66 / 69** | |
 
 ---
 
