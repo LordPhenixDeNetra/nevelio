@@ -1,3 +1,4 @@
+pub mod agent;
 pub mod provider;
 pub mod remediation;
 pub mod report;
@@ -11,6 +12,7 @@ pub use provider::{
 };
 pub use provider::factory::build_provider;
 pub use triage::FindingContext;
+pub use agent::{AgentConfig, AgentFinding, AgentResult, run_agent};
 
 #[cfg(test)]
 mod tests {

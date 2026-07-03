@@ -2,6 +2,7 @@ use anyhow::Result;
 
 rust_i18n::i18n!("locales");
 
+mod agent_cmd;
 mod ai_suggestions;
 mod args;
 mod commands;

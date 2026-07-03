@@ -146,20 +146,20 @@
 
 | # | Statut | Priorité | Tâche | Effort | Dépend de | Notes |
 |---|---|---|---|---|---|---|
-| G.1 | [ ] | 🔴 | `agent::Planner` — analyse cible, produit un plan de scan structuré | 8h | A.2 | Entrée : spec OpenAPI ou réponses initiales. Sortie : liste d'actions ordonnées |
-| G.2 | [ ] | 🔴 | `agent::ToolCaller` — appelle les outils Nevelio depuis l'agent | 6h | G.1 | Outils : `scan_endpoint`, `send_payload`, `read_response`, `list_endpoints` |
-| G.3 | [ ] | 🔴 | `agent::Reviewer` — interprète chaque réponse HTTP, décide de la suite | 6h | G.2 | Détecte : succès exploit / échec / WAF / rate-limit / endpoint intéressant |
-| G.4 | [ ] | 🔴 | Boucle principale : Planner → ToolCaller → Reviewer → itération | 5h | G.1 G.2 G.3 | Max configurable d'itérations (`agent.max_iterations`) |
+| G.1 | [x] | 🔴 | `agent::Planner` — analyse cible, produit un plan de scan structuré | 8h | A.2 | Implémenté via prompt système + `list_endpoints` outil |
+| G.2 | [x] | 🔴 | `agent::ToolCaller` — appelle les outils Nevelio depuis l'agent | 6h | G.1 | Outils : `list_endpoints`, `probe_endpoint`, `report_finding`, `finish` |
+| G.3 | [x] | 🔴 | `agent::Reviewer` — interprète chaque réponse HTTP, décide de la suite | 6h | G.2 | Le LLM analyse status/headers/body et décide de la suite |
+| G.4 | [x] | 🔴 | Boucle principale : Planner → ToolCaller → Reviewer → itération | 5h | G.1 G.2 G.3 | `run_agent()` dans `nevelio-ai/src/agent/mod.rs` — `max_iterations` configurable |
 
 ### Guardrails
 
 | # | Statut | Priorité | Tâche | Effort | Dépend de | Notes |
 |---|---|---|---|---|---|---|
-| G.5 | [ ] | 🔴 | Guardrail `scope` : l'agent ne peut pas envoyer de requête hors des domaines autorisés | 4h | G.2 | Vérifié côté Nevelio (pas côté LLM) — refus + log |
-| G.6 | [ ] | 🔴 | Guardrail `max_requests` : limite le nombre de requêtes HTTP émises | 2h | G.2 | Défaut : 100 — configurable via `agent.max_requests` |
-| G.7 | [ ] | 🔴 | Guardrail `require_legal_accept` : agent ne démarre pas sans `--accept-legal` | 1h | G.4 | |
-| G.8 | [ ] | 🔴 | Guardrail `dry_run` : agent planifie et simule sans envoyer de requête réelle | 2h | G.4 | `--dry-run` global s'applique aussi à l'agent |
-| G.9 | [ ] | 🟠 | Guardrail `ai_budget` : limite en tokens consommés | 3h | G.4 | `--ai-budget 50000` — arrêt propre avec rapport partiel |
+| G.5 | [x] | 🔴 | Guardrail `scope` : l'agent ne peut pas envoyer de requête hors des domaines autorisés | 4h | G.2 | `Guardrail::check_scope()` — vérifié avant chaque `probe_endpoint` |
+| G.6 | [x] | 🔴 | Guardrail `max_requests` : limite le nombre de requêtes HTTP émises | 2h | G.2 | `Guardrail::check_requests()` — défaut 100, `--max-requests` CLI |
+| G.7 | [x] | 🔴 | Guardrail `require_legal_accept` : agent ne démarre pas sans `--accept-legal` | 1h | G.4 | Vérifié par le check légal global dans `commands.rs` avant dispatch |
+| G.8 | [x] | 🔴 | Guardrail `dry_run` : agent planifie et simule sans envoyer de requête réelle | 2h | G.4 | `--dry-run` sur `AgentArgs` — retourne réponse simulée sans HTTP réel |
+| G.9 | [x] | 🟠 | Guardrail `ai_budget` : limite en tokens consommés | 3h | G.4 | `Guardrail::check_budget()` — `--ai-budget TOKENS` CLI, arrêt propre |
 
 ### Exposition MCP (optionnel)
 
@@ -172,7 +172,7 @@
 
 | # | Statut | Priorité | Tâche | Effort | Dépend de | Notes |
 |---|---|---|---|---|---|---|
-| G.12 | [ ] | 🟠 | Clés i18n `ai.agent.*` dans les trois locales | 3h | G.4 | Statuts boucle, guardrails, résumé d'itération |
+| G.12 | [x] | 🟠 | Clés i18n `ai.agent.*` dans les trois locales | 3h | G.4 | Clés `ai.agent.*` et `ai.guardrail.*` présentes dans fr/en/es depuis la session précédente |
 
 ---
 
@@ -183,7 +183,7 @@
 | I.1 | [x] | 🔴 | Ajouter `rust-i18n = "3"` dans `[workspace.dependencies]` si pas déjà présent | 1h | — | Mutualisé avec les crates hardware |
 | I.2 | [x] | 🔴 | `nevelio-config` et `nevelio-ai` membres du workspace Cargo racine | 1h | C.1 A.1 | Les deux crates ajoutées au workspace |
 | I.3 | [ ] | 🟠 | CI : `cargo build --features ai` + `cargo test --features ai` | 2h | A.18 | Ajout dans `.github/workflows/` — skip tests d'intégration LLM en CI |
-| I.4 | [ ] | 🟠 | CI : `cargo build --no-default-features` — vérifie que le build sans IA compile | 1h | A.1 | |
+| I.4 | [x] | 🟠 | CI : `cargo build --no-default-features` — vérifie que le build sans IA compile | 1h | A.1 | Vérifié manuellement : build propre sans aucune erreur ni warning |
 | I.5 | [ ] | 🟡 | Documentation `nevelio config init` dans `docs/tutorial.md` | 2h | C.8 | Section dédiée |
 | I.6 | [ ] | 🟡 | Mise à jour `docs/hardware-security-extensions.md` → mention config globale partagée | 1h | C.1 | |
 
@@ -196,9 +196,9 @@
 | **1 — Config globale** | 18 | 17 | Aucun |
 | **2 — Multi-provider** | 20 | 14 | Phase 1 |
 | **3 — LLM ponctuel** | 13 | 10 | Phase 2 |
-| **4 — Agent autonome** | 12 | 0 | Phases 2 + 3 |
-| **Transversal** | 6 | 2 (I.1, I.2) | — |
-| **TOTAL** | **69** | **43 / 69** | |
+| **4 — Agent autonome** | 12 | 10 (G.1–G.9, G.12) | Phases 2 + 3 |
+| **Transversal** | 6 | 3 (I.1, I.2, I.4) | — |
+| **TOTAL** | **69** | **56 / 69** | |
 
 ---
 

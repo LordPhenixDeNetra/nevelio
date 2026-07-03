@@ -73,6 +73,8 @@ pub enum Commands {
     Notify(NotifyArgs),
     Issue(IssueArgs),
     Config(crate::config_cmd::ConfigArgs),
+    #[command(about = "Run the autonomous AI security agent")]
+    Agent(crate::agent_cmd::AgentArgs),
 }
 
 #[derive(Debug, clap::Args)]

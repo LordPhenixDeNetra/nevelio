@@ -5,9 +5,12 @@ use anyhow::{Context, Result};
 use colored::Colorize;
 use indicatif::{ProgressBar, ProgressStyle};
 use rust_i18n::t;
+#[cfg(feature = "ai")]
 use std::path::Path;
 
-use nevelio_core::types::{Endpoint, Finding};
+#[cfg(feature = "ai")]
+use nevelio_core::types::Finding;
+use nevelio_core::types::Endpoint;
 use nevelio_core::{AttackModule, HttpClient, ScanSession};
 use nevelio_reporting::{JsonReporter, ReportFormat};
 

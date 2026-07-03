@@ -72,6 +72,7 @@ pub async fn run() -> Result<()> {
         Commands::Notify(args)  => crate::notify::handle_notify(args).await,
         Commands::Issue(args)   => crate::issue::handle_issue(args).await,
         Commands::Config(args)  => crate::config_cmd::handle_config(args),
+        Commands::Agent(args)   => crate::agent_cmd::handle_agent(args).await,
     }
 }
 
