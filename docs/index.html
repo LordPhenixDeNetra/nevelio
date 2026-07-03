@@ -97,7 +97,13 @@
   <div class="nav-section">
     <div class="nav-section-label" data-i18n="nav.outputs">Sorties &amp; intégrations</div>
     <a class="nav-link" href="#formats"><span class="nav-icon">📋</span><span data-i18n="nav.formats">Formats de sortie</span></a>
-    <a class="nav-link" href="#ai"><span class="nav-icon">🤖</span><span data-i18n="nav.ai">Suggestions IA</span></a>
+    <a class="nav-link" href="#ai"><span class="nav-icon">🤖</span><span data-i18n="nav.ai">Fonctionnalités IA</span></a>
+    <a class="nav-link nav-sub" href="#ai-triage"><span data-i18n="nav.ai.triage">↳ --ai-triage</span></a>
+    <a class="nav-link nav-sub" href="#ai-remediation"><span data-i18n="nav.ai.remediation">↳ --ai-remediation</span></a>
+    <a class="nav-link nav-sub" href="#ai-report"><span data-i18n="nav.ai.report">↳ --ai-report</span></a>
+    <a class="nav-link nav-sub" href="#ai-payloads"><span data-i18n="nav.ai.payloads">↳ --ai-payloads</span></a>
+    <a class="nav-link" href="#agent"><span class="nav-icon">🕵️</span>nevelio agent</a>
+    <a class="nav-link" href="#mcp-serve"><span class="nav-icon">🔌</span>nevelio mcp serve</a>
     <a class="nav-link" href="#cicd"><span class="nav-icon">🔄</span><span data-i18n="nav.cicd">CI/CD</span></a>
     <a class="nav-link" href="#scenarios"><span class="nav-icon">🎯</span><span data-i18n="nav.scenarios">Scénarios pratiques</span></a>
     <a class="nav-link" href="#suppress"><span class="nav-icon">🚫</span>Suppressions</a>
@@ -1133,35 +1139,187 @@ CF-Connecting-IP: 192.168.1.1</code></pre></div>
   </section>
 
   <!-- ── 8. AI ───────────────────────────────────────────────────────────── -->
+  <!-- ── 8. Fonctionnalités IA ─────────────────────────────────────────── -->
   <section class="doc-section" id="ai">
-    <h2><span class="section-icon">🤖</span> <span data-i18n="ai.title">Suggestions IA via Claude</span></h2>
+    <h2><span class="section-icon">🤖</span> <span data-i18n="ai.title">Fonctionnalités IA</span></h2>
 
-    <p data-i18n-html="1" data-i18n="ai.desc">Nevelio peut générer des <strong>recommandations de remédiation détaillées</strong> pour
-    chaque finding, via l'API Claude d'Anthropic.</p>
+    <p data-i18n-html="1" data-i18n="ai.desc">Nevelio intègre plusieurs fonctionnalités IA activées via des flags de scan.
+    Chacune nécessite un provider configuré (<code>nevelio config init</code>).</p>
 
     <div class="callout info">
       <span class="callout-icon">ℹ️</span>
-      <div data-i18n-html="1" data-i18n="ai.model-info">Modèle utilisé : <code>claude-haiku-4-5-20251001</code>.
-      Sortie : <code>&lt;out-dir&gt;/ai_suggestions.md</code></div>
+      <div data-i18n-html="1" data-i18n="ai.prereq">Configurer un provider avant d'utiliser les flags IA :
+      <code>nevelio config init</code> puis <code>nevelio config ai ping</code></div>
     </div>
 
     <div class="code-block">
       <div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)" data-i18n="copy.btn">Copier</button></div>
-      <pre><code class="language-bash">export ANTHROPIC_API_KEY=sk-ant-api03-...
-
-nevelio scan --target https://api.example.com \
-             --ai-suggestions \
-             --out-dir ./results \
-             --accept-legal
-
-# Lire les suggestions générées
-cat ./results/ai_suggestions.md</code></pre>
+      <pre><code class="language-bash"># Variables d'environnement directes (sans fichier de config)
+export ANTHROPIC_API_KEY=sk-ant-api03-...   # Anthropic Claude
+export OPENAI_API_KEY=sk-...                # OpenAI
+export MISTRAL_API_KEY=...                  # Mistral AI
+export GROQ_API_KEY=gsk_...                 # Groq
+# Bedrock : AWS_ACCESS_KEY_ID + AWS_SECRET_ACCESS_KEY + AWS_REGION
+# Ollama : pas de clé (local)</code></pre>
     </div>
 
-    <div class="callout warning">
-      <span class="callout-icon">⚠️</span>
-      <div data-i18n-html="1" data-i18n="ai.missing-key">Si <code>ANTHROPIC_API_KEY</code> est absent, Nevelio affiche un avertissement
-      <strong>avant le scan</strong> et continue normalement sans les suggestions.</div>
+    <!-- 8.1 ai-triage -->
+    <h3 id="ai-triage"><span data-i18n="ai.triage.title">Triage IA — <code>--ai-triage</code></span></h3>
+    <p data-i18n-html="1" data-i18n="ai.triage.desc">Classe chaque finding en <strong>vrai positif / faux positif / incertain</strong>
+    avec un score de confiance et une justification. Sortie : <code>ai_triage.json</code></p>
+    <div class="code-block">
+      <div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)" data-i18n="copy.btn">Copier</button></div>
+      <pre><code class="language-bash">nevelio scan --target https://api.example.com \
+             --ai-triage --out-dir ./results --accept-legal</code></pre>
+    </div>
+
+    <!-- 8.2 ai-remediation -->
+    <h3 id="ai-remediation"><span data-i18n="ai.remediation.title">Remédiation IA — <code>--ai-remediation</code></span></h3>
+    <p data-i18n-html="1" data-i18n="ai.remediation.desc">Génère des <strong>étapes de remédiation détaillées</strong> avec exemples de code.
+    Sortie : <code>ai_remediation.md</code></p>
+    <div class="code-block">
+      <div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)" data-i18n="copy.btn">Copier</button></div>
+      <pre><code class="language-bash">nevelio scan --target https://api.example.com \
+             --ai-remediation --out-dir ./results --accept-legal</code></pre>
+    </div>
+
+    <!-- 8.3 ai-report -->
+    <h3 id="ai-report"><span data-i18n="ai.report.title">Rapport narratif IA — <code>--ai-report</code></span></h3>
+    <p data-i18n-html="1" data-i18n="ai.report.desc">Génère un <strong>rapport exécutif complet</strong> : résumé, chaîne d'attaque narrative, priorités.
+    Sortie : <code>ai_narrative_report.md</code></p>
+    <div class="code-block">
+      <div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)" data-i18n="copy.btn">Copier</button></div>
+      <pre><code class="language-bash">nevelio scan --target https://api.example.com \
+             --ai-report --out-dir ./results --accept-legal</code></pre>
+    </div>
+
+    <!-- 8.4 ai-payloads -->
+    <h3 id="ai-payloads"><span data-i18n="ai.payloads.title">Payloads IA — <code>--ai-payloads</code></span></h3>
+    <p data-i18n-html="1" data-i18n="ai.payloads.desc">Génère des <strong>payloads d'attaque contextuels</strong> adaptés au framework et aux endpoints.
+    Sortie : <code>ai_payloads.json</code></p>
+    <div class="code-block">
+      <div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)" data-i18n="copy.btn">Copier</button></div>
+      <pre><code class="language-bash">nevelio scan --target https://api.example.com \
+             --ai-payloads --out-dir ./results --accept-legal</code></pre>
+    </div>
+
+    <!-- Combinaison -->
+    <h3><span data-i18n="ai.combo.title">Combinaison de flags</span></h3>
+    <div class="code-block">
+      <div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)" data-i18n="copy.btn">Copier</button></div>
+      <pre><code class="language-bash">nevelio scan --target https://api.example.com \
+             --ai-triage --ai-remediation --ai-report --ai-payloads \
+             --out-dir ./results --accept-legal</code></pre>
+    </div>
+
+    <!-- Routing -->
+    <h3><span data-i18n="ai.routing.title">Routing par tâche</span></h3>
+    <p data-i18n="ai.routing.desc">Chaque tâche peut utiliser un provider différent via la config :</p>
+    <div class="code-block">
+      <div class="code-header"><span>toml</span><button class="copy-btn" onclick="copyCode(this)" data-i18n="copy.btn">Copier</button></div>
+      <pre><code class="language-toml"># ~/.config/nevelio/config.toml
+[ai.routing]
+triage   = "groq"       # rapide pour le triage
+report   = "anthropic"  # qualitatif pour le rapport
+payloads = "ollama"     # local pour les payloads
+fallback = "openai"     # si le provider actif est indisponible</code></pre>
+    </div>
+  </section>
+
+  <!-- ── 8bis. Agent autonome ───────────────────────────────────────────── -->
+  <section class="doc-section" id="agent">
+    <h2><span class="section-icon">🕵️</span> <span data-i18n="agent.title">Commande <code>agent</code> — Agent autonome</span></h2>
+
+    <p data-i18n-html="1" data-i18n="agent.desc">L'agent autonome pilote une boucle <strong>LLM → outils → analyse</strong> sans intervention humaine.
+    Il découvre les endpoints, les sonde, identifie les vulnérabilités et produit un rapport.</p>
+
+    <div class="code-block">
+      <div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)" data-i18n="copy.btn">Copier</button></div>
+      <pre><code class="language-bash"># Audit complet
+nevelio agent https://api.example.com \
+    --max-iterations 15 \
+    --max-requests 200 \
+    --ai-budget 50000 \
+    --out-dir ./agent-report \
+    --accept-legal
+
+# Mode simulation (sans requêtes HTTP réelles)
+nevelio agent https://api.example.com --dry-run --max-iterations 5 --accept-legal</code></pre>
+    </div>
+
+    <h3 data-i18n="agent.options">Options</h3>
+    <div class="table-wrap">
+    <table>
+      <thead><tr><th>Option</th><th data-i18n="agent.col.default">Défaut</th><th data-i18n="scan.col.desc">Description</th></tr></thead>
+      <tbody>
+        <tr><td><code>TARGET</code></td><td>—</td><td data-i18n="agent.target.desc">URL de base de l'API cible (requis)</td></tr>
+        <tr><td><code>--max-iterations N</code></td><td>20</td><td data-i18n="agent.iter.desc">Nombre maximum de tours LLM</td></tr>
+        <tr><td><code>--max-requests N</code></td><td>100</td><td data-i18n="agent.req.desc">Nombre maximum de requêtes HTTP</td></tr>
+        <tr><td><code>--ai-budget TOKENS</code></td><td>—</td><td data-i18n="agent.budget.desc">Limite de tokens consommés (coût)</td></tr>
+        <tr><td><code>--dry-run</code></td><td>false</td><td data-i18n="agent.dry.desc">Planifie sans envoyer de requêtes réelles</td></tr>
+        <tr><td><code>--out-dir PATH</code></td><td>—</td><td data-i18n="agent.outdir.desc">Répertoire de sortie du rapport</td></tr>
+      </tbody>
+    </table>
+    </div>
+
+    <h3 data-i18n="agent.guardrails">Guardrails de sécurité</h3>
+    <div class="table-wrap">
+    <table>
+      <thead><tr><th data-i18n="agent.guardrail.col">Guardrail</th><th data-i18n="agent.guardrail.behavior">Comportement</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Scope</strong></td><td data-i18n="agent.g.scope">Refuse toute requête hors du domaine cible</td></tr>
+        <tr><td><strong>Max requests</strong></td><td data-i18n="agent.g.req">Arrêt propre une fois la limite atteinte</td></tr>
+        <tr><td><strong>Budget tokens</strong></td><td data-i18n="agent.g.budget">Arrêt si le budget IA est dépassé</td></tr>
+        <tr><td><strong>Dry run</strong></td><td data-i18n="agent.g.dry">Simule les requêtes sans les envoyer</td></tr>
+        <tr><td><strong>Legal</strong></td><td data-i18n="agent.g.legal">Refuse de démarrer sans <code>--accept-legal</code></td></tr>
+      </tbody>
+    </table>
+    </div>
+  </section>
+
+  <!-- ── 8ter. MCP serve ────────────────────────────────────────────────── -->
+  <section class="doc-section" id="mcp-serve">
+    <h2><span class="section-icon">🔌</span> <span data-i18n-html="1" data-i18n="mcp.title">Commande <code>mcp serve</code> — Serveur MCP</span></h2>
+
+    <p data-i18n-html="1" data-i18n="mcp.desc">Expose les outils Nevelio via le <strong>Model Context Protocol (MCP)</strong>,
+    permettant à Claude Desktop, Continue.dev ou tout agent compatible d'orchestrer Nevelio
+    depuis une conversation.</p>
+
+    <div class="code-block">
+      <div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)" data-i18n="copy.btn">Copier</button></div>
+      <pre><code class="language-bash">nevelio mcp serve --target https://api.example.com --accept-legal</code></pre>
+    </div>
+
+    <h3 data-i18n="mcp.claude-config">Configuration Claude Desktop</h3>
+    <p data-i18n-html="1" data-i18n="mcp.claude-config.desc">Ajouter dans <code>~/.config/claude/claude_desktop_config.json</code> :</p>
+    <div class="code-block">
+      <div class="code-header"><span>json</span><button class="copy-btn" onclick="copyCode(this)" data-i18n="copy.btn">Copier</button></div>
+      <pre><code class="language-json">{
+  "mcpServers": {
+    "nevelio": {
+      "command": "nevelio",
+      "args": ["mcp", "serve", "--target", "https://api.example.com", "--accept-legal"]
+    }
+  }
+}</code></pre>
+    </div>
+
+    <h3 data-i18n="mcp.tools">Outils MCP exposés</h3>
+    <div class="table-wrap">
+    <table>
+      <thead><tr><th data-i18n="mcp.col.tool">Outil</th><th data-i18n="scan.col.desc">Description</th></tr></thead>
+      <tbody>
+        <tr><td><code>list_endpoints</code></td><td data-i18n="mcp.tool.list">Crawle la cible et retourne les endpoints découverts</td></tr>
+        <tr><td><code>probe_endpoint</code></td><td data-i18n="mcp.tool.probe">Sonde un endpoint (méthode, headers, body configurables)</td></tr>
+        <tr><td><code>report_finding</code></td><td data-i18n="mcp.tool.report">Enregistre une vulnérabilité dans la session</td></tr>
+        <tr><td><code>finish</code></td><td data-i18n="mcp.tool.finish">Retourne le rapport JSON complet de la session</td></tr>
+      </tbody>
+    </table>
+    </div>
+
+    <div class="callout info">
+      <span class="callout-icon">ℹ️</span>
+      <div data-i18n="mcp.transport">Transport : <strong>stdio</strong> — compatible MCP protocol version <code>2024-11-05</code></div>
     </div>
   </section>
 

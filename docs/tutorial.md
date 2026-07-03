@@ -13,12 +13,15 @@
 
 1. [Installation](#1-installation)
 2. [Premier lancement et disclaimer légal](#2-premier-lancement-et-disclaimer-légal)
+2bis. [Configuration globale — `nevelio config init`](#2bis-configuration-globale--nevelio-config-init)
 3. [Configuration avec `nevelio init`](#3-configuration-avec-nevelio-init)
 4. [Commande `scan` — référence complète](#4-commande-scan--référence-complète)
 5. [TUI Dashboard](#5-tui-dashboard)
 6. [Les 10 modules d'attaque](#6-les-10-modules-dattaque)
 7. [Formats de sortie](#7-formats-de-sortie)
-8. [Suggestions IA via Claude](#8-suggestions-ia-via-claude)
+8. [Fonctionnalités IA](#8-fonctionnalités-ia) (`--ai-triage` / `--ai-remediation` / `--ai-report` / `--ai-payloads`)
+8bis. [Commande `agent` — Agent autonome](#8bis-commande-agent--agent-de-sécurité-autonome)
+8ter. [Commande `mcp serve` — Serveur MCP](#8ter-commande-mcp-serve--serveur-mcp)
 9. [Commande `report` / `convert`](#9-commande-report--convert)
 10. [Commande `modules`](#10-commande-modules)
 11. [Reprise de scan (`--resume`)](#11-reprise-de-scan---resume)
@@ -1013,53 +1016,296 @@ Upload vers GitHub Security :
 
 ---
 
-## 8. Suggestions IA via Claude
+## 8. Fonctionnalités IA
 
-Nevelio peut générer des **recommandations de remédiation détaillées** pour
-chaque finding, en utilisant l'API Claude d'Anthropic.
+Nevelio intègre plusieurs fonctionnalités IA activées via des flags de scan.
+Chacune nécessite un provider configuré (`nevelio config init`).
 
-### Prérequis
+### 8.0 Prérequis
+
+Configurer au moins un provider (Anthropic, OpenAI, Mistral, Groq, Ollama ou Bedrock) :
 
 ```bash
-export ANTHROPIC_API_KEY=sk-ant-api03-...
+nevelio config init            # assistant interactif
+nevelio config ai ping         # vérifier la connexion
 ```
 
-Modèle utilisé : **`claude-haiku-4-5-20251001`** (rapide et économique).
+Variables d'environnement directes (sans fichier de config) :
 
-### Utilisation
+```bash
+export ANTHROPIC_API_KEY=sk-ant-api03-...   # Anthropic Claude
+export OPENAI_API_KEY=sk-...                # OpenAI / Azure
+export MISTRAL_API_KEY=...                  # Mistral AI
+export GROQ_API_KEY=gsk_...                 # Groq (inférence rapide)
+# Ollama ne requiert pas de clé (local)
+# Bedrock : AWS_ACCESS_KEY_ID + AWS_SECRET_ACCESS_KEY + AWS_REGION
+```
+
+---
+
+### 8.1 Triage IA — `--ai-triage`
+
+Classe chaque finding en **vrai positif / faux positif / incertain** avec
+un score de confiance et une justification.
 
 ```bash
 nevelio scan --target https://api.example.com \
-             --ai-suggestions \
+             --ai-triage \
              --out-dir ./results \
              --accept-legal
 ```
 
-Si `ANTHROPIC_API_KEY` est absent, Nevelio affiche un avertissement
-**avant le scan** et continue sans les suggestions :
+**Sorties :**
+- Table colorisée dans le terminal (vert = faux positif, rouge = vrai positif)
+- `<out-dir>/ai_triage.json` — résultats structurés
 
+```json
+[
+  {
+    "finding_id": "jwt-alg-none-1",
+    "verdict": "true_positive",
+    "confidence": 0.95,
+    "reason": "L'endpoint accepte effectivement alg:none sans rejeter le token."
+  }
+]
 ```
-⚠  --ai-suggestions ignoré : ANTHROPIC_API_KEY non défini
+
+---
+
+### 8.2 Remédiation IA — `--ai-remediation`
+
+Génère des **étapes de remédiation détaillées** avec exemples de code pour
+chaque finding.
+
+```bash
+nevelio scan --target https://api.example.com \
+             --ai-remediation \
+             --out-dir ./results \
+             --accept-legal
 ```
 
-### Fichier de sortie
-
-Les suggestions sont sauvegardées dans `<out-dir>/ai_suggestions.md` :
+**Sortie :** `<out-dir>/ai_remediation.md`
 
 ```markdown
-# Suggestions de remédiation IA — Nevelio
+## JWT Algorithm None Accepted — Remédiation
 
-## JWT Algorithm None Accepted (CRITICAL)
-**Endpoint :** POST /api/v1/auth/token
+**Priorité :** Critique
 
-### Analyse
-Cette vulnérabilité permet à un attaquant de forger des tokens JWT valides
-sans connaître le secret, en spécifiant `"alg": "none"` dans l'en-tête...
+### Étapes
+1. Définir une liste blanche d'algorithmes : `["RS256", "ES256"]`
+2. Valider l'en-tête `alg` côté serveur avant toute vérification de signature
 
-### Remédiation recommandée
-1. Utiliser une liste blanche d'algorithmes acceptés : `["RS256", "ES256"]`
-2. Ne jamais faire confiance au champ `alg` fourni dans le token...
+### Exemple (Node.js / jsonwebtoken)
+\```js
+jwt.verify(token, secret, { algorithms: ['RS256'] });
+\```
 ```
+
+---
+
+### 8.3 Rapport narratif IA — `--ai-report`
+
+Génère un **rapport exécutif complet** en Markdown : résumé, chaîne d'attaque
+narrative, priorités, contexte métier.
+
+```bash
+nevelio scan --target https://api.example.com \
+             --ai-report \
+             --out-dir ./results \
+             --accept-legal
+```
+
+**Sortie :** `<out-dir>/ai_narrative_report.md`
+
+```markdown
+# Rapport de Sécurité — api.example.com
+
+## Résumé Exécutif
+L'audit a révélé 3 vulnérabilités critiques permettant une compromission
+complète de l'authentification...
+
+## Chaîne d'Attaque Principale
+1. Exploitation du bypass JWT (CRITICAL) → accès admin sans credentials
+2. IDOR sur /api/users/{id} (HIGH) → exfiltration de données utilisateurs
+...
+```
+
+---
+
+### 8.4 Payloads IA — `--ai-payloads`
+
+Génère des **payloads d'attaque contextuels** adaptés au framework et aux
+endpoints découverts, avant ou pendant le scan.
+
+```bash
+nevelio scan --target https://api.example.com \
+             --ai-payloads \
+             --out-dir ./results \
+             --accept-legal
+```
+
+**Sortie :** `<out-dir>/ai_payloads.json`
+
+Les payloads sont générés pour les types de vulnérabilité : SQLi, NoSQLi, XSS,
+SSRF, SSTI, Path Traversal, Command Injection, LDAP, XXE, Open Redirect.
+
+---
+
+### 8.5 Combinaison de flags IA
+
+Tous les flags IA sont cumulables et fonctionnent en parallèle :
+
+```bash
+nevelio scan --target https://api.example.com \
+             --ai-triage \
+             --ai-remediation \
+             --ai-report \
+             --ai-payloads \
+             --out-dir ./results \
+             --accept-legal
+```
+
+Chaque tâche peut utiliser un provider différent via le routing :
+
+```toml
+# ~/.config/nevelio/config.toml
+[ai.routing]
+triage   = "groq"       # rapide pour le triage
+report   = "anthropic"  # qualitatif pour le rapport
+payloads = "ollama"     # local pour les payloads
+fallback = "openai"     # si le provider principal est indisponible
+```
+
+---
+
+### 8.6 Ancien flag `--ai-suggestions`
+
+Le flag `--ai-suggestions` reste disponible pour compatibilité ascendante.
+Il est équivalent à `--ai-remediation` avec le provider Anthropic uniquement.
+Préférer `--ai-remediation` avec la configuration globale de provider.
+
+---
+
+## 8bis. Commande `agent` — Agent de sécurité autonome
+
+L'agent autonome pilote une boucle LLM → outils → analyse sans intervention
+humaine. Il découvre les endpoints, les sonde, identifie les vulnérabilités
+et produit un rapport.
+
+### Usage
+
+```bash
+nevelio agent <TARGET> \
+    --max-iterations 10 \
+    --max-requests  100 \
+    --accept-legal
+```
+
+| Option | Défaut | Description |
+|---|---|---|
+| `TARGET` | — | URL de base de l'API cible |
+| `--max-iterations N` | 20 | Nombre maximum de tours LLM |
+| `--max-requests N` | 100 | Nombre maximum de requêtes HTTP |
+| `--ai-budget TOKENS` | — | Limite de tokens consommés (coût) |
+| `--dry-run` | `false` | Planifie sans envoyer de requêtes réelles |
+| `--out-dir PATH` | — | Répertoire de sortie du rapport |
+
+### Exemple — Audit complet
+
+```bash
+nevelio agent https://api.example.com \
+    --max-iterations 15 \
+    --max-requests 200 \
+    --ai-budget 50000 \
+    --out-dir ./agent-report \
+    --accept-legal
+```
+
+### Exemple — Mode simulation
+
+```bash
+nevelio agent https://api.example.com \
+    --dry-run \
+    --max-iterations 5 \
+    --accept-legal
+```
+
+### Guardrails de sécurité
+
+L'agent est soumis à des guardrails inviolables :
+
+| Guardrail | Comportement |
+|---|---|
+| **Scope** | Refuse toute requête hors du domaine cible déclaré |
+| **Max requests** | Arrêt propre une fois la limite atteinte |
+| **Budget tokens** | Arrêt si le budget IA est dépassé |
+| **Dry run** | Simule les requêtes sans les envoyer |
+| **Legal** | Refuse de démarrer sans `--accept-legal` |
+
+### Outils disponibles pour l'agent LLM
+
+| Outil | Description |
+|---|---|
+| `list_endpoints` | Découvre les endpoints de la cible |
+| `probe_endpoint` | Envoie une requête HTTP et analyse la réponse |
+| `report_finding` | Enregistre une vulnérabilité détectée |
+| `finish` | Termine la session et produit le rapport |
+
+---
+
+## 8ter. Commande `mcp serve` — Serveur MCP
+
+Expose les outils Nevelio via le **Model Context Protocol (MCP)**, permettant
+à Claude Desktop, Continue.dev ou tout agent compatible MCP d'orchestrer
+Nevelio directement depuis une conversation.
+
+### Usage
+
+```bash
+nevelio mcp serve --target https://api.example.com --accept-legal
+```
+
+| Option | Description |
+|---|---|
+| `--target URL` | URL de base de l'API (optionnel, peut être fourni par le LLM) |
+| `--timeout N` | Timeout HTTP en secondes (défaut : 30) |
+
+### Configuration Claude Desktop
+
+Ajouter dans `~/.config/claude/claude_desktop_config.json` :
+
+```json
+{
+  "mcpServers": {
+    "nevelio": {
+      "command": "nevelio",
+      "args": [
+        "mcp", "serve",
+        "--target", "https://api.example.com",
+        "--accept-legal"
+      ]
+    }
+  }
+}
+```
+
+Claude peut alors demander : *"Audite l'API cible et liste les
+vulnérabilités"* — Nevelio exécute le crawling et les probes directement.
+
+### Outils exposés via MCP
+
+| Outil MCP | Description |
+|---|---|
+| `list_endpoints` | Crawle la cible et retourne les endpoints découverts |
+| `probe_endpoint` | Sonde un endpoint (méthode, headers, body configurables) |
+| `report_finding` | Enregistre une vulnérabilité dans la session courante |
+| `finish` | Retourne le rapport JSON complet de la session |
+
+### Transport
+
+Le serveur utilise le transport **stdio** (stdin → requêtes JSON-RPC,
+stdout → réponses). Il est compatible avec tout client MCP utilisant
+le protocole version `2024-11-05`.
 
 ---
 
@@ -1681,7 +1927,11 @@ nevelio scan \
 | `--resume` | booléen | Reprendre un scan interrompu |
 | `--dry-run` | booléen | Simuler sans requêtes réelles |
 | `--no-tui` | booléen | Désactiver le dashboard TUI |
-| `--ai-suggestions` | booléen | Suggestions IA (nécessite ANTHROPIC_API_KEY) |
+| `--ai-suggestions` | booléen | Suggestions IA Anthropic (compatibilité — préférer `--ai-remediation`) |
+| `--ai-triage` | booléen | Triage vrai/faux positif par LLM |
+| `--ai-remediation` | booléen | Étapes de remédiation détaillées par LLM |
+| `--ai-report` | booléen | Rapport narratif exécutif par LLM |
+| `--ai-payloads` | booléen | Génération de payloads contextuels par LLM |
 | `--script FILE` | liste | Scripts Rhai de filtrage post-scan (répétable) |
 
 ### Flags globaux (toutes commandes)
@@ -1708,11 +1958,44 @@ nevelio modules list           # lister tous les modules
 nevelio modules show <nom>     # détail d'un module
 ```
 
+### Commande `nevelio agent`
+
+```
+nevelio agent <TARGET> [OPTIONS]
+```
+
+| Option | Défaut | Description |
+|---|---|---|
+| `--max-iterations N` | 20 | Tours LLM maximum |
+| `--max-requests N` | 100 | Requêtes HTTP maximum |
+| `--ai-budget TOKENS` | — | Limite de tokens consommés |
+| `--dry-run` | false | Simulation sans HTTP réel |
+| `--out-dir PATH` | — | Répertoire de sortie |
+
+### Commande `nevelio mcp serve`
+
+```
+nevelio mcp serve [OPTIONS]
+```
+
+| Option | Défaut | Description |
+|---|---|---|
+| `--target URL` | — | URL de base de l'API cible |
+| `--timeout N` | 30 | Timeout HTTP en secondes |
+
 ### Variables d'environnement
 
 | Variable | Description |
 |---|---|
-| `ANTHROPIC_API_KEY` | Clé API Claude (requis pour `--ai-suggestions`) |
+| `ANTHROPIC_API_KEY` | Clé API Claude (Anthropic) |
+| `OPENAI_API_KEY` | Clé API OpenAI |
+| `MISTRAL_API_KEY` | Clé API Mistral AI |
+| `GROQ_API_KEY` | Clé API Groq |
+| `OLLAMA_HOST` | URL du serveur Ollama local (défaut : `http://localhost:11434`) |
+| `AWS_ACCESS_KEY_ID` | Clé d'accès AWS (Bedrock) |
+| `AWS_SECRET_ACCESS_KEY` | Clé secrète AWS (Bedrock) |
+| `AWS_SESSION_TOKEN` | Token de session AWS (optionnel, pour credentials temporaires) |
+| `AWS_REGION` | Région AWS pour Bedrock (ex: `us-east-1`) |
 | `NEVELIO_LANG` | Forcer la langue (`fr`/`en`/`es`) sans passer par `--lang` |
 
 ---

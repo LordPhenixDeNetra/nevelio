@@ -4,6 +4,7 @@ rust_i18n::i18n!("locales");
 
 mod agent_cmd;
 mod ai_suggestions;
+mod mcp;
 mod args;
 mod commands;
 mod config;

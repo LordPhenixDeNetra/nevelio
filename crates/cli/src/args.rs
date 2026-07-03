@@ -75,6 +75,8 @@ pub enum Commands {
     Config(crate::config_cmd::ConfigArgs),
     #[command(about = "Run the autonomous AI security agent")]
     Agent(crate::agent_cmd::AgentArgs),
+    #[command(about = "Start an MCP server exposing Nevelio tools to AI orchestrators")]
+    Mcp(crate::mcp::McpArgs),
 }
 
 #[derive(Debug, clap::Args)]

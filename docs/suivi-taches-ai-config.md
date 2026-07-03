@@ -165,8 +165,8 @@
 
 | # | Statut | Priorité | Tâche | Effort | Dépend de | Notes |
 |---|---|---|---|---|---|---|
-| G.10 | [ ] | 🟡 | Exposer les outils Nevelio via protocole MCP | 12h | G.2 | Permet à Claude Desktop / d'autres agents d'orchestrer Nevelio |
-| G.11 | [ ] | 🟡 | `nevelio mcp serve` — démarre le serveur MCP | 3h | G.10 | |
+| G.10 | [x] | 🟡 | Exposer les outils Nevelio via protocole MCP | 12h | G.2 | `cli/src/mcp.rs` — JSON-RPC 2.0, transport stdio, 4 outils, 6 tests |
+| G.11 | [x] | 🟡 | `nevelio mcp serve` — démarre le serveur MCP | 3h | G.10 | `Commands::Mcp` + `handle_mcp()` — compatible Claude Desktop |
 
 ### i18n agent
 
@@ -196,9 +196,9 @@
 | **1 — Config globale** | 18 | 18 ✓ | Aucun |
 | **2 — Multi-provider** | 20 | 20 ✓ | Phase 1 |
 | **3 — LLM ponctuel** | 13 | 13 ✓ | Phase 2 |
-| **4 — Agent autonome** | 12 | 10 (G.10–G.11 restent) | Phases 2 + 3 |
+| **4 — Agent autonome** | 12 | 12 ✓ | Phases 2 + 3 |
 | **Transversal** | 6 | 6 ✓ | — |
-| **TOTAL** | **69** | **67 / 69** | |
+| **TOTAL** | **69** | **69 / 69 ✓** | |
 
 ---
 
