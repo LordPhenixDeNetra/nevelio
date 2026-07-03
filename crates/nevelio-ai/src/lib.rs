@@ -1,4 +1,5 @@
 pub mod agent;
+pub mod payloads;
 pub mod provider;
 pub mod remediation;
 pub mod report;
@@ -10,9 +11,11 @@ pub use provider::{
     AiProvider, CompletionOpts, Message, Role,
     ToolCall, ToolCallResponse, ToolDefinition,
 };
-pub use provider::factory::build_provider;
+pub use provider::factory::{build_provider, build_named_provider};
+pub use provider::router::{build_provider_for_task, TaskType};
 pub use triage::FindingContext;
 pub use agent::{AgentConfig, AgentFinding, AgentResult, run_agent};
+pub use payloads::{generate as generate_payloads, merge_with_static, PayloadContext, PayloadSet, VulnType};
 
 #[cfg(test)]
 mod tests {

@@ -38,6 +38,18 @@ jobs:
       - name: Run tests
         run: cargo test --workspace
 
+      # I.3 — Build with AI feature enabled
+      - name: Build with AI feature
+        run: cargo build --package nevelio --features ai
+
+      # I.3 — Run nevelio-ai unit tests (no real API calls — all use MockProvider)
+      - name: Test nevelio-ai (unit tests, no LLM keys required)
+        run: cargo test --package nevelio-ai
+
+      # I.4 — Build without default features (verify feature-gating is clean)
+      - name: Build without AI feature
+        run: cargo build --package nevelio --no-default-features
+
   docker:
     name: Docker build (smoke test)
     runs-on: ubuntu-latest

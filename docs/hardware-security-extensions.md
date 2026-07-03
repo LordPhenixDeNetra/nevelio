@@ -242,6 +242,39 @@ dans son `lib.rs` pour compiler les locales dans son scope.
 
 ---
 
+## Configuration globale partagée
+
+Les extensions hardware partagent la **même configuration globale** que le scanner Nevelio
+principal (`~/.config/nevelio/config.toml`). La commande `nevelio config init` (ou
+`nevelio-hw config init`) configure les deux en une seule fois.
+
+### Langue des rapports
+
+```bash
+nevelio-hw config set scan.lang fr    # français (défaut)
+nevelio-hw config set scan.lang en    # anglais
+nevelio-hw config set scan.lang es    # espagnol
+```
+
+### Provider IA (optionnel)
+
+Si vous avez configuré un provider IA via `nevelio config init`, les futures
+intégrations IA hardware (analyse de firmware, corrélation sidechannel) utiliseront
+le même provider sans reconfiguration.
+
+```bash
+# Vérifier la config partagée
+nevelio config show
+
+# Tester le provider configuré
+nevelio config ai ping
+```
+
+Le fichier de config généré : `~/.config/nevelio/config.toml` — documenté dans
+[tutorial.md](tutorial.md#2bis-configuration-globale--nevelio-config-init).
+
+---
+
 ## Installation
 
 Voir [INSTALL.md](../hardware/INSTALL.md) pour les commandes détaillées par distribution

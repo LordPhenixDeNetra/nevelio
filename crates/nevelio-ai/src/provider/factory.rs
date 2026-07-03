@@ -1,24 +1,37 @@
 use anyhow::{bail, Result};
 
-use nevelio_config::AiConfig;
+use nevelio_config::{AiConfig, ProviderConfig};
 
 use super::{anthropic::AnthropicProvider, ollama::OllamaProvider, openai::OpenAiProvider, AiProvider};
 
-/// Build the active provider from the resolved AI config.
-pub fn build_provider(cfg: &AiConfig) -> Result<Box<dyn AiProvider>> {
-    let name = cfg.active_provider_name();
-    let prov_cfg = cfg
-        .providers
-        .get(name)
-        .ok_or_else(|| anyhow::anyhow!("Provider '{}' introuvable dans la config", name))?;
+// ── Public API ────────────────────────────────────────────────────────────────
 
+/// Build the currently active provider from config.
+pub fn build_provider(cfg: &AiConfig) -> Result<Box<dyn AiProvider>> {
+    build_named_provider(cfg, cfg.active_provider_name())
+}
+
+/// Build a specific named provider from config.
+///
+/// Returns an error if `name` is not found in `cfg.providers` or if its
+/// required API key is missing from the environment.
+pub fn build_named_provider(cfg: &AiConfig, name: &str) -> Result<Box<dyn AiProvider>> {
+    let prov_cfg = cfg.providers.get(name).ok_or_else(|| {
+        anyhow::anyhow!("Provider '{}' introuvable dans la config", name)
+    })?;
+    build_from_config(name, prov_cfg)
+}
+
+// ── Private implementation ────────────────────────────────────────────────────
+
+fn build_from_config(name: &str, prov_cfg: &ProviderConfig) -> Result<Box<dyn AiProvider>> {
     let api_key = prov_cfg
         .api_key_env
         .as_deref()
         .and_then(|env| std::env::var(env).ok());
 
-    let base_url = prov_cfg.base_url.clone();
-    let model    = prov_cfg.model.clone();
+    let base_url    = prov_cfg.base_url.clone();
+    let model       = prov_cfg.model.clone();
     let max_tokens  = prov_cfg.max_tokens.unwrap_or(4096);
     let temperature = prov_cfg.temperature.unwrap_or(0.2);
 

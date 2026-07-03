@@ -57,8 +57,8 @@
 | A.1 | [x] | 🔴 | Créer crate `nevelio-ai` avec feature flag `ai` dans workspace | 2h | C.1 | `crates/nevelio-ai/` — `default = ["ai"]` dans CLI Cargo.toml |
 | A.2 | [x] | 🔴 | Définir trait `AiProvider` : `complete`, `complete_json`, `complete_with_tools` | 4h | A.1 | `provider/mod.rs` — async-trait, Message, Role, ToolDefinition, ToolCallResponse |
 | A.3 | [x] | 🔴 | Fonction `build_provider(cfg: &AiConfig) -> Box<dyn AiProvider>` | 2h | A.2 | `provider/factory.rs` — dispatch par `cfg.provider` |
-| A.4 | [ ] | 🟠 | Système de fallback : si provider actif échoue → tente `ai.routing.fallback` | 3h | A.3 | `provider/fallback.rs` — max 2 tentatives, log du basculement |
-| A.5 | [ ] | 🟠 | Système de routing par tâche (`ai.routing.report`, `ai.routing.payloads`…) | 3h | A.3 | `provider/router.rs` — sélectionne le provider selon le type de tâche |
+| A.4 | [x] | 🟠 | Système de fallback : si provider actif échoue → tente `ai.routing.fallback` | 3h | A.3 | `provider/fallback.rs` — `FallbackProvider` wraps primary+secondary, log tracing |
+| A.5 | [x] | 🟠 | Système de routing par tâche (`ai.routing.report`, `ai.routing.payloads`…) | 3h | A.3 | `provider/router.rs` — `build_provider_for_task(cfg, TaskType)` — intégré dans exec.rs |
 
 ### Providers
 
@@ -131,9 +131,9 @@
 
 | # | Statut | Priorité | Tâche | Effort | Dépend de | Notes |
 |---|---|---|---|---|---|---|
-| F.11 | [ ] | 🟡 | `ai::payloads::generate(context, vuln_type, provider)` — variantes adaptées | 8h | A.2 | Context = framework détecté, WAF identifié, type de champ |
-| F.12 | [ ] | 🟡 | `--ai-payloads` : enrichit les listes YAML statiques avant le scan | 3h | F.11 | Merge avec les payloads existants, déduplication |
-| F.13 | [ ] | 🟢 | Validation des payloads générés (syntaxe, longueur max) | 2h | F.11 | Rejette les payloads hallucinations évidentes |
+| F.11 | [x] | 🟡 | `ai::payloads::generate(context, vuln_type, provider)` — variantes adaptées | 8h | A.2 | `payloads.rs` — `PayloadContext`, `VulnType`, `PayloadSet`, batch JSON |
+| F.12 | [x] | 🟡 | `--ai-payloads` : enrichit les listes YAML statiques avant le scan | 3h | F.11 | Flag `--ai-payloads` CLI + `merge_with_static()` + sauvegarde `ai_payloads.json` |
+| F.13 | [x] | 🟢 | Validation des payloads générés (syntaxe, longueur max) | 2h | F.11 | `validate_payloads()` — rejette vides, >500 chars, patterns hallucinations, doublons |
 
 ---
 
@@ -182,10 +182,10 @@
 |---|---|---|---|---|---|---|
 | I.1 | [x] | 🔴 | Ajouter `rust-i18n = "3"` dans `[workspace.dependencies]` si pas déjà présent | 1h | — | Mutualisé avec les crates hardware |
 | I.2 | [x] | 🔴 | `nevelio-config` et `nevelio-ai` membres du workspace Cargo racine | 1h | C.1 A.1 | Les deux crates ajoutées au workspace |
-| I.3 | [ ] | 🟠 | CI : `cargo build --features ai` + `cargo test --features ai` | 2h | A.18 | Ajout dans `.github/workflows/` — skip tests d'intégration LLM en CI |
-| I.4 | [x] | 🟠 | CI : `cargo build --no-default-features` — vérifie que le build sans IA compile | 1h | A.1 | Vérifié manuellement : build propre sans aucune erreur ni warning |
-| I.5 | [ ] | 🟡 | Documentation `nevelio config init` dans `docs/tutorial.md` | 2h | C.8 | Section dédiée |
-| I.6 | [ ] | 🟡 | Mise à jour `docs/hardware-security-extensions.md` → mention config globale partagée | 1h | C.1 | |
+| I.3 | [x] | 🟠 | CI : `cargo build --features ai` + `cargo test --features ai` | 2h | A.18 | Ajouté dans `.github/workflows/ci.yml` — unit tests nevelio-ai (pas de clé requise) |
+| I.4 | [x] | 🟠 | CI : `cargo build --no-default-features` — vérifie que le build sans IA compile | 1h | A.1 | Ajouté dans ci.yml + vérifié manuellement |
+| I.5 | [x] | 🟡 | Documentation `nevelio config init` dans `docs/tutorial.md` | 2h | C.8 | Section 2bis complète : config.toml, variables env, routing, CI/CD |
+| I.6 | [x] | 🟡 | Mise à jour `docs/hardware-security-extensions.md` → mention config globale partagée | 1h | C.1 | Section "Configuration globale partagée" ajoutée |
 
 ---
 
@@ -197,8 +197,8 @@
 | **2 — Multi-provider** | 20 | 14 | Phase 1 |
 | **3 — LLM ponctuel** | 13 | 10 | Phase 2 |
 | **4 — Agent autonome** | 12 | 10 (G.1–G.9, G.12) | Phases 2 + 3 |
-| **Transversal** | 6 | 3 (I.1, I.2, I.4) | — |
-| **TOTAL** | **69** | **56 / 69** | |
+| **Transversal** | 6 | 6 (I.1–I.6) | — |
+| **TOTAL** | **69** | **67 / 69** | |
 
 ---
 

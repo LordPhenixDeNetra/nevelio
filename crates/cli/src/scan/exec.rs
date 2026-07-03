@@ -34,6 +34,7 @@ pub(super) async fn run_and_report(
     ai_triage:      bool,
     ai_remediation: bool,
     ai_report:      bool,
+    ai_payloads:    bool,
     fail_on:        Option<FailOnArg>,
 ) -> Result<()> {
     let out_dir = session.config.out_dir.clone();
@@ -187,8 +188,12 @@ pub(super) async fn run_and_report(
             ai_report,
         ).await;
     }
+    #[cfg(feature = "ai")]
+    if ai_payloads {
+        run_ai_payloads(&endpoints, &session.config.locale, &out_dir).await;
+    }
     // suppress unused-variable warnings when feature = "ai" is off
-    let _ = (ai_triage, ai_remediation, ai_report);
+    let _ = (ai_triage, ai_remediation, ai_report, ai_payloads);
 
     let exit_code = crate::commands::resolve_exit_code(&session.findings, fail_on);
     std::process::exit(exit_code);
@@ -207,7 +212,7 @@ async fn run_ai_features(
     ai_report:     bool,
 ) {
     use colored::Colorize;
-    use nevelio_ai::{build_provider, CompletionOpts, FindingContext};
+    use nevelio_ai::{build_provider_for_task, CompletionOpts, FindingContext, TaskType};
 
     // Convert CLI findings to nevelio-ai FindingContext
     let contexts: Vec<FindingContext> = findings.iter().map(|f| FindingContext {
@@ -233,21 +238,19 @@ async fn run_ai_features(
         return;
     }
 
-    let provider = match build_provider(&global_cfg.ai) {
-        Ok(p)  => p,
-        Err(e) => { eprintln!("  {} Provider IA : {}", "✗".red(), e); return; }
-    };
-
     let opts = CompletionOpts::default();
 
-    // ── Triage ────────────────────────────────────────────────────────────────
+    // ── Triage (task-specific provider via router) ────────────────────────────
     if ai_triage {
         println!();
         println!("{}", "  IA · Triage des findings...".cyan());
-        match nevelio_ai::triage::classify_findings(&contexts, lang, provider.as_ref(), &opts).await {
+        let triage_provider = match build_provider_for_task(&global_cfg.ai, TaskType::Triage) {
+            Ok(p)  => p,
+            Err(e) => { eprintln!("  {} Provider triage : {}", "✗".red(), e); return; }
+        };
+        match nevelio_ai::triage::classify_findings(&contexts, lang, triage_provider.as_ref(), &opts).await {
             Err(e) => eprintln!("  {} Triage : {}", "✗".red(), e),
             Ok(results) => {
-                // Print triage table
                 println!("  {:<8} {:<20} {:>4}  {}", "Verdict", "Titre", "Conf", "Raison");
                 println!("  {}", "─".repeat(72));
                 for r in &results {
@@ -267,7 +270,6 @@ async fn run_ai_features(
                     };
                     println!("  {:<8} {:<20} {:>3}%  {}", verdict_colored, title_trunc, r.confidence, reason_trunc);
                 }
-                // Save JSON
                 let path = out_dir.join("ai_triage.json");
                 if let Ok(json) = serde_json::to_string_pretty(&results) {
                     let _ = std::fs::write(&path, json);
@@ -281,13 +283,17 @@ async fn run_ai_features(
     if ai_remediation {
         println!();
         println!("{}", "  IA · Génération des remédiations...".cyan());
-        match nevelio_ai::remediation::suggest(&contexts, lang, provider.as_ref(), &opts).await {
+        let rem_provider = match build_provider_for_task(&global_cfg.ai, TaskType::Remediation) {
+            Ok(p)  => p,
+            Err(e) => { eprintln!("  {} Provider remédiation : {}", "✗".red(), e); return; }
+        };
+        match nevelio_ai::remediation::suggest(&contexts, lang, rem_provider.as_ref(), &opts).await {
             Err(e) => eprintln!("  {} Remédiation : {}", "✗".red(), e),
             Ok(results) => {
                 let path = out_dir.join("ai_remediation.md");
                 let mut md = format!(
                     "# Remédiations IA — Nevelio\n\n> Provider : {} · Modèle : {}\n\n---\n\n",
-                    provider.name(), provider.model()
+                    rem_provider.name(), rem_provider.model()
                 );
                 for r in &results {
                     let f = findings.iter().find(|f| f.id == r.id);
@@ -311,13 +317,17 @@ async fn run_ai_features(
         }
     }
 
-    // ── Narrative report ──────────────────────────────────────────────────────
+    // ── Narrative report (task-specific provider) ─────────────────────────────
     if ai_report {
         println!();
         println!("{}", "  IA · Génération du rapport narratif...".cyan());
+        let report_provider = match build_provider_for_task(&global_cfg.ai, TaskType::Report) {
+            Ok(p)  => p,
+            Err(e) => { eprintln!("  {} Provider rapport : {}", "✗".red(), e); return; }
+        };
         let mut report_opts = opts.clone();
         report_opts.max_tokens = 8192;
-        match nevelio_ai::report::narrative(&contexts, target, lang, provider.as_ref(), &report_opts).await {
+        match nevelio_ai::report::narrative(&contexts, target, lang, report_provider.as_ref(), &report_opts).await {
             Err(e) => eprintln!("  {} Rapport narratif : {}", "✗".red(), e),
             Ok(content) => {
                 use chrono::Utc;
@@ -325,13 +335,87 @@ async fn run_ai_features(
                     "# Rapport Narratif — Nevelio\n\n> Cible : {}  \n> Généré le {}  \n> Provider : {} · Modèle : {}\n\n---\n\n",
                     target,
                     Utc::now().format("%Y-%m-%d %H:%M UTC"),
-                    provider.name(),
-                    provider.model()
+                    report_provider.name(),
+                    report_provider.model()
                 );
                 let path = out_dir.join("ai_narrative_report.md");
                 let _ = std::fs::write(&path, format!("{}{}", header, content));
                 println!("  {} ai_narrative_report.md", "→".cyan());
             }
+        }
+    }
+}
+
+// ── AI Payload generation (F.11 / F.12) ──────────────────────────────────────
+
+#[cfg(feature = "ai")]
+async fn run_ai_payloads(endpoints: &[Endpoint], lang: &str, out_dir: &Path) {
+    use colored::Colorize;
+    use nevelio_ai::{
+        build_provider_for_task, CompletionOpts, PayloadContext, TaskType, VulnType,
+        generate_payloads,
+    };
+
+    let global_cfg = match nevelio_config::load_global() {
+        Ok(c)  => c,
+        Err(e) => { eprintln!("  {} Config IA payloads : {}", "✗".red(), e); return; }
+    };
+    if !global_cfg.ai.enabled || global_cfg.ai.providers.is_empty() {
+        eprintln!("  {} IA désactivée — payloads non générés", "⚠".yellow());
+        return;
+    }
+
+    let provider = match build_provider_for_task(&global_cfg.ai, TaskType::Payloads) {
+        Ok(p)  => p,
+        Err(e) => { eprintln!("  {} Provider payloads : {}", "✗".red(), e); return; }
+    };
+
+    println!();
+    println!("{}", "  IA · Génération de payloads contextuels...".cyan());
+
+    let vuln_types = [
+        VulnType::SqlInjection,
+        VulnType::Xss,
+        VulnType::Ssrf,
+        VulnType::PathTraversal,
+    ];
+
+    let opts = CompletionOpts::default();
+    let mut all_sets = Vec::new();
+
+    for ep in endpoints.iter().take(3) {
+        let ctx = PayloadContext {
+            framework:  None,
+            waf:        None,
+            field:      None,
+            field_type: None,
+            endpoint:   ep.path.clone(),
+            method:     ep.method.clone(),
+        };
+
+        for &vt in &vuln_types {
+            match generate_payloads(&ctx, vt, lang, provider.as_ref(), &opts).await {
+                Ok(set) => {
+                    println!(
+                        "  {} {} → {} payload(s)",
+                        "✓".green(),
+                        set.vuln_type,
+                        set.payloads.len()
+                    );
+                    all_sets.push(set);
+                }
+                Err(e) => {
+                    eprintln!("  {} Payloads {} : {}", "⚠".yellow(), vt.label(), e);
+                }
+            }
+        }
+    }
+
+    if !all_sets.is_empty() {
+        let path = out_dir.join("ai_payloads.json");
+        if let Ok(json) = serde_json::to_string_pretty(&all_sets) {
+            let _ = std::fs::write(&path, &json);
+            println!("  {} ai_payloads.json", "→".cyan());
         }
     }
 }

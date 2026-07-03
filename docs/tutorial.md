@@ -137,6 +137,106 @@ rm ~/.config/nevelio/legal_accepted
 
 ---
 
+## 2bis. Configuration globale — `nevelio config init`
+
+### Pourquoi configurer ?
+
+Nevelio intègre des fonctionnalités IA (triage, remédiation, rapport narratif,
+génération de payloads, agent autonome). Elles nécessitent un provider LLM configuré
+une seule fois dans un fichier global `~/.config/nevelio/config.toml`.
+
+### Premier lancement automatique
+
+Dès la première commande, si la config globale n'existe pas et que vous êtes dans
+un terminal interactif, Nevelio lance automatiquement l'assistant de configuration :
+
+```
+Bienvenue ! Nevelio a besoin d'une configuration initiale.
+
+Provider IA [anthropic/openai/ollama/mistral/groq] : anthropic
+Modèle [claude-opus-4-8] : 
+Langue d'interface [fr/en/es] : fr
+
+Configuration enregistrée dans ~/.config/nevelio/config.toml
+```
+
+### Lancement manuel
+
+```bash
+nevelio config init
+```
+
+### Afficher la configuration actuelle
+
+```bash
+nevelio config show
+```
+
+### Modifier une valeur
+
+```bash
+nevelio config set ai.provider openai
+nevelio config set ai.providers.openai.model gpt-4o
+```
+
+### Tester la connexion au provider
+
+```bash
+# Tous les providers configurés
+nevelio config ai ping
+
+# Un provider spécifique
+nevelio config ai ping anthropic
+```
+
+### Fichier de config généré
+
+```toml
+# ~/.config/nevelio/config.toml
+
+[ai]
+enabled = true
+provider = "anthropic"   # provider actif
+
+[ai.providers.anthropic]
+model        = "claude-opus-4-8"
+api_key_env  = "ANTHROPIC_API_KEY"
+max_tokens   = 4096
+temperature  = 0.2
+
+[ai.routing]
+# Providers dédiés par tâche (optionnel)
+# triage   = "groq"      # provider rapide pour le triage
+# report   = "anthropic" # provider puissant pour les rapports
+# payloads = "mistral"   # provider pour la génération de payloads
+# fallback = "ollama"    # fallback local si le cloud est indisponible
+```
+
+### Variables d'environnement
+
+| Provider   | Variable         |
+|------------|-----------------|
+| Anthropic  | `ANTHROPIC_API_KEY` |
+| OpenAI     | `OPENAI_API_KEY`    |
+| Mistral    | `MISTRAL_API_KEY`   |
+| Groq       | `GROQ_API_KEY`      |
+| Ollama     | aucune (local)      |
+
+### En CI/CD
+
+En environnement non interactif, la config IA est optionnelle. Sans elle,
+les flags `--ai-*` sont silencieusement ignorés (pas d'erreur fatale).
+
+Configurez en CI via variables d'environnement :
+
+```yaml
+# GitHub Actions
+env:
+  ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+```
+
+---
+
 ## 3. Configuration avec `nevelio init`
 
 ### Générer un fichier de configuration

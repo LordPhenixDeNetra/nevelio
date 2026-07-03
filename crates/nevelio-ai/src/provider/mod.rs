@@ -105,5 +105,7 @@ pub trait AiProvider: Send + Sync {
 // ── Re-exports ────────────────────────────────────────────────────────────────
 pub mod anthropic;
 pub mod factory;
+pub mod fallback;
 pub mod ollama;
 pub mod openai;
+pub mod router;

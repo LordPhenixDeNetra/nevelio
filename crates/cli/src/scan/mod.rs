@@ -203,6 +203,7 @@ pub async fn handle_scan(args: ScanArgs, verbose: bool) -> Result<()> {
     let ai_triage       = args.ai_triage;
     let ai_remediation  = args.ai_remediation;
     let ai_report       = args.ai_report;
+    let ai_payloads     = args.ai_payloads;
     let script_paths    = args.scripts.clone();
 
     if ai_suggestions && std::env::var("ANTHROPIC_API_KEY").is_err() {
@@ -352,6 +353,7 @@ pub async fn handle_scan(args: ScanArgs, verbose: bool) -> Result<()> {
         ai_triage,
         ai_remediation,
         ai_report,
+        ai_payloads,
         fail_on,
     ).await
 }
