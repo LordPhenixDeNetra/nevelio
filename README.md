@@ -1,71 +1,88 @@
-# Nevelio — API Penetration Testing Tool
+# Nevelio
 
 [![CI](https://github.com/LordPhenixDeNetra/nevelio/actions/workflows/ci.yml/badge.svg)](https://github.com/LordPhenixDeNetra/nevelio/actions/workflows/ci.yml)
 [![Release](https://github.com/LordPhenixDeNetra/nevelio/actions/workflows/release.yml/badge.svg)](https://github.com/LordPhenixDeNetra/nevelio/releases/latest)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Rust](https://img.shields.io/badge/rust-%3E%3D1.75-orange.svg)](https://www.rust-lang.org)
 
-> **LEGAL NOTICE** — Use Nevelio only on systems you own or have explicit written
-> authorization to test. Unauthorized use is illegal. See [Legal](#legal).
+**Fast, modular API security scanner written in Rust.**  
+Detects vulnerabilities in REST and GraphQL APIs — from an OpenAPI spec or a bare URL —
+and produces actionable reports in JSON, HTML, Markdown, JUnit XML and SARIF.
 
-Nevelio is a fast, modular API security scanner written in Rust. It detects
-vulnerabilities in REST and GraphQL APIs from an OpenAPI spec or a bare URL,
-and produces actionable reports in JSON, HTML, Markdown, JUnit XML and SARIF formats.
+> **LEGAL NOTICE** — Use Nevelio only on systems you own or for which you hold
+> explicit written authorisation. Unauthorised use is illegal in every jurisdiction.
+> See [Legal](#legal).
 
 ---
 
-## Features
+## What Nevelio does
+
+| Command | Purpose |
+|---|---|
+| `nevelio scan` | Run 70+ security checks across 6 attack modules |
+| `nevelio agent` | Autonomous LLM-driven audit loop (discover → probe → report) |
+| `nevelio mcp serve` | Expose Nevelio tools to Claude Desktop / any MCP-compatible agent |
+| `nevelio config` | Manage AI provider configuration (Anthropic, OpenAI, Mistral, Groq, Ollama, Bedrock) |
+| `nevelio report` | Convert an existing `findings.json` to any output format without re-scanning |
+| `nevelio diff` | Compare two scan results and highlight regressions |
+| `nevelio watch` | Watch mode — re-scan automatically on spec change |
+
+---
+
+## Attack modules
 
 | Module | Checks |
 |---|---|
-| `auth` | JWT alg:none bypass, weak secrets, claims manipulation, missing auth, Basic Auth brute force |
-| `injection` | SQLi (boolean/time/union/error), NoSQLi (MongoDB operators), SSTI, Command Injection |
-| `access-control` | IDOR (numeric + UUID), BFLA, vertical privilege escalation, mass assignment |
+| `auth` | JWT alg:none bypass, weak secret brute force, claims manipulation, missing auth, Basic Auth brute force |
+| `injection` | SQLi (boolean / time / union / error), NoSQLi (MongoDB operators), SSTI, command injection |
+| `access-control` | Numeric + UUID IDOR, BFLA, vertical privilege escalation, mass assignment |
 | `graphql` | Introspection exposure, field suggestions, depth-based DoS |
-| `business-logic` | Rate limit bypass (XFF/UA rotation), race conditions, negative values, price manipulation |
-| `infra` | CORS, HSTS, CSP, TLS, cookie flags, secrets in responses, stack traces, 20+ debug endpoints |
+| `business-logic` | Rate-limit bypass (XFF / UA rotation), race conditions, negative values, price manipulation |
+| `infra` | CORS, HSTS, CSP, TLS 1.0/1.1, cookie flags, secrets in responses, stack traces, 20+ debug endpoints |
 
-Nevelio also ships **`nevelio-hw`**, a companion binary for hardware-layer security
-audits — see [Hardware Security Extension](#hardware-security-extension-nevelio-hw).
+---
+
+## Quick start
+
+```bash
+# 1. First-run legal confirmation (persisted to ~/.config/nevelio/legal_accepted)
+nevelio --accept-legal scan --target https://api.example.com --dry-run
+
+# 2. Full scan with HTML report
+nevelio --accept-legal scan \
+  --target https://staging.api.example.com \
+  --spec openapi.yaml \
+  --output html \
+  --out-dir ./reports
+
+# 3. Scan specific modules only
+nevelio --accept-legal scan \
+  --target https://api.example.com \
+  --module auth injection access-control
+```
 
 ---
 
 ## Installation
 
-### Debian / Ubuntu — apt
-
-> Requires GitHub Pages enabled on the `packages` branch of the repository.
+### Debian / Ubuntu
 
 ```bash
-# 1. Add the GPG signing key
 curl -fsSL https://lordphenixdenetra.github.io/nevelio/apt/KEY.gpg \
   | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/nevelio.gpg
 
-# 2. Add the repository
 echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/trusted.gpg.d/nevelio.gpg] \
   https://lordphenixdenetra.github.io/nevelio/apt stable main" \
   | sudo tee /etc/apt/sources.list.d/nevelio.list
 
-# 3. Install
 sudo apt update && sudo apt install nevelio
 ```
 
-Or install directly from a `.deb` file (no repo needed):
+### RHEL / Fedora / CentOS
 
 ```bash
-ARCH=$(dpkg --print-architecture)  # amd64 or arm64
-curl -LO https://github.com/LordPhenixDeNetra/nevelio/releases/latest/download/nevelio_latest_${ARCH}.deb
-sudo dpkg -i nevelio_latest_${ARCH}.deb
-```
-
-### RHEL / CentOS / Fedora — yum / dnf
-
-> Requires GitHub Pages enabled on the `packages` branch of the repository.
-
-```bash
-# 1. Add the GPG key
 sudo rpm --import https://lordphenixdenetra.github.io/nevelio/rpm/RPM-GPG-KEY-nevelio
 
-# 2. Add the repository
 sudo tee /etc/yum.repos.d/nevelio.repo << 'EOF'
 [nevelio]
 name=Nevelio — API Security Scanner
@@ -75,20 +92,10 @@ gpgcheck=1
 gpgkey=https://lordphenixdenetra.github.io/nevelio/rpm/RPM-GPG-KEY-nevelio
 EOF
 
-# 3. Install
-sudo dnf install nevelio   # Fedora / RHEL 8+
-sudo yum install nevelio   # CentOS 7
+sudo dnf install nevelio
 ```
 
-Or install directly from an `.rpm` file (no repo needed):
-
-```bash
-ARCH=$(uname -m)  # x86_64 or aarch64
-curl -LO https://github.com/LordPhenixDeNetra/nevelio/releases/latest/download/nevelio_latest_${ARCH}.rpm
-sudo rpm -i nevelio_latest_${ARCH}.rpm
-```
-
-### macOS and Linux — Homebrew
+### macOS / Linux — Homebrew
 
 ```bash
 brew tap LordPhenixDeNetra/nevelio
@@ -101,17 +108,14 @@ brew install nevelio
 winget install LordPhenixDeNetra.nevelio
 ```
 
-### Linux / macOS — Script universel
+### Universal installer
 
 ```bash
+# Linux / macOS
 curl --proto '=https' --tlsv1.2 -LsSf \
-  https://github.com/LordPhenixDeNetra/nevelio/releases/latest/download/nevelio-installer.sh \
-  | sh
-```
+  https://github.com/LordPhenixDeNetra/nevelio/releases/latest/download/nevelio-installer.sh | sh
 
-### Windows — PowerShell
-
-```powershell
+# Windows PowerShell
 irm https://github.com/LordPhenixDeNetra/nevelio/releases/latest/download/nevelio-installer.ps1 | iex
 ```
 
@@ -119,15 +123,20 @@ irm https://github.com/LordPhenixDeNetra/nevelio/releases/latest/download/neveli
 
 ```bash
 docker pull lordphenixdenetra/nevelio:latest
-docker run --rm lordphenixdenetra/nevelio:latest --version
+docker run --rm \
+  -v $(pwd)/openapi.yaml:/spec.yaml \
+  -v $(pwd)/reports:/reports \
+  lordphenixdenetra/nevelio:latest \
+  --accept-legal scan --spec /spec.yaml \
+  --target https://staging.api.example.com \
+  --output html --out-dir /reports
 ```
 
-### Binaires pré-compilés (GitHub Releases)
+### Pre-built binaries
 
-Téléchargez l'archive correspondant à votre plateforme depuis la
-[page Releases](https://github.com/LordPhenixDeNetra/nevelio/releases/latest) :
+Download from [GitHub Releases](https://github.com/LordPhenixDeNetra/nevelio/releases/latest):
 
-| Plateforme | Archive |
+| Platform | Archive |
 |---|---|
 | Linux x86_64 (musl) | `nevelio-vX.Y.Z-x86_64-unknown-linux-musl.tar.gz` |
 | Linux ARM64 (musl) | `nevelio-vX.Y.Z-aarch64-unknown-linux-musl.tar.gz` |
@@ -135,187 +144,205 @@ Téléchargez l'archive correspondant à votre plateforme depuis la
 | macOS Apple Silicon | `nevelio-vX.Y.Z-aarch64-apple-darwin.tar.gz` |
 | Windows x86_64 | `nevelio-vX.Y.Z-x86_64-pc-windows-msvc.zip` |
 
-### Depuis les sources (Rust requis ≥ 1.75)
+### From source (Rust ≥ 1.75)
 
 ```bash
 git clone https://github.com/LordPhenixDeNetra/nevelio.git
 cd nevelio
 cargo build --release
-cp target/release/nevelio /usr/local/bin/   # Linux/macOS
+cp target/release/nevelio ~/.local/bin/
 ```
 
 ---
 
 ## Usage
 
-### Disclaimer légal (premier lancement)
+### Scan profiles
 
-Au premier scan, Nevelio affiche un avertissement et demande confirmation.
-Pour CI/CD, utilisez `--accept-legal` ou la variable `NEVELIO_ACCEPT_LEGAL=1` :
+| Profile | Concurrency | Rate | Recommended for |
+|---|---|---|---|
+| `stealth` | 1 req | 2 req/s | Sensitive production systems |
+| `normal` | 5 reqs | 10 req/s | Staging (default) |
+| `aggressive` | 20 reqs | 50 req/s | Dedicated lab / isolated env |
 
 ```bash
-nevelio --accept-legal scan --url https://api.example.com --dry-run
+nevelio --accept-legal scan --target https://api.example.com --profile stealth
 ```
 
-### Scan depuis une spec OpenAPI
+### Authenticated scan
 
 ```bash
+# Static token
 nevelio --accept-legal scan \
-  --spec openapi.yaml \
-  --target https://staging.api.example.com \
-  --output html \
-  --out-dir ./reports
-```
-
-### Scan sans spec (auto-discovery)
-
-```bash
-nevelio --accept-legal scan \
-  --url https://api.example.com \
-  --module auth injection
-```
-
-### Scan authentifié
-
-```bash
-nevelio --accept-legal scan \
-  --url https://api.example.com \
+  --target https://api.example.com \
   --auth-token "Bearer eyJhbGci..."
+
+# Token from environment variable (recommended — avoids shell history exposure)
+AUTH_TOKEN_ENV=API_TOKEN nevelio --accept-legal scan --target https://api.example.com
 ```
 
-### Via un proxy (Burp Suite)
+### Via proxy (Burp Suite)
 
 ```bash
 nevelio --accept-legal scan \
-  --url https://api.example.com \
+  --target https://api.example.com \
   --proxy http://127.0.0.1:8080
 ```
 
-### Dry-run (aucune requête réelle)
+### Input formats (auto-detected)
 
 ```bash
-nevelio --accept-legal scan --url https://api.example.com --dry-run
-```
+# OpenAPI 3.x / Swagger 2 (JSON or YAML)
+nevelio --accept-legal scan --spec openapi.yaml --target https://api.example.com
 
-### Via Docker
+# Postman v2.1 collection
+nevelio --accept-legal scan --spec collection.postman_json --target https://api.example.com
 
-```bash
-docker run --rm \
-  -v $(pwd)/openapi.yaml:/spec.yaml \
-  -v $(pwd)/reports:/reports \
-  lordphenixdenetra/nevelio:latest \
-  --accept-legal scan \
-  --spec /spec.yaml \
-  --target https://staging.api.example.com \
-  --output html \
-  --out-dir /reports
+# Insomnia v4 export
+nevelio --accept-legal scan --spec insomnia.json --target https://api.example.com
+
+# HAR (HTTP Archive)
+nevelio --accept-legal scan --spec traffic.har --target https://api.example.com
 ```
 
 ---
 
-## Internationalisation (`--lang`)
+## AI features
 
-Nevelio supporte **3 langues** — français (`fr`), anglais (`en`), espagnol (`es`).
+Nevelio integrates multi-provider AI capabilities. Configure a provider once, then use any combination of flags.
+
+### Configure a provider
 
 ```bash
-nevelio --lang en scan --url https://api.example.com --accept-legal
-nevelio --lang es scan --url https://api.example.com --accept-legal
-NEVELIO_LANG=fr nevelio scan --url https://api.example.com --accept-legal
+# Interactive wizard (Anthropic, OpenAI, Mistral, Groq, Ollama, AWS Bedrock)
+nevelio config init
+
+# Verify connectivity
+nevelio config ai ping
+
+# Or use environment variables directly
+export ANTHROPIC_API_KEY=sk-ant-api03-...   # Anthropic
+export OPENAI_API_KEY=sk-...                # OpenAI
+export MISTRAL_API_KEY=...                  # Mistral
+export GROQ_API_KEY=gsk_...                 # Groq
+# Ollama: no key needed (local)
+# Bedrock: AWS_ACCESS_KEY_ID + AWS_SECRET_ACCESS_KEY + AWS_REGION
 ```
 
-Priorité de détection : `--lang` > `NEVELIO_LANG` > `$LANG` > anglais par défaut.
+### AI scan flags
 
----
-
-## CLI Reference
-
-### Global flags
-
-| Flag | Description |
-|---|---|
-| `--accept-legal` | Accepter le disclaimer sans prompt interactif |
-| `--lang <LANG>` | Langue : `fr` / `en` / `es` |
-| `--verbose` | Logs détaillés et requêtes HTTP |
-| `--no-color` | Désactiver les couleurs ANSI |
-
-### `scan`
-
-| Flag | Default | Description |
+| Flag | Output file | Description |
 |---|---|---|
-| `--url <URL>` | — | URL de base de l'API cible |
-| `--target <URL>` | — | Alias de `--url` |
-| `--spec <SPEC>` | — | Fichier ou URL OpenAPI/Swagger (JSON ou YAML) |
-| `--profile` | `normal` | `stealth` / `normal` / `aggressive` |
-| `--module <NAME>` | tous | Restreindre à un ou plusieurs modules |
-| `--output <FORMAT>` | `html` | `json` / `html` / `markdown` / `junit` / `sarif` |
-| `--out-dir <PATH>` | `.` | Répertoire de sortie |
-| `--auth-token <TOKEN>` | — | Header Authorization complet |
-| `--proxy <URL>` | — | Proxy HTTP/S |
-| `--concurrency <N>` | profil | Requêtes simultanées |
-| `--rate-limit <N>` | profil | Requêtes par seconde |
-| `--timeout <SECS>` | `10` | Timeout par requête |
-| `--fail-on <SEV>` | — | Seuil CI : `none` / `low` / `medium` / `high` / `critical` |
-| `--dry-run` | false | Simuler sans requêtes réelles |
-| `--resume` | false | Reprendre un scan interrompu |
-| `--no-tui` | false | Désactiver le dashboard TUI |
-| `--ai-suggestions` | false | Suggestions IA (nécessite `ANTHROPIC_API_KEY`) |
-
-### `report` / `convert`
-
-Re-génère un rapport depuis un `findings.json` existant, sans relancer le scan :
+| `--ai-triage` | `ai_triage.json` | Classify each finding: true positive / false positive / uncertain |
+| `--ai-remediation` | `ai_remediation.md` | Step-by-step remediation with code examples |
+| `--ai-report` | `ai_narrative_report.md` | Full executive report with attack chain narrative |
+| `--ai-payloads` | `ai_payloads.json` | Context-aware attack payloads tailored to the target |
 
 ```bash
-nevelio --accept-legal report \
-  --input findings.json \
-  --format sarif \
-  --out-dir ./security
+# All AI flags at once
+nevelio --accept-legal scan \
+  --target https://api.example.com \
+  --ai-triage --ai-remediation --ai-report --ai-payloads \
+  --out-dir ./results
 ```
 
-### `modules`
+### Per-task provider routing
 
-```bash
-nevelio modules list
-nevelio modules show auth
-nevelio modules show injection
+Route each AI task to a different provider in `~/.config/nevelio/config.toml`:
+
+```toml
+[ai.routing]
+triage      = "groq"       # fast for triage
+report      = "anthropic"  # quality writing for reports
+payloads    = "ollama"     # local, no cost
+fallback    = "openai"     # if primary provider is unavailable
 ```
 
 ---
 
-## Profils de scan
+## Autonomous agent
 
-| Profil | Concurrence | Rate limit | Usage recommandé |
-|---|---|---|---|
-| `stealth` | 1 | 2 req/s | Production sensible |
-| `normal` | 5 | 10 req/s | Staging (défaut) |
-| `aggressive` | 20 | 50 req/s | Lab / environnement dédié |
+The agent drives a **LLM → tools → analysis** loop autonomously:
+discover endpoints, probe them, identify vulnerabilities, produce a report.
+
+```bash
+nevelio agent https://api.example.com \
+  --max-iterations 15 \
+  --max-requests 200 \
+  --ai-budget 50000 \
+  --out-dir ./agent-report \
+  --accept-legal
+
+# Dry run — plan without sending real HTTP requests
+nevelio agent https://api.example.com --dry-run --max-iterations 5 --accept-legal
+```
+
+**Built-in guardrails:** scope enforcement (refuses out-of-target requests), request cap,
+token budget cap, dry-run mode, `--accept-legal` gate.
 
 ---
 
-## Formats de sortie
+## MCP server
 
-| Format | Fichier | Usage |
+Expose Nevelio tools to Claude Desktop, Continue.dev, or any MCP-compatible orchestrator.
+
+```bash
+nevelio mcp serve --target https://api.example.com --accept-legal
+```
+
+**Claude Desktop configuration** (`~/.config/claude/claude_desktop_config.json`):
+
+```json
+{
+  "mcpServers": {
+    "nevelio": {
+      "command": "nevelio",
+      "args": ["mcp", "serve", "--target", "https://api.example.com", "--accept-legal"]
+    }
+  }
+}
+```
+
+Available tools: `list_endpoints`, `probe_endpoint`, `report_finding`, `finish`.  
+Transport: **stdio** — MCP protocol version `2024-11-05`.
+
+---
+
+## Output formats
+
+| Format | File | Use case |
 |---|---|---|
-| `json` | `findings.json` | Source canonique, SIEM, Jira |
-| `html` | `report.html` | Rapport interactif avec filtres et thème |
-| `markdown` | `report.md` | PRs GitHub, wikis, Confluence |
-| `junit` | `report.xml` | GitHub Actions, GitLab CI, Jenkins |
-| `sarif` | `report.sarif` | GitHub Advanced Security, CodeQL |
+| `json` | `findings.json` | Canonical source — always written. SIEM, Jira, custom pipelines |
+| `html` | `report.html` | Interactive report with severity filters and dark/light theme |
+| `markdown` | `report.md` | GitHub PRs, wikis, Confluence |
+| `junit` | `security-report.xml` | GitHub Actions, GitLab CI, Jenkins |
+| `sarif` | `security-report.sarif` | GitHub Advanced Security, CodeQL |
+
+Convert an existing `findings.json` without re-scanning:
+
+```bash
+nevelio --accept-legal report --input findings.json --format sarif --out-dir ./security
+```
 
 ---
 
-## CI/CD Integration
+## CI/CD
 
 ### Exit codes
 
-| Code | Signification |
+| Code | Meaning |
 |---|---|
-| `0` | Aucun finding (ou sous le seuil `--fail-on`) |
-| `1` | Findings au-dessus du seuil |
+| `0` | No findings (or below `--fail-on` threshold) |
+| `1` | Findings at or above threshold |
+| `2` | High severity findings present |
+| `3` | Critical severity findings present |
 
 ### GitHub Actions
 
 ```yaml
-- name: Run API Security Scan
+- name: API Security Scan
+  env:
+    ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
   run: |
     nevelio scan \
       --target ${{ vars.API_STAGING_URL }} \
@@ -323,18 +350,15 @@ nevelio modules show injection
       --output sarif \
       --out-dir sarif-results \
       --fail-on high \
-      --accept-legal \
-      --no-tui \
-      --no-color
+      --ai-triage \
+      --accept-legal --no-tui --no-color
 
 - name: Upload SARIF to GitHub Security
   uses: github/codeql-action/upload-sarif@v3
   if: always()
   with:
-    sarif_file: sarif-results/report.sarif
+    sarif_file: sarif-results/security-report.sarif
 ```
-
-Voir le workflow complet : [`.github/workflows/security-scan.yml`](.github/workflows/security-scan.yml)
 
 ### GitLab CI
 
@@ -348,134 +372,74 @@ api-security-scan:
         --accept-legal --no-tui --no-color
   artifacts:
     reports:
-      junit: results/report.xml
+      junit: results/security-report.xml
 ```
 
 ---
 
-## Environnements de test
+## Internationalisation
 
-Démarrez des cibles vulnérables localement :
+Nevelio CLI, TUI, legal disclaimer and AI prompts are available in **3 languages**:
+French (`fr`), English (`en`), Spanish (`es`).
+
+Detection order: `--lang` flag > `NEVELIO_LANG` env var > `$LANG` system variable > English default.
 
 ```bash
-docker compose up -d
+nevelio --lang fr scan --target https://api.example.com --accept-legal
+NEVELIO_LANG=es nevelio scan --target https://api.example.com --accept-legal
 ```
 
-| Cible | URL | Description |
+---
+
+## CLI reference
+
+### Global flags
+
+| Flag | Description |
+|---|---|
+| `--accept-legal` | Accept legal disclaimer without interactive prompt |
+| `--lang <LANG>` | Language: `fr` / `en` / `es` |
+| `--verbose` | Detailed logs and HTTP requests |
+| `--no-color` | Disable ANSI colours (CI logs) |
+
+### `scan` flags
+
+| Flag | Default | Description |
 |---|---|---|
-| OWASP Juice Shop | http://localhost:3000 | API Node.js riche en vulnérabilités |
-| VAmPI | http://localhost:5000 | REST API vulnérable (OWASP API Top 10) |
-| DVWA | http://localhost:8080 | Application PHP vulnérable |
-| crAPI | http://localhost:8888 | API automobile vulnérable (OWASP) |
+| `--target <URL>` | — | Base URL of the target API |
+| `--spec <PATH>` | — | OpenAPI / Postman / Insomnia / HAR (auto-detected) |
+| `--profile` | `normal` | `stealth` / `normal` / `aggressive` |
+| `--module <NAME>…` | all | Restrict to one or more modules |
+| `--output <FORMAT>` | `html` | `json` / `html` / `markdown` / `junit` / `sarif` |
+| `--out-dir <PATH>` | `.` | Output directory |
+| `--auth-token <TOKEN>` | — | Full Authorization header value |
+| `--proxy <URL>` | — | HTTP/S proxy |
+| `--concurrency <N>` | profile | Concurrent requests |
+| `--rate-limit <N>` | profile | Requests per second |
+| `--timeout <SECS>` | `10` | Per-request timeout |
+| `--fail-on <SEV>` | — | CI exit threshold: `none` / `low` / `medium` / `high` / `critical` |
+| `--dry-run` | false | Plan without sending real requests |
+| `--resume` | false | Resume an interrupted scan from `--out-dir` |
+| `--no-tui` | false | Disable TUI dashboard |
+| `--ai-triage` | false | AI triage of findings (requires configured provider) |
+| `--ai-remediation` | false | AI remediation steps |
+| `--ai-report` | false | AI executive narrative report |
+| `--ai-payloads` | false | AI contextual attack payloads |
 
-```bash
-# Exemple de scan contre Juice Shop
-nevelio --accept-legal scan \
-  --url http://localhost:3000 \
-  --profile aggressive \
-  --output html \
-  --out-dir ./reports
-```
+### Environment variables
 
----
-
-## Hardware Security Extension (`nevelio-hw`)
-
-`nevelio-hw` is a separate binary included in the `hardware/` workspace.
-It audits the **hardware and kernel security layer** of a Linux machine :
-CPU mitigations (Spectre/Meltdown/MDS), UEFI/Secure Boot, DMA/IOMMU/Thunderbolt,
-timing side-channels, eBPF syscall latency, and more.
-
-> **Requires Linux.** On macOS the binary compiles but most checks are silently skipped
-> (no `/sys`, `/proc` or eBPF available).
-
-### Modules
-
-| Module | Checks |
+| Variable | Description |
 |---|---|
-| `hw-cpu` | Spectre v1/v2, Meltdown, MDS, L1TF, Retbleed, ASLR, KASLR, microcode, NX/SMEP |
-| `hw-firmware` | UEFI Secure Boot, BIOS version/age, EFI Shell entries, flash SPI, fwupd updates |
-| `hw-dma` | IOMMU (on/off/passthrough/strict), Thunderbolt security level, PCIe BusMaster, kernel lockdown |
-| `hw-sidechannel` | Flush+Reload (CLFLUSH/RDTSC), HTTP timing oracle (CWE-208), perf_event_paranoid, ptrace_scope, eBPF latency |
-
-### Build et lancement (tout en une commande)
-
-```bash
-# 1. Dépendances système (Linux, une seule fois)
-cd hardware && make install-deps
-
-# 2. Build (compile le binaire + les programmes eBPF si clang est disponible)
-make
-
-# 3. Audit passif complet (sans root)
-make run
-
-# 4. Audit actif : flashrom + eBPF (root requis)
-sudo make run-active
-
-# 5. Rapport HTML
-make run-html REPORT=rapport.html
-
-# 6. Timing oracle sur une API distante
-make run-target TARGET_URL=https://api.example.com
-```
-
-### Cibles Makefile principales
-
-| Commande | Description |
-|---|---|
-| `make install-deps` | Installe dmidecode, clang, libbpf-dev, bpftool, checksec… |
-| `make` | Build release (active `--features ebpf` automatiquement sur Linux) |
-| `make run` | Audit passif — stdout texte coloré |
-| `make run-active` | Audit actif + eBPF (root requis) |
-| `make run-html REPORT=f.html` | Rapport HTML dark-mode |
-| `make run-json` | Rapport JSON → stdout |
-| `make run-target TARGET_URL=…` | Timing oracle HTTP |
-| `make test` | Tests unitaires |
-
-### Depuis les sources
-
-```bash
-# Build seul (sans Makefile)
-cd hardware
-cargo build --release                        # macOS / dev
-cargo build --release --features ebpf        # Linux avec eBPF
-./target/release/nevelio-hw --help
-```
-
-### eBPF (Linux ≥ 5.4, root requis)
-
-Les programmes eBPF (`syscall_latency`, `memory_access`) sont compilés
-automatiquement par `build.rs` lors du `cargo build --features ebpf`
-si `clang` est disponible. Ils sont **embarqués dans le binaire** via
-`include_bytes!` — aucun fichier externe nécessaire à l'exécution.
-
-```
-make install-deps   # installe clang + libbpf-dev
-make                # build + compile .bpf.c → .bpf.o → intégré dans nevelio-hw
-sudo make run-active
-```
-
-Si `clang` est absent, un avertissement est émis et les checks eBPF sont
-simplement désactivés — le reste de l'audit fonctionne normalement.
-
----
-
-## Développement
-
-```bash
-# Build
-cargo build --workspace
-
-# Tests
-cargo test --workspace
-
-# Lint
-cargo clippy --workspace -- -D warnings
-
-# Format
-cargo fmt --all
-```
+| `ANTHROPIC_API_KEY` | Anthropic Claude API key |
+| `OPENAI_API_KEY` | OpenAI API key |
+| `MISTRAL_API_KEY` | Mistral AI API key |
+| `GROQ_API_KEY` | Groq API key |
+| `AWS_ACCESS_KEY_ID` | AWS credentials (Bedrock provider) |
+| `AWS_SECRET_ACCESS_KEY` | AWS credentials (Bedrock provider) |
+| `AWS_SESSION_TOKEN` | AWS temporary session token (optional) |
+| `AWS_REGION` | AWS region for Bedrock |
+| `NEVELIO_LANG` | Force language without CLI flag |
+| `NEVELIO_ACCEPT_LEGAL` | Set to `1` to skip legal prompt |
 
 ---
 
@@ -484,47 +448,84 @@ cargo fmt --all
 ```
 nevelio/
 ├── crates/
-│   ├── cli/                # Point d'entrée, CLI (clap), commandes
-│   ├── core/               # Types, session, HttpClient, trait AttackModule
+│   ├── cli/               # Entry point, CLI (clap), command routing
+│   ├── core/              # Types, session, HttpClient, AttackModule trait
+│   ├── nevelio-config/    # Global + project config, semantic validation, merge
+│   ├── nevelio-ai/        # Multi-provider AI (Anthropic, OpenAI, Mistral, Groq, Ollama, Bedrock)
 │   ├── modules/
-│   │   ├── auth/           # JWT, Basic Auth, authentification manquante
-│   │   ├── injection/      # SQLi, NoSQLi, SSTI, Command Injection
-│   │   ├── access-control/ # IDOR, BFLA, élévation de privilèges, mass assignment
-│   │   ├── graphql/        # Introspection, field suggestions, depth DoS
-│   │   ├── business-logic/ # Rate limit, race conditions, manipulation de prix
-│   │   └── infra/          # Headers, TLS, cookies, secrets, debug endpoints
-│   ├── recon/              # Parseur OpenAPI, crawleur d'endpoints
-│   └── reporting/          # Reporters JSON, HTML (Tera), Markdown, JUnit, SARIF
-├── hardware/               # Extension sécurité hardware (workspace Cargo séparé)
-│   ├── Makefile            # Point d'entrée unique : make / make run / make run-active
-│   ├── crates/
-│   │   ├── hw-core/        # Types HardwareFinding, HwModule, HwScanContext, HTML reporter
-│   │   ├── hw-cpu/         # Mitigations CPU, ASLR, microcode
-│   │   ├── hw-firmware/    # UEFI, Secure Boot, flash SPI
-│   │   ├── hw-dma/         # IOMMU, Thunderbolt, PCIe, kernel lockdown
-│   │   ├── hw-sidechannel/ # Flush+Reload, timing oracle, eBPF latence, checksec
-│   │   └── hw-cli/         # Binaire nevelio-hw (clap, scan, modules)
-│   ├── asm/
-│   │   ├── x86_64/         # timing.asm — CLFLUSH + RDTSC (référence NASM)
-│   │   └── aarch64/        # timing.asm — CNTVCT_EL0 + DC CIVAC (référence GAS)
-│   └── ebpf/
-│       ├── syscall_latency.bpf.c   # Tracer latence syscalls (ring buffer)
-│       └── memory_access.bpf.c     # Détection accès mémoire / rowhammer
-├── docs/                   # Documentation, cahier des charges, suivi des tâches
-└── payloads/               # Bibliothèques de payloads YAML (sqli, jwt, idor)
+│   │   ├── auth/          # JWT, Basic Auth, missing authentication
+│   │   ├── injection/     # SQLi, NoSQLi, SSTI, command injection
+│   │   ├── access-control/# IDOR, BFLA, privilege escalation, mass assignment
+│   │   ├── graphql/       # Introspection, field suggestions, depth DoS
+│   │   ├── business-logic/# Rate limit bypass, race conditions, price manipulation
+│   │   └── infra/         # Headers, TLS, cookies, secrets, debug endpoints
+│   ├── recon/             # OpenAPI / Postman / Insomnia / HAR parsers, JS crawler
+│   └── reporting/         # JSON, HTML (Tera), Markdown, JUnit, SARIF reporters
+├── hardware/              # nevelio-hw — hardware security extension (separate workspace)
+├── docs/                  # Web documentation, tutorial, task tracking
+└── payloads/              # YAML payload libraries (sqli, jwt, idor, cmdi)
 ```
+
+---
+
+## Hardware Security Extension (`nevelio-hw`)
+
+A companion binary that audits the **hardware and kernel security layer** of a Linux machine.
+
+| Module | Checks |
+|---|---|
+| `hw-cpu` | Spectre v1/v2, Meltdown, MDS, Retbleed, ASLR/KASLR, microcode, NX/SMEP/SMAP |
+| `hw-firmware` | UEFI Secure Boot, BIOS age, EFI Shell entries, SPI flash, fwupd updates |
+| `hw-dma` | IOMMU/VT-d, Thunderbolt security level, PCIe BusMaster, kernel lockdown |
+| `hw-sidechannel` | Flush+Reload (CLFLUSH/RDTSC), HTTP timing oracle (CWE-208), eBPF latency |
+| `hw-jtag` | JTAG/UART probe detection, STM32 RDP Level 0, firmware analysis (binwalk + angr) |
+| `hw-memory` | Rowhammer, ECC/TRR, swap+KASLR, Volatility forensics (DKOM, malfind) |
+| `hw-dma-fpga` | IOMMU strict mode, leechcore FFI, Verilog PCIe TLP injection |
+
+```bash
+cd hardware
+make install-deps   # clang, libbpf-dev, dmidecode, checksec (Linux only, once)
+make                # build release + compile eBPF programs
+make run            # passive audit (no root needed)
+sudo make run-active  # active audit + eBPF (root required)
+make run-html REPORT=audit.html
+```
+
+> Requires Linux. On macOS the binary compiles but most checks are silently skipped.
+
+---
+
+## Development
+
+```bash
+cargo build --workspace
+cargo test --workspace
+cargo clippy --workspace -- -D warnings
+cargo fmt --all
+```
+
+### Local test targets (Docker Compose)
+
+```bash
+docker compose up -d
+```
+
+| Target | URL | Description |
+|---|---|---|
+| OWASP Juice Shop | http://localhost:3000 | Node.js API, intentionally vulnerable |
+| VAmPI | http://localhost:5000 | REST API (OWASP API Top 10) |
+| crAPI | http://localhost:8888 | Automotive API (OWASP) |
+| DVWA | http://localhost:8080 | PHP vulnerable web app |
 
 ---
 
 ## Legal
 
-> Nevelio is intended exclusively for security testing on systems you own or
-> have explicit written authorization to test.
+Nevelio is designed exclusively for authorised security testing.
 
-1. Vous devez disposer d'une **autorisation écrite** du propriétaire du système avant tout scan.
-2. Ne pas utiliser sur des systèmes de production sans accord formel de pentest.
-3. Toute vulnérabilité découverte sur un système tiers doit être signalée via une **Responsible Disclosure**.
-4. Les auteurs déclinent toute responsabilité en cas d'utilisation non autorisée.
+1. You must hold **explicit written authorisation** from the system owner before any scan.
+2. Do not run against production systems without a formal penetration testing agreement.
+3. Any vulnerability discovered on a third-party system must be reported via **Responsible Disclosure**.
+4. The authors accept no liability for unauthorised use.
 
-**Références légales :** CFAA (US), Computer Misuse Act (UK), Directive NIS2 (EU), LCEN (FR).
-
+**Legal references:** CFAA (US) · Computer Misuse Act (UK) · Directive NIS2 (EU) · LCEN (FR) · CP 323-1/323-8 (FR).
