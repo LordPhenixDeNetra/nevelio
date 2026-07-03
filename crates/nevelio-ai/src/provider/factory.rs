@@ -3,6 +3,8 @@ use anyhow::{bail, Result};
 use nevelio_config::{AiConfig, ProviderConfig};
 
 use super::{anthropic::AnthropicProvider, ollama::OllamaProvider, openai::OpenAiProvider, AiProvider};
+#[cfg(feature = "bedrock")]
+use super::bedrock::BedrockProvider;
 
 // ── Public API ────────────────────────────────────────────────────────────────
 
@@ -80,6 +82,19 @@ fn build_from_config(name: &str, prov_cfg: &ProviderConfig) -> Result<Box<dyn Ai
             let url = base_url.unwrap_or_else(|| "http://localhost:11434".to_string());
             Ok(Box::new(OllamaProvider::new(url, model, max_tokens, temperature)))
         }
+        #[cfg(feature = "bedrock")]
+        "bedrock" => {
+            let region_env = prov_cfg.region_env.as_deref().unwrap_or("AWS_REGION");
+            let region = std::env::var(region_env)
+                .or_else(|_| std::env::var("AWS_DEFAULT_REGION"))
+                .unwrap_or_else(|_| "us-east-1".to_string());
+            Ok(Box::new(BedrockProvider::new(model, region, max_tokens, temperature)))
+        }
+        #[cfg(not(feature = "bedrock"))]
+        "bedrock" => bail!(
+            "Compilez avec la feature 'bedrock' pour utiliser AWS Bedrock : \
+             cargo build --features bedrock"
+        ),
         other => bail!("Provider '{}' non supporté", other),
     }
 }

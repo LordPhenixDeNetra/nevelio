@@ -104,6 +104,8 @@ pub trait AiProvider: Send + Sync {
 
 // ── Re-exports ────────────────────────────────────────────────────────────────
 pub mod anthropic;
+#[cfg(feature = "bedrock")]
+pub mod bedrock;
 pub mod factory;
 pub mod fallback;
 pub mod ollama;

@@ -69,7 +69,7 @@
 | A.8 | [x] | 🔴 | `OllamaProvider` — HTTP local + tool use (models compatibles) | 4h | A.2 | `provider/ollama.rs` — format json, tool_calls llama3.1+ |
 | A.9 | [x] | 🟠 | `MistralProvider` | 3h | A.2 | Réutilise `OpenAiProvider` avec base_url mistral.ai |
 | A.10 | [x] | 🟠 | `GroqProvider` | 2h | A.2 | Réutilise `OpenAiProvider` avec base_url groq.com |
-| A.11 | [ ] | 🟡 | `BedrockProvider` — AWS SDK | 8h | A.2 | `provider/bedrock.rs` — feature `bedrock` séparée, auth via env AWS |
+| A.11 | [x] | 🟡 | `BedrockProvider` — AWS SDK | 8h | A.2 | `provider/bedrock.rs` — SigV4 manuel + reqwest, feature `bedrock`, 5 tests unitaires |
 
 ### Commandes `nevelio config ai`
 
@@ -194,11 +194,11 @@
 | Phase | Tâches | Terminées | Prérequis |
 |---|---|---|---|
 | **1 — Config globale** | 18 | 18 ✓ | Aucun |
-| **2 — Multi-provider** | 20 | 19 (A.11 reste) | Phase 1 |
+| **2 — Multi-provider** | 20 | 20 ✓ | Phase 1 |
 | **3 — LLM ponctuel** | 13 | 13 ✓ | Phase 2 |
 | **4 — Agent autonome** | 12 | 10 (G.10–G.11 restent) | Phases 2 + 3 |
 | **Transversal** | 6 | 6 ✓ | — |
-| **TOTAL** | **69** | **66 / 69** | |
+| **TOTAL** | **69** | **67 / 69** | |
 
 ---
 
