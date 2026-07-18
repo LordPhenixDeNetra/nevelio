@@ -29,8 +29,13 @@ const METHOD_OVERRIDE_HEADERS: &[(&str, &str)] = &[
 
 // Responses that are clearly "method not supported" (not a bypass)
 const METHOD_BLOCKED_INDICATORS: &[&str] = &[
-    "not allowed", "method not supported", "not implemented", "not permitted",
-    "invalid method", "method not found", "unsupported",
+    "not allowed",
+    "method not supported",
+    "not implemented",
+    "not permitted",
+    "invalid method",
+    "method not found",
+    "unsupported",
 ];
 
 // UUID nil value
@@ -190,10 +195,13 @@ fn is_uuid(s: &str) -> bool {
         return false;
     }
     let bytes = s.as_bytes();
-    bytes[8] == b'-' && bytes[13] == b'-' && bytes[18] == b'-' && bytes[23] == b'-'
-        && s.chars().enumerate().all(|(i, c)| {
-            matches!(i, 8 | 13 | 18 | 23) || c.is_ascii_hexdigit()
-        })
+    bytes[8] == b'-'
+        && bytes[13] == b'-'
+        && bytes[18] == b'-'
+        && bytes[23] == b'-'
+        && s.chars()
+            .enumerate()
+            .all(|(i, c)| matches!(i, 8 | 13 | 18 | 23) || c.is_ascii_hexdigit())
 }
 
 fn extract_uuid(url: &str) -> Option<(String, String, String)> {
@@ -252,8 +260,7 @@ mod tests {
 
     #[test]
     fn extract_numeric_id_root_id() {
-        let (_, id, suffix) =
-            extract_numeric_id("https://api.example.com/items/123").unwrap();
+        let (_, id, suffix) = extract_numeric_id("https://api.example.com/items/123").unwrap();
         assert_eq!(id, 123);
         assert!(suffix.is_empty());
     }
@@ -298,7 +305,10 @@ mod tests {
         let is_real_error = BFLA_ERROR_INDICATORS
             .iter()
             .any(|kw| body_lower.contains(kw));
-        assert!(is_real_error, "should detect 'not allowed' as error indicator");
+        assert!(
+            is_real_error,
+            "should detect 'not allowed' as error indicator"
+        );
     }
 
     #[test]

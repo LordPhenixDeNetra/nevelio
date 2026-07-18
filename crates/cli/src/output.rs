@@ -19,11 +19,26 @@ pub fn print_finding(finding: &Finding) {
 }
 
 pub fn print_summary(findings: &[Finding]) {
-    let critical = findings.iter().filter(|f| f.severity == Severity::Critical).count();
-    let high = findings.iter().filter(|f| f.severity == Severity::High).count();
-    let medium = findings.iter().filter(|f| f.severity == Severity::Medium).count();
-    let low = findings.iter().filter(|f| f.severity == Severity::Low).count();
-    let informative = findings.iter().filter(|f| f.severity == Severity::Informative).count();
+    let critical = findings
+        .iter()
+        .filter(|f| f.severity == Severity::Critical)
+        .count();
+    let high = findings
+        .iter()
+        .filter(|f| f.severity == Severity::High)
+        .count();
+    let medium = findings
+        .iter()
+        .filter(|f| f.severity == Severity::Medium)
+        .count();
+    let low = findings
+        .iter()
+        .filter(|f| f.severity == Severity::Low)
+        .count();
+    let informative = findings
+        .iter()
+        .filter(|f| f.severity == Severity::Informative)
+        .count();
 
     println!("{}", "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━".cyan());
     println!(

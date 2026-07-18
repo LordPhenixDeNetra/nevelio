@@ -25,8 +25,8 @@ use std::time::Duration;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 
 const MCP_PROTOCOL_VERSION: &str = "2024-11-05";
-const SERVER_NAME:           &str = "nevelio";
-const SERVER_VERSION:        &str = env!("CARGO_PKG_VERSION");
+const SERVER_NAME: &str = "nevelio";
+const SERVER_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 // ── CLI args ──────────────────────────────────────────────────────────────────
 
@@ -34,23 +34,28 @@ const SERVER_VERSION:        &str = env!("CARGO_PKG_VERSION");
 #[command(about = "Démarre un serveur MCP exposant les outils Nevelio aux agents IA")]
 pub struct McpArgs {
     #[arg(
-        long, value_name = "URL",
+        long,
+        value_name = "URL",
         help = "URL de base de l'API cible (ex: https://api.example.com)"
     )]
     pub target: Option<String>,
 
-    #[arg(long, value_name = "SECS", default_value = "30",
-          help = "Timeout des requêtes HTTP en secondes")]
+    #[arg(
+        long,
+        value_name = "SECS",
+        default_value = "30",
+        help = "Timeout des requêtes HTTP en secondes"
+    )]
     pub timeout: u64,
 }
 
 pub async fn handle_mcp(args: McpArgs, accept_legal: bool) -> Result<()> {
     let state = Arc::new(Mutex::new(McpState {
-        target:       args.target,
+        target: args.target,
         accept_legal,
         timeout_secs: args.timeout,
-        findings:     Vec::new(),
-        client:       reqwest::Client::builder()
+        findings: Vec::new(),
+        client: reqwest::Client::builder()
             .timeout(Duration::from_secs(args.timeout))
             .user_agent("nevelio-mcp/0.1")
             .build()?,
@@ -62,12 +67,12 @@ pub async fn handle_mcp(args: McpArgs, accept_legal: bool) -> Result<()> {
 // ── Server state ──────────────────────────────────────────────────────────────
 
 struct McpState {
-    target:        Option<String>,
-    accept_legal:  bool,
+    target: Option<String>,
+    accept_legal: bool,
     #[allow(dead_code)]
-    timeout_secs:  u64,   // stored for reference; timeout is baked into the client
-    findings:      Vec<Value>,
-    client:        reqwest::Client,
+    timeout_secs: u64, // stored for reference; timeout is baked into the client
+    findings: Vec<Value>,
+    client: reqwest::Client,
 }
 
 // ── JSON-RPC 2.0 types ────────────────────────────────────────────────────────
@@ -76,32 +81,37 @@ struct McpState {
 struct RpcRequest {
     #[allow(dead_code)]
     jsonrpc: String,
-    id:      Option<Value>,
-    method:  String,
+    id: Option<Value>,
+    method: String,
     #[serde(default)]
-    params:  Value,
+    params: Value,
 }
 
 #[derive(Serialize)]
 struct RpcResponse {
     jsonrpc: &'static str,
     #[serde(skip_serializing_if = "Option::is_none")]
-    id:      Option<Value>,
+    id: Option<Value>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    result:  Option<Value>,
+    result: Option<Value>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    error:   Option<RpcError>,
+    error: Option<RpcError>,
 }
 
 #[derive(Serialize)]
 struct RpcError {
-    code:    i32,
+    code: i32,
     message: String,
 }
 
 impl RpcResponse {
     fn ok(id: Option<Value>, result: Value) -> Self {
-        Self { jsonrpc: "2.0", id, result: Some(result), error: None }
+        Self {
+            jsonrpc: "2.0",
+            id,
+            result: Some(result),
+            error: None,
+        }
     }
 
     fn err(id: Option<Value>, code: i32, message: impl Into<String>) -> Self {
@@ -109,7 +119,10 @@ impl RpcResponse {
             jsonrpc: "2.0",
             id,
             result: None,
-            error: Some(RpcError { code, message: message.into() }),
+            error: Some(RpcError {
+                code,
+                message: message.into(),
+            }),
         }
     }
 }
@@ -117,12 +130,14 @@ impl RpcResponse {
 // ── Main server loop ──────────────────────────────────────────────────────────
 
 async fn run_server(state: Arc<Mutex<McpState>>) -> Result<()> {
-    let mut lines  = BufReader::new(tokio::io::stdin()).lines();
+    let mut lines = BufReader::new(tokio::io::stdin()).lines();
     let mut stdout = tokio::io::stdout();
 
     while let Some(line) = lines.next_line().await? {
         let line = line.trim().to_string();
-        if line.is_empty() { continue; }
+        if line.is_empty() {
+            continue;
+        }
 
         let response_opt = match serde_json::from_str::<RpcRequest>(&line) {
             Err(e) => Some(RpcResponse::err(None, -32700, format!("Parse error: {e}"))),
@@ -130,7 +145,11 @@ async fn run_server(state: Arc<Mutex<McpState>>) -> Result<()> {
                 let is_notification = req.id.is_none();
                 let resp = dispatch(req, Arc::clone(&state)).await;
                 // Notifications must not receive a response
-                if is_notification { None } else { resp }
+                if is_notification {
+                    None
+                } else {
+                    resp
+                }
             }
         };
 
@@ -151,16 +170,16 @@ async fn dispatch(req: RpcRequest, state: Arc<Mutex<McpState>>) -> Option<RpcRes
     let id = req.id.clone();
 
     let result = match req.method.as_str() {
-        "initialize"              => Some(handle_initialize(&req.params)),
+        "initialize" => Some(handle_initialize(&req.params)),
         "notifications/initialized" => None, // notification — no response
-        "tools/list"              => Some(handle_tools_list()),
-        "tools/call"              => Some(handle_tools_call(&req.params, state).await),
-        "ping"                    => Some(Ok(json!({}))),
-        _                         => Some(Err((-32601, format!("Method '{}' not found", req.method)))),
+        "tools/list" => Some(handle_tools_list()),
+        "tools/call" => Some(handle_tools_call(&req.params, state).await),
+        "ping" => Some(Ok(json!({}))),
+        _ => Some(Err((-32601, format!("Method '{}' not found", req.method)))),
     };
 
     result.map(|r| match r {
-        Ok(v)          => RpcResponse::ok(id, v),
+        Ok(v) => RpcResponse::ok(id, v),
         Err((code, m)) => RpcResponse::err(id, code, m),
     })
 }
@@ -246,29 +265,40 @@ fn handle_tools_list() -> Result<Value, (i32, String)> {
     }))
 }
 
-async fn handle_tools_call(params: &Value, state: Arc<Mutex<McpState>>) -> Result<Value, (i32, String)> {
-    let name = params["name"].as_str()
-        .ok_or((- 32602, "Paramètre 'name' manquant".to_string()))?;
+async fn handle_tools_call(
+    params: &Value,
+    state: Arc<Mutex<McpState>>,
+) -> Result<Value, (i32, String)> {
+    let name = params["name"]
+        .as_str()
+        .ok_or((-32602, "Paramètre 'name' manquant".to_string()))?;
     let args = &params["arguments"];
 
     match name {
-        "list_endpoints"  => tool_list_endpoints(args, state).await,
-        "probe_endpoint"  => tool_probe_endpoint(args, state).await,
-        "report_finding"  => tool_report_finding(args, state),
-        "finish"          => tool_finish(args, state),
-        other             => Err((-32602, format!("Outil inconnu : '{}'", other))),
+        "list_endpoints" => tool_list_endpoints(args, state).await,
+        "probe_endpoint" => tool_probe_endpoint(args, state).await,
+        "report_finding" => tool_report_finding(args, state),
+        "finish" => tool_finish(args, state),
+        other => Err((-32602, format!("Outil inconnu : '{}'", other))),
     }
 }
 
 // ── Tool implementations ──────────────────────────────────────────────────────
 
-async fn tool_list_endpoints(args: &Value, state: Arc<Mutex<McpState>>) -> Result<Value, (i32, String)> {
+async fn tool_list_endpoints(
+    args: &Value,
+    state: Arc<Mutex<McpState>>,
+) -> Result<Value, (i32, String)> {
     let (target, client, stealth) = {
         let s = state.lock().unwrap();
-        let t = args["target"].as_str()
+        let t = args["target"]
+            .as_str()
             .map(|s| s.to_string())
             .or_else(|| s.target.clone())
-            .ok_or((-32602, "Paramètre 'target' requis (ou démarrez avec --target URL)".to_string()))?;
+            .ok_or((
+                -32602,
+                "Paramètre 'target' requis (ou démarrez avec --target URL)".to_string(),
+            ))?;
         let c = s.client.clone();
         let st = args["stealth"].as_bool().unwrap_or(false);
         (t, c, st)
@@ -278,11 +308,16 @@ async fn tool_list_endpoints(args: &Value, state: Arc<Mutex<McpState>>) -> Resul
         .await
         .map_err(|e| (-32603, format!("Crawling échoué : {e}")))?;
 
-    let ep_list: Vec<Value> = endpoints.iter().map(|ep| json!({
-        "method": ep.method,
-        "path":   ep.path,
-        "url":    ep.full_url,
-    })).collect();
+    let ep_list: Vec<Value> = endpoints
+        .iter()
+        .map(|ep| {
+            json!({
+                "method": ep.method,
+                "path":   ep.path,
+                "url":    ep.full_url,
+            })
+        })
+        .collect();
 
     Ok(mcp_text(format!(
         "Découverts {} endpoints sur {}:\n{}",
@@ -292,29 +327,37 @@ async fn tool_list_endpoints(args: &Value, state: Arc<Mutex<McpState>>) -> Resul
     )))
 }
 
-async fn tool_probe_endpoint(args: &Value, state: Arc<Mutex<McpState>>) -> Result<Value, (i32, String)> {
+async fn tool_probe_endpoint(
+    args: &Value,
+    state: Arc<Mutex<McpState>>,
+) -> Result<Value, (i32, String)> {
     let (accept_legal, client) = {
         let s = state.lock().unwrap();
         (s.accept_legal, s.client.clone())
     };
 
     if !accept_legal {
-        return Err((-32603, "Démarrez le serveur avec --accept-legal pour activer l'envoi de requêtes HTTP.".to_string()));
+        return Err((
+            -32603,
+            "Démarrez le serveur avec --accept-legal pour activer l'envoi de requêtes HTTP."
+                .to_string(),
+        ));
     }
 
-    let url = args["url"].as_str()
+    let url = args["url"]
+        .as_str()
         .ok_or((-32602, "Paramètre 'url' requis".to_string()))?;
     let method = args["method"].as_str().unwrap_or("GET").to_uppercase();
 
     let mut req = match method.as_str() {
-        "GET"     => client.get(url),
-        "POST"    => client.post(url),
-        "PUT"     => client.put(url),
-        "DELETE"  => client.delete(url),
-        "PATCH"   => client.patch(url),
+        "GET" => client.get(url),
+        "POST" => client.post(url),
+        "PUT" => client.put(url),
+        "DELETE" => client.delete(url),
+        "PATCH" => client.patch(url),
         "OPTIONS" => client.request(reqwest::Method::OPTIONS, url),
-        "HEAD"    => client.head(url),
-        other     => return Err((-32602, format!("Méthode HTTP non supportée : {}", other))),
+        "HEAD" => client.head(url),
+        other => return Err((-32602, format!("Méthode HTTP non supportée : {}", other))),
     };
 
     if let Some(headers) = args["headers"].as_object() {
@@ -329,12 +372,21 @@ async fn tool_probe_endpoint(args: &Value, state: Arc<Mutex<McpState>>) -> Resul
         req = req.body(body.to_string());
     }
 
-    let resp = req.send().await
+    let resp = req
+        .send()
+        .await
         .map_err(|e| (-32603, format!("Requête échouée : {e}")))?;
 
-    let status   = resp.status().as_u16();
-    let hdrs: Value = resp.headers().iter()
-        .map(|(k, v)| (k.as_str().to_string(), Value::String(v.to_str().unwrap_or("").to_string())))
+    let status = resp.status().as_u16();
+    let hdrs: Value = resp
+        .headers()
+        .iter()
+        .map(|(k, v)| {
+            (
+                k.as_str().to_string(),
+                Value::String(v.to_str().unwrap_or("").to_string()),
+            )
+        })
         .collect::<serde_json::Map<_, _>>()
         .into();
 
@@ -354,7 +406,8 @@ async fn tool_probe_endpoint(args: &Value, state: Arc<Mutex<McpState>>) -> Resul
 }
 
 fn tool_report_finding(args: &Value, state: Arc<Mutex<McpState>>) -> Result<Value, (i32, String)> {
-    let title = args["title"].as_str()
+    let title = args["title"]
+        .as_str()
         .ok_or((-32602, "Paramètre 'title' requis".to_string()))?;
 
     let finding = json!({
@@ -372,7 +425,10 @@ fn tool_report_finding(args: &Value, state: Arc<Mutex<McpState>>) -> Result<Valu
         s.findings.len()
     };
 
-    Ok(mcp_text(format!("Finding enregistré ({} au total).", count)))
+    Ok(mcp_text(format!(
+        "Finding enregistré ({} au total).",
+        count
+    )))
 }
 
 fn tool_finish(args: &Value, state: Arc<Mutex<McpState>>) -> Result<Value, (i32, String)> {
@@ -417,9 +473,7 @@ mod tests {
         let result = handle_tools_list().unwrap();
         let tools = result["tools"].as_array().unwrap();
         assert_eq!(tools.len(), 4);
-        let names: Vec<&str> = tools.iter()
-            .map(|t| t["name"].as_str().unwrap())
-            .collect();
+        let names: Vec<&str> = tools.iter().map(|t| t["name"].as_str().unwrap()).collect();
         assert!(names.contains(&"list_endpoints"));
         assert!(names.contains(&"probe_endpoint"));
         assert!(names.contains(&"report_finding"));
@@ -429,18 +483,21 @@ mod tests {
     #[test]
     fn initialize_returns_correct_protocol_version() {
         let result = handle_initialize(&json!({})).unwrap();
-        assert_eq!(result["protocolVersion"].as_str().unwrap(), MCP_PROTOCOL_VERSION);
+        assert_eq!(
+            result["protocolVersion"].as_str().unwrap(),
+            MCP_PROTOCOL_VERSION
+        );
         assert_eq!(result["serverInfo"]["name"].as_str().unwrap(), "nevelio");
     }
 
     #[test]
     fn report_finding_accumulates() {
         let state = Arc::new(Mutex::new(McpState {
-            target:       None,
+            target: None,
             accept_legal: true,
             timeout_secs: 30,
-            findings:     Vec::new(),
-            client:       reqwest::Client::new(),
+            findings: Vec::new(),
+            client: reqwest::Client::new(),
         }));
 
         let args = json!({
@@ -462,10 +519,10 @@ mod tests {
     #[test]
     fn finish_returns_all_findings() {
         let state = Arc::new(Mutex::new(McpState {
-            target:       None,
+            target: None,
             accept_legal: true,
             timeout_secs: 30,
-            findings:     vec![
+            findings: vec![
                 json!({"title": "A", "severity": "high", "endpoint": "/a", "description": "x", "recommendation": "", "proof": ""}),
                 json!({"title": "B", "severity": "low",  "endpoint": "/b", "description": "y", "recommendation": "", "proof": ""}),
             ],
@@ -481,11 +538,11 @@ mod tests {
     #[test]
     fn probe_endpoint_requires_accept_legal() {
         let state = Arc::new(Mutex::new(McpState {
-            target:       None,
-            accept_legal: false,   // ← not accepted
+            target: None,
+            accept_legal: false, // ← not accepted
             timeout_secs: 30,
-            findings:     Vec::new(),
-            client:       reqwest::Client::new(),
+            findings: Vec::new(),
+            client: reqwest::Client::new(),
         }));
 
         // probe_endpoint is async but the legal check is sync — test with tokio::test
@@ -505,8 +562,11 @@ mod tests {
         // tools/call with unknown name
         let rt = tokio::runtime::Runtime::new().unwrap();
         let state = Arc::new(Mutex::new(McpState {
-            target: None, accept_legal: true, timeout_secs: 30,
-            findings: Vec::new(), client: reqwest::Client::new(),
+            target: None,
+            accept_legal: true,
+            timeout_secs: 30,
+            findings: Vec::new(),
+            client: reqwest::Client::new(),
         }));
         let result = rt.block_on(handle_tools_call(
             &json!({"name": "nonexistent_tool", "arguments": {}}),

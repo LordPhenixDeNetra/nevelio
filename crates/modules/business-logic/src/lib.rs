@@ -1,7 +1,7 @@
-mod rate_limit;
-mod race;
 mod negative;
 mod price;
+mod race;
+mod rate_limit;
 
 use async_trait::async_trait;
 use nevelio_core::types::{Endpoint, Finding};
@@ -15,21 +15,52 @@ pub(crate) const RATE_LIMIT_PROBE_COUNT: usize = 20;
 pub(crate) const RACE_PROBE_COUNT: usize = 10;
 
 pub(crate) const FINANCIAL_KEYWORDS: &[&str] = &[
-    "order", "payment", "checkout", "purchase", "cart", "buy",
-    "coupon", "promo", "discount", "voucher", "redeem",
-    "transfer", "withdraw", "deposit", "refund", "invoice",
-    "subscription", "charge", "billing",
+    "order",
+    "payment",
+    "checkout",
+    "purchase",
+    "cart",
+    "buy",
+    "coupon",
+    "promo",
+    "discount",
+    "voucher",
+    "redeem",
+    "transfer",
+    "withdraw",
+    "deposit",
+    "refund",
+    "invoice",
+    "subscription",
+    "charge",
+    "billing",
 ];
 
 pub(crate) const NUMERIC_FIELD_NAMES: &[&str] = &[
-    "price", "amount", "quantity", "qty", "total", "cost",
-    "fee", "discount", "coupon_value", "points", "credits",
-    "balance", "subtotal", "tax", "tip",
+    "price",
+    "amount",
+    "quantity",
+    "qty",
+    "total",
+    "cost",
+    "fee",
+    "discount",
+    "coupon_value",
+    "points",
+    "credits",
+    "balance",
+    "subtotal",
+    "tax",
+    "tip",
 ];
 
 pub(crate) const XFF_VALUES: &[&str] = &[
-    "127.0.0.1", "10.0.0.1", "192.168.1.1",
-    "172.16.0.1", "1.1.1.1", "8.8.8.8",
+    "127.0.0.1",
+    "10.0.0.1",
+    "192.168.1.1",
+    "172.16.0.1",
+    "1.1.1.1",
+    "8.8.8.8",
 ];
 
 pub(crate) const USER_AGENTS: &[&str] = &[
@@ -48,13 +79,20 @@ pub struct BusinessLogicModule;
 
 #[async_trait]
 impl AttackModule for BusinessLogicModule {
-    fn name(&self) -> &str { "business-logic" }
+    fn name(&self) -> &str {
+        "business-logic"
+    }
 
     fn description(&self) -> &str {
         "Tests rate limit bypass, race conditions, negative values, and workflow bypass"
     }
 
-    async fn run(&self, session: &ScanSession, client: &HttpClient, endpoints: &[Endpoint]) -> Vec<Finding> {
+    async fn run(
+        &self,
+        session: &ScanSession,
+        client: &HttpClient,
+        endpoints: &[Endpoint],
+    ) -> Vec<Finding> {
         let token = session.config.auth_token.as_deref().unwrap_or("");
         let mut findings = Vec::new();
 
@@ -103,7 +141,9 @@ pub(crate) async fn send_request(
         builder = builder.header(*k, *v);
     }
     if let Some(b) = body {
-        builder = builder.header("Content-Type", "application/json").body(b.to_string());
+        builder = builder
+            .header("Content-Type", "application/json")
+            .body(b.to_string());
     }
 
     let req = builder.build().ok()?;
@@ -113,9 +153,10 @@ pub(crate) async fn send_request(
 
 pub(crate) fn is_mutation_endpoint(ep: &Endpoint) -> bool {
     let path = ep.path.to_lowercase();
-    let verbs = ["submit", "create", "apply", "redeem", "buy", "pay", "confirm"];
-    verbs.iter().any(|v| path.contains(v))
-        || FINANCIAL_KEYWORDS.iter().any(|kw| path.contains(kw))
+    let verbs = [
+        "submit", "create", "apply", "redeem", "buy", "pay", "confirm",
+    ];
+    verbs.iter().any(|v| path.contains(v)) || FINANCIAL_KEYWORDS.iter().any(|kw| path.contains(kw))
 }
 
 // ---------------------------------------------------------------------------

@@ -28,7 +28,10 @@ pub(super) async fn load_robots_disallowed(
         }
     }
 
-    tracing::debug!("[crawler] robots.txt: {} disallowed paths", disallowed.len());
+    tracing::debug!(
+        "[crawler] robots.txt: {} disallowed paths",
+        disallowed.len()
+    );
     disallowed
 }
 

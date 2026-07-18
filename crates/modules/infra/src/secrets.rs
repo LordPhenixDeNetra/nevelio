@@ -2,18 +2,18 @@ use nevelio_core::types::{Finding, Severity};
 
 pub(super) const SECRET_PATTERNS: &[(&str, &str, &str)] = &[
     // (pattern substring, label, CWE)
-    ("api_key",       "API Key",            "CWE-312"),
-    ("apikey",        "API Key",            "CWE-312"),
-    ("api-key",       "API Key",            "CWE-312"),
-    ("secret_key",    "Secret Key",         "CWE-312"),
-    ("client_secret", "OAuth Client Secret","CWE-312"),
-    ("access_token",  "Access Token",       "CWE-312"),
-    ("private_key",   "Private Key",        "CWE-312"),
-    ("password",      "Password",           "CWE-256"),
-    ("passwd",        "Password",           "CWE-256"),
-    ("db_password",   "DB Password",        "CWE-256"),
-    ("aws_secret",    "AWS Secret",         "CWE-312"),
-    ("AKIA",          "AWS Access Key ID",  "CWE-312"),
+    ("api_key", "API Key", "CWE-312"),
+    ("apikey", "API Key", "CWE-312"),
+    ("api-key", "API Key", "CWE-312"),
+    ("secret_key", "Secret Key", "CWE-312"),
+    ("client_secret", "OAuth Client Secret", "CWE-312"),
+    ("access_token", "Access Token", "CWE-312"),
+    ("private_key", "Private Key", "CWE-312"),
+    ("password", "Password", "CWE-256"),
+    ("passwd", "Password", "CWE-256"),
+    ("db_password", "DB Password", "CWE-256"),
+    ("aws_secret", "AWS Secret", "CWE-312"),
+    ("AKIA", "AWS Access Key ID", "CWE-312"),
 ];
 
 pub(super) const STACK_TRACE_PATTERNS: &[&str] = &[
@@ -79,9 +79,7 @@ pub(super) fn check_secrets_in_response(url: &str, body: &str) -> Vec<Finding> {
 pub(super) fn check_stack_traces(url: &str, body: &str) -> Option<Finding> {
     let lower = body.to_lowercase();
 
-    let matched = STACK_TRACE_PATTERNS
-        .iter()
-        .find(|&&p| lower.contains(p))?;
+    let matched = STACK_TRACE_PATTERNS.iter().find(|&&p| lower.contains(p))?;
 
     let mut f = Finding::new(
         "Stack trace / internal path exposed in response",
@@ -103,9 +101,7 @@ pub(super) fn check_stack_traces(url: &str, body: &str) -> Option<Finding> {
          (HTTP 500) without internal details. Use structured logging instead."
             .to_string();
     f.cwe = Some("CWE-209".to_string());
-    f.references = vec![
-        "https://owasp.org/www-community/Improper_Error_Handling".to_string(),
-    ];
+    f.references = vec!["https://owasp.org/www-community/Improper_Error_Handling".to_string()];
     Some(f)
 }
 
@@ -122,7 +118,9 @@ mod tests {
     #[test]
     fn stack_trace_patterns_non_empty() {
         assert!(!STACK_TRACE_PATTERNS.is_empty());
-        assert!(STACK_TRACE_PATTERNS.iter().any(|&p| p.contains("traceback")));
+        assert!(STACK_TRACE_PATTERNS
+            .iter()
+            .any(|&p| p.contains("traceback")));
     }
 
     #[test]

@@ -31,9 +31,8 @@ pub(super) fn check_cookie_flags(url: &str, headers: &HeaderMap) -> Vec<Finding>
             f.recommendation =
                 "Add the Secure flag to all cookies set on HTTPS endpoints.".to_string();
             f.cwe = Some("CWE-614".to_string());
-            f.references = vec![
-                "https://owasp.org/www-community/controls/SecureCookieAttribute".to_string(),
-            ];
+            f.references =
+                vec!["https://owasp.org/www-community/controls/SecureCookieAttribute".to_string()];
             findings.push(f);
         }
 
@@ -54,9 +53,7 @@ pub(super) fn check_cookie_flags(url: &str, headers: &HeaderMap) -> Vec<Finding>
             f.recommendation =
                 "Add the HttpOnly flag to all session and authentication cookies.".to_string();
             f.cwe = Some("CWE-1004".to_string());
-            f.references = vec![
-                "https://owasp.org/www-community/HttpOnly".to_string(),
-            ];
+            f.references = vec!["https://owasp.org/www-community/HttpOnly".to_string()];
             findings.push(f);
         }
 
@@ -73,8 +70,7 @@ pub(super) fn check_cookie_flags(url: &str, headers: &HeaderMap) -> Vec<Finding>
                 "The cookie '{}' has no SameSite attribute, exposing it to CSRF attacks.",
                 name
             );
-            f.recommendation =
-                "Set SameSite=Strict or SameSite=Lax on all cookies.".to_string();
+            f.recommendation = "Set SameSite=Strict or SameSite=Lax on all cookies.".to_string();
             f.cwe = Some("CWE-352".to_string());
             findings.push(f);
         }

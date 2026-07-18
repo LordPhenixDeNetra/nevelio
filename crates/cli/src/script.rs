@@ -83,7 +83,10 @@ mod tests {
 
     #[test]
     fn empty_runner_keeps_all_findings() {
-        let runner = ScriptRunner { engine: rhai::Engine::new(), scripts: vec![] };
+        let runner = ScriptRunner {
+            engine: rhai::Engine::new(),
+            scripts: vec![],
+        };
         let findings = vec![make_finding("auth", Severity::High)];
         assert_eq!(runner.filter_findings(&findings).len(), 1);
     }

@@ -84,13 +84,18 @@ impl AttackModule for PrototypePollutionModule {
 async fn detect_nodejs(client: &HttpClient, ep: &Endpoint) -> bool {
     let Ok(req) = client
         .inner()
-        .request(ep.method.parse().unwrap_or(reqwest::Method::GET), &ep.full_url)
+        .request(
+            ep.method.parse().unwrap_or(reqwest::Method::GET),
+            &ep.full_url,
+        )
         .build()
     else {
         return false;
     };
 
-    let Ok(resp) = client.send(req).await else { return false };
+    let Ok(resp) = client.send(req).await else {
+        return false;
+    };
 
     // Check response headers
     let powered_by = resp
@@ -107,22 +112,23 @@ async fn detect_nodejs(client: &HttpClient, ep: &Endpoint) -> bool {
         .unwrap_or("")
         .to_lowercase();
 
-    NODEJS_INDICATORS.iter().any(|i| powered_by.contains(i) || server.contains(i))
+    NODEJS_INDICATORS
+        .iter()
+        .any(|i| powered_by.contains(i) || server.contains(i))
 }
 
 // ---------------------------------------------------------------------------
 // Check: Prototype Pollution via JSON body
 // ---------------------------------------------------------------------------
 
-async fn check_proto_json(
-    client: &HttpClient,
-    ep: &Endpoint,
-    is_node: bool,
-) -> Vec<Finding> {
+async fn check_proto_json(client: &HttpClient, ep: &Endpoint, is_node: bool) -> Vec<Finding> {
     // Baseline
     let Ok(baseline_req) = client
         .inner()
-        .request(ep.method.parse().unwrap_or(reqwest::Method::POST), &ep.full_url)
+        .request(
+            ep.method.parse().unwrap_or(reqwest::Method::POST),
+            &ep.full_url,
+        )
         .header("Content-Type", "application/json")
         .body("{}")
         .build()
@@ -147,14 +153,18 @@ async fn check_proto_json(
             continue;
         };
 
-        let Ok(resp) = client.send(req).await else { continue };
+        let Ok(resp) = client.send(req).await else {
+            continue;
+        };
         let status = resp.status().as_u16();
         let body = resp.text().await.unwrap_or_default();
 
         let pollution_detected = POLLUTION_INDICATORS.iter().any(|i| body.contains(i))
             && !baseline_body.contains(POLLUTION_INDICATORS[0]);
 
-        if matches!(status, 200..=299) && (pollution_detected || body.len() > baseline_body.len() + 100) {
+        if matches!(status, 200..=299)
+            && (pollution_detected || body.len() > baseline_body.len() + 100)
+        {
             return vec![build_finding(
                 ep,
                 payload,
@@ -173,17 +183,17 @@ async fn check_proto_json(
 // Check: Prototype Pollution via query string
 // ---------------------------------------------------------------------------
 
-async fn check_proto_query(
-    client: &HttpClient,
-    ep: &Endpoint,
-    is_node: bool,
-) -> Vec<Finding> {
+async fn check_proto_query(client: &HttpClient, ep: &Endpoint, is_node: bool) -> Vec<Finding> {
     for (proto_key, proto_val) in PROTO_QUERY_PAYLOADS {
         let sep = if ep.full_url.contains('?') { '&' } else { '?' };
         let url = format!("{}{}{}={}", ep.full_url, sep, proto_key, proto_val);
 
-        let Ok(req) = client.inner().get(&url).build() else { continue };
-        let Ok(resp) = client.send(req).await else { continue };
+        let Ok(req) = client.inner().get(&url).build() else {
+            continue;
+        };
+        let Ok(resp) = client.send(req).await else {
+            continue;
+        };
 
         let status = resp.status().as_u16();
         let body = resp.text().await.unwrap_or_default();
@@ -219,9 +229,16 @@ fn build_finding(
     injection_point: &str,
     is_confirmed_node: bool,
 ) -> Finding {
-    let confidence = if is_confirmed_node { "Confirmé (Node.js/Express)" } else { "Possible" };
+    let confidence = if is_confirmed_node {
+        "Confirmé (Node.js/Express)"
+    } else {
+        "Possible"
+    };
     let mut f = Finding::new(
-        format!("Prototype Pollution — {} ({}) via {}", ep.path, confidence, injection_point),
+        format!(
+            "Prototype Pollution — {} ({}) via {}",
+            ep.path, confidence, injection_point
+        ),
         Severity::High,
         7.5,
         "prototype-pollution".to_string(),
@@ -271,7 +288,9 @@ mod tests {
     #[test]
     fn proto_query_payloads_non_empty() {
         assert!(!PROTO_QUERY_PAYLOADS.is_empty());
-        assert!(PROTO_QUERY_PAYLOADS.iter().any(|(k, _)| k.contains("__proto__")));
+        assert!(PROTO_QUERY_PAYLOADS
+            .iter()
+            .any(|(k, _)| k.contains("__proto__")));
     }
 
     #[test]

@@ -15,8 +15,12 @@ pub(super) async fn check_admin_endpoints_unauth(
 
     for path in admin_paths {
         let url = format!("{}{}", base, path);
-        let Ok(req) = client.inner().get(&url).build() else { continue };
-        let Ok(resp) = client.send(req).await else { continue };
+        let Ok(req) = client.inner().get(&url).build() else {
+            continue;
+        };
+        let Ok(resp) = client.send(req).await else {
+            continue;
+        };
 
         let status = resp.status().as_u16();
 

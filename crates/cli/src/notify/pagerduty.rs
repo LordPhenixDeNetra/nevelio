@@ -8,13 +8,28 @@ pub(super) async fn send_pagerduty(
     report: &ScanReport,
     findings: &[&Finding],
 ) -> Result<()> {
-    let critical = findings.iter().filter(|f| matches!(f.severity, Severity::Critical)).count();
-    let high     = findings.iter().filter(|f| matches!(f.severity, Severity::High)).count();
+    let critical = findings
+        .iter()
+        .filter(|f| matches!(f.severity, Severity::Critical))
+        .count();
+    let high = findings
+        .iter()
+        .filter(|f| matches!(f.severity, Severity::High))
+        .count();
 
-    let severity = if critical > 0 { "critical" } else if high > 0 { "error" } else { "warning" };
+    let severity = if critical > 0 {
+        "critical"
+    } else if high > 0 {
+        "error"
+    } else {
+        "warning"
+    };
     let summary = format!(
         "Nevelio: {} security finding(s) on {} — CRITICAL: {}, HIGH: {}",
-        findings.len(), report.target, critical, high
+        findings.len(),
+        report.target,
+        critical,
+        high
     );
 
     let body = serde_json::json!({

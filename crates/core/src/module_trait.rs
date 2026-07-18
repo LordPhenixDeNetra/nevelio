@@ -1,7 +1,7 @@
-use async_trait::async_trait;
 use crate::http_client::HttpClient;
 use crate::session::ScanSession;
 use crate::types::{Endpoint, Finding};
+use async_trait::async_trait;
 
 #[async_trait]
 pub trait AttackModule: Send + Sync {

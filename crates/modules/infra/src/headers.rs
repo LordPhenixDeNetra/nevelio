@@ -6,7 +6,10 @@ pub(super) fn check_security_headers(url: &str, headers: &HeaderMap) -> Vec<Find
     let mut findings = Vec::new();
 
     // X-Content-Type-Options
-    match headers.get("x-content-type-options").and_then(|v| v.to_str().ok()) {
+    match headers
+        .get("x-content-type-options")
+        .and_then(|v| v.to_str().ok())
+    {
         None => {
             let mut f = Finding::new(
                 "X-Content-Type-Options missing",
@@ -52,8 +55,9 @@ pub(super) fn check_security_headers(url: &str, headers: &HeaderMap) -> Vec<Find
         f.description =
             "The X-Frame-Options header is absent. The page may be embedded in iframes (clickjacking risk)."
                 .to_string();
-        f.recommendation = "Add 'X-Frame-Options: DENY' or set a Content-Security-Policy with frame-ancestors."
-            .to_string();
+        f.recommendation =
+            "Add 'X-Frame-Options: DENY' or set a Content-Security-Policy with frame-ancestors."
+                .to_string();
         f.cwe = Some("CWE-1021".to_string());
         findings.push(f);
     }
@@ -205,13 +209,11 @@ pub(super) fn check_referrer_policy(url: &str, headers: &HeaderMap) -> Option<Fi
         url,
         "GET",
     );
-    f.description =
-        "The Referrer-Policy header is absent. The browser may leak the full URL \
+    f.description = "The Referrer-Policy header is absent. The browser may leak the full URL \
          (including tokens or paths) in the Referer header to third-party sites."
-            .to_string();
+        .to_string();
     f.recommendation =
-        "Add 'Referrer-Policy: strict-origin-when-cross-origin' or 'no-referrer'."
-            .to_string();
+        "Add 'Referrer-Policy: strict-origin-when-cross-origin' or 'no-referrer'.".to_string();
     f.cwe = Some("CWE-200".to_string());
     Some(f)
 }

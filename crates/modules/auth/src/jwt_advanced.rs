@@ -23,7 +23,10 @@ pub(super) async fn check_jwt_kid_injection(
 
         let Ok(req) = client
             .inner()
-            .request(ep.method.parse().unwrap_or(reqwest::Method::GET), &ep.full_url)
+            .request(
+                ep.method.parse().unwrap_or(reqwest::Method::GET),
+                &ep.full_url,
+            )
             .header("Authorization", format!("Bearer {}", forged))
             .build()
         else {
@@ -243,7 +246,10 @@ pub(super) async fn check_jwt_jku_ssrf(
     let baseline_start = Instant::now();
     if let Ok(req) = client
         .inner()
-        .request(ep.method.parse().unwrap_or(reqwest::Method::GET), &ep.full_url)
+        .request(
+            ep.method.parse().unwrap_or(reqwest::Method::GET),
+            &ep.full_url,
+        )
         .header("Authorization", format!("Bearer {}", token))
         .build()
     {
@@ -264,7 +270,10 @@ pub(super) async fn check_jwt_jku_ssrf(
         let start = Instant::now();
         let Ok(req) = client
             .inner()
-            .request(ep.method.parse().unwrap_or(reqwest::Method::GET), &ep.full_url)
+            .request(
+                ep.method.parse().unwrap_or(reqwest::Method::GET),
+                &ep.full_url,
+            )
             .header("Authorization", format!("Bearer {}", jku_token))
             .build()
         else {
@@ -320,9 +329,8 @@ pub(super) async fn check_jwt_jku_ssrf(
                  sans jamais fetcher de clés depuis des URLs dynamiques."
                     .to_string();
             f.cwe = Some("CWE-918".to_string());
-            f.references = vec![
-                "https://portswigger.net/web-security/jwt/algorithm-confusion".to_string(),
-            ];
+            f.references =
+                vec!["https://portswigger.net/web-security/jwt/algorithm-confusion".to_string()];
             return vec![f];
         }
     }

@@ -25,10 +25,7 @@ impl MarkdownReporter {
         md.push_str(&format!("| Cible | `{}` |\n", report.target));
         md.push_str(&format!("| Profil | {} |\n", report.profile));
         md.push_str(&format!("| Démarré | {} |\n", report.started_at));
-        md.push_str(&format!(
-            "| Durée | {:.2}s |\n",
-            report.duration_secs
-        ));
+        md.push_str(&format!("| Durée | {:.2}s |\n", report.duration_secs));
         md.push('\n');
 
         // Summary
@@ -82,10 +79,7 @@ impl MarkdownReporter {
 
                 md.push_str("| Champ | Valeur |\n|---|---|\n");
                 md.push_str(&format!("| Module | `{}` |\n", f.module));
-                md.push_str(&format!(
-                    "| Endpoint | `{} {}` |\n",
-                    f.method, f.endpoint
-                ));
+                md.push_str(&format!("| Endpoint | `{} {}` |\n", f.method, f.endpoint));
                 if f.cvss_score > 0.0 {
                     md.push_str(&format!("| CVSS | {} |\n", f.cvss_score));
                 }

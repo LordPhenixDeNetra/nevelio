@@ -14,7 +14,9 @@ pub(super) async fn probe_ssrf_bypass(
         let result = if matches!(ep.method.as_str(), "GET" | "HEAD" | "DELETE") {
             let sep = if ep.full_url.contains('?') { '&' } else { '?' };
             let url = format!("{}{}{}={}", ep.full_url, sep, param, urlenc(bypass.url));
-            let Ok(req) = client.inner().request(method.clone(), &url).build() else { continue };
+            let Ok(req) = client.inner().request(method.clone(), &url).build() else {
+                continue;
+            };
             client.send(req).await.ok()?
         } else {
             let body = serde_json::json!({ param: bypass.url });

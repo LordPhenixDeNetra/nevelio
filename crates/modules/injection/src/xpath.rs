@@ -65,9 +65,8 @@ pub(super) async fn check_xpath(
                  avant de les inclure dans des expressions XPath. Valider via une allowlist."
                     .to_string();
             f.cwe = Some("CWE-643".to_string());
-            f.references = vec![
-                "https://owasp.org/www-community/attacks/XPATH_Injection".to_string(),
-            ];
+            f.references =
+                vec!["https://owasp.org/www-community/attacks/XPATH_Injection".to_string()];
             return vec![f];
         }
     }

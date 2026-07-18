@@ -21,7 +21,7 @@ use anyhow::{bail, Result};
 /// Returns a `ResolvedConfig` from global + optional project file + CLI overrides.
 /// Performs semantic validation after merging — returns an error if the config is invalid.
 pub fn load(overrides: CliOverrides) -> Result<ResolvedConfig> {
-    let global  = loader::load_global()?;
+    let global = loader::load_global()?;
     let project = loader::load_project(None)?;
     let resolved = merge::merge(global, project, overrides);
 
@@ -52,28 +52,37 @@ mod tests {
 
     #[test]
     fn merge_cli_lang_wins() {
-        let global  = GlobalConfig::default();
+        let global = GlobalConfig::default();
         let project = ProjectConfig::default();
-        let ovr     = CliOverrides { lang: Some("en".to_string()), ..Default::default() };
+        let ovr = CliOverrides {
+            lang: Some("en".to_string()),
+            ..Default::default()
+        };
         let resolved = merge(global, project, ovr);
         assert_eq!(resolved.scan.lang, "en");
     }
 
     #[test]
     fn merge_project_lang_over_global() {
-        let global  = GlobalConfig::default(); // lang = "fr"
-        let project = ProjectConfig { lang: Some("es".to_string()), ..Default::default() };
-        let ovr     = CliOverrides::default();
+        let global = GlobalConfig::default(); // lang = "fr"
+        let project = ProjectConfig {
+            lang: Some("es".to_string()),
+            ..Default::default()
+        };
+        let ovr = CliOverrides::default();
         let resolved = merge(global, project, ovr);
         assert_eq!(resolved.scan.lang, "es");
     }
 
     #[test]
     fn merge_cli_ai_provider_wins() {
-        let mut global  = GlobalConfig::default();
+        let mut global = GlobalConfig::default();
         global.ai.provider = Some("openai".to_string());
         let project = ProjectConfig::default();
-        let ovr     = CliOverrides { ai_provider: Some("ollama".to_string()), ..Default::default() };
+        let ovr = CliOverrides {
+            ai_provider: Some("ollama".to_string()),
+            ..Default::default()
+        };
         let resolved = merge(global, project, ovr);
         assert_eq!(resolved.ai.active_provider_name(), "ollama");
     }

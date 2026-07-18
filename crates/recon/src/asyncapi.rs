@@ -1,7 +1,6 @@
 use anyhow::{Context, Result};
 use nevelio_core::types::{Endpoint, Parameter, ParameterLocation};
 
-
 // ---------------------------------------------------------------------------
 // AsyncAPI 2.x / 3.x spec parser
 // Supports JSON and YAML. Discovers WebSocket / HTTP / MQTT channels.
@@ -28,7 +27,8 @@ pub fn parse_asyncapi_content(content: &str) -> Result<Vec<Endpoint>> {
     };
 
     // Detect version
-    let version_str = raw.get("asyncapi")
+    let version_str = raw
+        .get("asyncapi")
         .and_then(|v| v.as_str())
         .unwrap_or("2.0.0");
 
@@ -100,7 +100,10 @@ fn extract_servers_v2(raw: &serde_json::Value) -> Vec<String> {
 
     for (_name, server) in servers {
         let url = server.get("url").and_then(|u| u.as_str()).unwrap_or("");
-        let protocol = server.get("protocol").and_then(|p| p.as_str()).unwrap_or("ws");
+        let protocol = server
+            .get("protocol")
+            .and_then(|p| p.as_str())
+            .unwrap_or("ws");
 
         let full_url = if url.starts_with("http") || url.starts_with("ws") {
             url.to_string()
@@ -139,7 +142,8 @@ fn parse_v3(raw: &serde_json::Value) -> Result<Vec<Endpoint>> {
     let operations = raw.get("operations").and_then(|o| o.as_object());
 
     for (channel_name, channel_def) in channels {
-        let address = channel_def.get("address")
+        let address = channel_def
+            .get("address")
             .and_then(|a| a.as_str())
             .unwrap_or(channel_name.as_str());
 
@@ -172,7 +176,10 @@ fn parse_v3(raw: &serde_json::Value) -> Result<Vec<Endpoint>> {
         }
 
         for (op_name, op_def) in ops_for_channel {
-            let action = op_def.get("action").and_then(|a| a.as_str()).unwrap_or(op_name);
+            let action = op_def
+                .get("action")
+                .and_then(|a| a.as_str())
+                .unwrap_or(op_name);
             let method = if action == "send" { "POST" } else { "GET" };
 
             endpoints.push(Endpoint {
@@ -196,8 +203,14 @@ fn extract_server_base_v3(raw: &serde_json::Value) -> String {
 
     for (_name, server) in servers {
         let host = server.get("host").and_then(|h| h.as_str()).unwrap_or("");
-        let protocol = server.get("protocol").and_then(|p| p.as_str()).unwrap_or("ws");
-        let pathname = server.get("pathname").and_then(|p| p.as_str()).unwrap_or("");
+        let protocol = server
+            .get("protocol")
+            .and_then(|p| p.as_str())
+            .unwrap_or("ws");
+        let pathname = server
+            .get("pathname")
+            .and_then(|p| p.as_str())
+            .unwrap_or("");
 
         if !host.is_empty() {
             let scheme = match protocol {
@@ -258,7 +271,8 @@ fn extract_binding_protocol(channel_def: &serde_json::Value) -> Option<&'static 
 }
 
 fn has_security(op_def: &serde_json::Value) -> bool {
-    op_def.get("security")
+    op_def
+        .get("security")
         .and_then(|s| s.as_array())
         .map(|a| !a.is_empty())
         .unwrap_or(false)
@@ -312,14 +326,23 @@ channels:
     #[test]
     fn parse_asyncapi_v2_base_url() {
         let endpoints = parse_asyncapi_content(ASYNCAPI_V2).expect("should parse");
-        let has_wss = endpoints.iter().any(|e| e.full_url.contains("api.example.com"));
-        assert!(has_wss, "endpoints: {:?}", endpoints.iter().map(|e| &e.full_url).collect::<Vec<_>>());
+        let has_wss = endpoints
+            .iter()
+            .any(|e| e.full_url.contains("api.example.com"));
+        assert!(
+            has_wss,
+            "endpoints: {:?}",
+            endpoints.iter().map(|e| &e.full_url).collect::<Vec<_>>()
+        );
     }
 
     #[test]
     fn parse_asyncapi_v2_path_params() {
         let endpoints = parse_asyncapi_content(ASYNCAPI_V2).expect("should parse");
-        let chat = endpoints.iter().find(|e| e.path.contains("roomId")).expect("chat endpoint");
+        let chat = endpoints
+            .iter()
+            .find(|e| e.path.contains("roomId"))
+            .expect("chat endpoint");
         assert!(!chat.parameters.is_empty());
     }
 

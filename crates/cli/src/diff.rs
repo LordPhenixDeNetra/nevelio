@@ -36,11 +36,7 @@ pub async fn handle_diff(args: DiffArgs) -> Result<()> {
         .findings
         .iter()
         .filter(|f| {
-            !before_map.contains_key(&(
-                f.title.clone(),
-                f.endpoint.clone(),
-                f.method.clone(),
-            ))
+            !before_map.contains_key(&(f.title.clone(), f.endpoint.clone(), f.method.clone()))
         })
         .collect();
     new_findings.sort_by(|a, b| b.severity.cmp(&a.severity));
@@ -50,11 +46,7 @@ pub async fn handle_diff(args: DiffArgs) -> Result<()> {
         .findings
         .iter()
         .filter(|f| {
-            !after_map.contains_key(&(
-                f.title.clone(),
-                f.endpoint.clone(),
-                f.method.clone(),
-            ))
+            !after_map.contains_key(&(f.title.clone(), f.endpoint.clone(), f.method.clone()))
         })
         .collect();
     resolved.sort_by(|a, b| b.severity.cmp(&a.severity));
@@ -79,10 +71,7 @@ pub async fn handle_diff(args: DiffArgs) -> Result<()> {
     // ── Print header ──────────────────────────────────────────────────────────
 
     println!("{}", "═".repeat(64).cyan());
-    println!(
-        "  {}",
-        "Nevelio — Rapport de diff".bold()
-    );
+    println!("  {}", "Nevelio — Rapport de diff".bold());
     println!(
         "  {} {} {}",
         args.before.display().to_string().dimmed(),
@@ -189,8 +178,7 @@ pub async fn handle_diff(args: DiffArgs) -> Result<()> {
 fn load_report(path: &Path) -> Result<ScanReport> {
     let content = std::fs::read_to_string(path)
         .with_context(|| format!("Cannot read '{}'", path.display()))?;
-    serde_json::from_str(&content)
-        .with_context(|| format!("Invalid JSON in '{}'", path.display()))
+    serde_json::from_str(&content).with_context(|| format!("Invalid JSON in '{}'", path.display()))
 }
 
 fn severity_badge(s: &Severity) -> colored::ColoredString {
@@ -250,9 +238,7 @@ mod tests {
     }
 
     fn make_finding(sev: Severity) -> Finding {
-        nevelio_core::types::Finding::new(
-            "Test", sev, 5.0, "module", "https://x.com/", "GET",
-        )
+        nevelio_core::types::Finding::new("Test", sev, 5.0, "module", "https://x.com/", "GET")
     }
 
     #[test]

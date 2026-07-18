@@ -5,7 +5,10 @@ use super::SSRF_HEADERS;
 
 pub(super) async fn check_header_ssrf(client: &HttpClient, ep: &Endpoint) -> Option<Finding> {
     let header_probes = [
-        ("http://169.254.169.254/", &["ami-id", "instance-id", "local-ipv4", "iam"][..]),
+        (
+            "http://169.254.169.254/",
+            &["ami-id", "instance-id", "local-ipv4", "iam"][..],
+        ),
         ("http://localhost/", &["localhost", "127.0.0.1"][..]),
     ];
 
@@ -21,19 +24,23 @@ pub(super) async fn check_header_ssrf(client: &HttpClient, ep: &Endpoint) -> Opt
                 continue;
             };
 
-            let Ok(resp) = client.send(req).await else { continue };
+            let Ok(resp) = client.send(req).await else {
+                continue;
+            };
             let status = resp.status().as_u16();
             let body = resp.text().await.unwrap_or_default();
             let body_lower = body.to_lowercase();
 
             let confirmed = indicators.iter().any(|i| body_lower.contains(i));
-            let probable = !confirmed
-                && status == 200
-                && body.len() > 50
-                && body_lower.contains("169.254");
+            let probable =
+                !confirmed && status == 200 && body.len() > 50 && body_lower.contains("169.254");
 
             if confirmed || probable {
-                let severity = if confirmed { Severity::Critical } else { Severity::High };
+                let severity = if confirmed {
+                    Severity::Critical
+                } else {
+                    Severity::High
+                };
                 let cvss = if confirmed { 9.8 } else { 7.5 };
                 let confidence = if confirmed { "Confirmé" } else { "Probable" };
 
@@ -53,7 +60,10 @@ pub(super) async fn check_header_ssrf(client: &HttpClient, ep: &Endpoint) -> Opt
                 );
                 f.proof = format!(
                     "{} — `{}: {}` → HTTP {} avec indicateurs dans la réponse: {}",
-                    confidence, header_name, probe_url, status,
+                    confidence,
+                    header_name,
+                    probe_url,
+                    status,
                     body.chars().take(200).collect::<String>()
                 );
                 f.recommendation =
@@ -63,7 +73,8 @@ pub(super) async fn check_header_ssrf(client: &HttpClient, ep: &Endpoint) -> Opt
                         .to_string();
                 f.cwe = Some("CWE-918".to_string());
                 f.references = vec![
-                    "https://owasp.org/www-community/attacks/Server_Side_Request_Forgery".to_string(),
+                    "https://owasp.org/www-community/attacks/Server_Side_Request_Forgery"
+                        .to_string(),
                     "https://portswigger.net/web-security/ssrf".to_string(),
                 ];
                 return Some(f);

@@ -192,8 +192,8 @@ pub enum ProfileArg {
 impl From<ProfileArg> for nevelio_core::types::ScanProfile {
     fn from(p: ProfileArg) -> Self {
         match p {
-            ProfileArg::Stealth    => Self::Stealth,
-            ProfileArg::Normal     => Self::Normal,
+            ProfileArg::Stealth => Self::Stealth,
+            ProfileArg::Normal => Self::Normal,
             ProfileArg::Aggressive => Self::Aggressive,
         }
     }
@@ -212,11 +212,11 @@ pub enum OutputFormat {
 impl From<OutputFormat> for nevelio_reporting::ReportFormat {
     fn from(f: OutputFormat) -> Self {
         match f {
-            OutputFormat::Json     => Self::Json,
-            OutputFormat::Html     => Self::Html,
+            OutputFormat::Json => Self::Json,
+            OutputFormat::Html => Self::Html,
             OutputFormat::Markdown => Self::Markdown,
-            OutputFormat::Junit    => Self::Junit,
-            OutputFormat::Sarif    => Self::Sarif,
+            OutputFormat::Junit => Self::Junit,
+            OutputFormat::Sarif => Self::Sarif,
         }
     }
 }

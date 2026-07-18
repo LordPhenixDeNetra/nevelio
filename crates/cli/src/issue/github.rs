@@ -9,7 +9,8 @@ use crate::args::GithubIssueArgs;
 use crate::notify::severity_meets_threshold;
 
 pub(super) async fn handle_github(report: &ScanReport, args: GithubIssueArgs) -> Result<()> {
-    let token = args.token
+    let token = args
+        .token
         .or_else(|| std::env::var("GITHUB_TOKEN").ok())
         .context("Token GitHub requis. Utilisez --token ou la variable GITHUB_TOKEN.")?;
 
@@ -18,7 +19,9 @@ pub(super) async fn handle_github(report: &ScanReport, args: GithubIssueArgs) ->
         .user_agent("nevelio-security-scanner")
         .build()?;
 
-    let to_create: Vec<&Finding> = report.findings.iter()
+    let to_create: Vec<&Finding> = report
+        .findings
+        .iter()
         .filter(|f| severity_meets_threshold(&f.severity, &args.min_severity))
         .collect();
 
@@ -27,7 +30,11 @@ pub(super) async fn handle_github(report: &ScanReport, args: GithubIssueArgs) ->
         return Ok(());
     }
 
-    println!("  {} finding(s) à créer sur {}", to_create.len().to_string().bold(), args.repo.cyan());
+    println!(
+        "  {} finding(s) à créer sur {}",
+        to_create.len().to_string().bold(),
+        args.repo.cyan()
+    );
 
     let existing = fetch_github_issue_titles(&client, &args.repo, &token).await?;
 
@@ -45,8 +52,12 @@ pub(super) async fn handle_github(report: &ScanReport, args: GithubIssueArgs) ->
         tokio::time::sleep(Duration::from_secs(1)).await;
     }
 
-    println!("  {} {} issue(s) créé(s), {} ignoré(s) (déjà existant).",
-        "✓".green(), created, skipped);
+    println!(
+        "  {} {} issue(s) créé(s), {} ignoré(s) (déjà existant).",
+        "✓".green(),
+        created,
+        skipped
+    );
     Ok(())
 }
 
@@ -64,16 +75,19 @@ async fn fetch_github_issue_titles(
         .get(&url)
         .header("Authorization", format!("token {}", token))
         .header("Accept", "application/vnd.github.v3+json")
-        .send().await.context("Erreur API GitHub")?;
+        .send()
+        .await
+        .context("Erreur API GitHub")?;
 
     match resp.status().as_u16() {
         401 => anyhow::bail!("Token GitHub invalide ou permissions insuffisantes."),
         404 => anyhow::bail!("Dépôt '{}' introuvable ou accès refusé.", repo),
-        _   => {}
+        _ => {}
     }
 
     let issues: Vec<serde_json::Value> = resp.json().await?;
-    Ok(issues.iter()
+    Ok(issues
+        .iter()
         .filter_map(|i| i["title"].as_str().map(|s| s.to_string()))
         .collect())
 }
@@ -115,7 +129,9 @@ async fn create_github_issue(
         .header("Authorization", format!("token {}", token))
         .header("Accept", "application/vnd.github.v3+json")
         .json(&payload)
-        .send().await.context("Erreur création issue GitHub")?;
+        .send()
+        .await
+        .context("Erreur création issue GitHub")?;
 
     if !resp.status().is_success() {
         let text = resp.text().await.unwrap_or_default();
@@ -123,6 +139,11 @@ async fn create_github_issue(
     }
 
     let issue: serde_json::Value = resp.json().await?;
-    println!("  {} #{} {}", "→".blue(), issue["number"].as_u64().unwrap_or(0), title);
+    println!(
+        "  {} #{} {}",
+        "→".blue(),
+        issue["number"].as_u64().unwrap_or(0),
+        title
+    );
     Ok(())
 }

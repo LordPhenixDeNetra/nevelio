@@ -22,14 +22,39 @@ pub struct InfraModule;
 /// Known debug/sensitive paths to probe.
 const DEBUG_PATHS: &[(&str, &str, &str, f64)] = &[
     ("/.env", "ENV file exposed", "CRITICAL", 9.8),
-    ("/actuator/env", "Spring Actuator /env endpoint", "CRITICAL", 9.1),
-    ("/actuator/mappings", "Spring Actuator /mappings endpoint", "HIGH", 7.5),
-    ("/actuator/beans", "Spring Actuator /beans endpoint", "HIGH", 7.5),
-    ("/actuator/loggers", "Spring Actuator /loggers endpoint", "HIGH", 7.5),
+    (
+        "/actuator/env",
+        "Spring Actuator /env endpoint",
+        "CRITICAL",
+        9.1,
+    ),
+    (
+        "/actuator/mappings",
+        "Spring Actuator /mappings endpoint",
+        "HIGH",
+        7.5,
+    ),
+    (
+        "/actuator/beans",
+        "Spring Actuator /beans endpoint",
+        "HIGH",
+        7.5,
+    ),
+    (
+        "/actuator/loggers",
+        "Spring Actuator /loggers endpoint",
+        "HIGH",
+        7.5,
+    ),
     ("/.git/HEAD", "Git repository exposed", "CRITICAL", 9.8),
     ("/phpinfo.php", "phpinfo() exposed", "HIGH", 7.8),
     ("/debug", "Debug endpoint accessible", "HIGH", 7.5),
-    ("/server-status", "Apache server-status exposed", "MEDIUM", 5.3),
+    (
+        "/server-status",
+        "Apache server-status exposed",
+        "MEDIUM",
+        5.3,
+    ),
     ("/server-info", "Apache server-info exposed", "MEDIUM", 5.3),
     ("/config.json", "Config file exposed", "CRITICAL", 9.1),
 ];

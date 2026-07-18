@@ -105,7 +105,10 @@ impl HtmlReporter {
 
         let mut ctx = tera::Context::new();
         ctx.insert("scan", &serde_json::to_value(report)?);
-        ctx.insert("generated_at", &Utc::now().format("%Y-%m-%d %H:%M UTC").to_string());
+        ctx.insert(
+            "generated_at",
+            &Utc::now().format("%Y-%m-%d %H:%M UTC").to_string(),
+        );
         ctx.insert("i18n", &labels);
         ctx.insert("version", env!("CARGO_PKG_VERSION"));
 

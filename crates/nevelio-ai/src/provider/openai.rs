@@ -7,22 +7,22 @@ use super::{AiProvider, CompletionOpts, Message, ToolCall, ToolCallResponse, Too
 
 pub struct OpenAiProvider {
     provider_name: String,
-    api_key:       String,
-    base_url:      String,
-    model:         String,
-    max_tokens:    u32,
-    temperature:   f32,
-    client:        reqwest::Client,
+    api_key: String,
+    base_url: String,
+    model: String,
+    max_tokens: u32,
+    temperature: f32,
+    client: reqwest::Client,
 }
 
 impl OpenAiProvider {
     pub fn new(
         provider_name: &str,
-        api_key:       String,
-        base_url:      String,
-        model:         String,
-        max_tokens:    u32,
-        temperature:   f32,
+        api_key: String,
+        base_url: String,
+        model: String,
+        max_tokens: u32,
+        temperature: f32,
     ) -> Self {
         Self {
             provider_name: provider_name.to_string(),
@@ -38,9 +38,9 @@ impl OpenAiProvider {
     /// Returns `CompletionOpts` pre-populated from provider config defaults.
     pub fn default_opts(&self) -> CompletionOpts {
         CompletionOpts {
-            max_tokens:  self.max_tokens,
+            max_tokens: self.max_tokens,
             temperature: self.temperature,
-            model:       None,
+            model: None,
         }
     }
 
@@ -49,22 +49,29 @@ impl OpenAiProvider {
     }
 
     fn chat_url(&self) -> String {
-        format!("{}/v1/chat/completions", self.base_url.trim_end_matches('/'))
+        format!(
+            "{}/v1/chat/completions",
+            self.base_url.trim_end_matches('/')
+        )
     }
 
     fn to_api_messages(messages: &[Message]) -> Vec<Value> {
-        messages.iter().map(|m| {
-            let role = match m.role {
-                super::Role::System    => "system",
-                super::Role::User      => "user",
-                super::Role::Assistant => "assistant",
-            };
-            json!({ "role": role, "content": m.content })
-        }).collect()
+        messages
+            .iter()
+            .map(|m| {
+                let role = match m.role {
+                    super::Role::System => "system",
+                    super::Role::User => "user",
+                    super::Role::Assistant => "assistant",
+                };
+                json!({ "role": role, "content": m.content })
+            })
+            .collect()
     }
 
     async fn post(&self, body: Value) -> Result<Value> {
-        let resp = self.client
+        let resp = self
+            .client
             .post(self.chat_url())
             .header("Authorization", format!("Bearer {}", self.api_key))
             .header("content-type", "application/json")
@@ -74,7 +81,7 @@ impl OpenAiProvider {
             .context("Requête échouée")?;
 
         let status = resp.status();
-        let bytes  = resp.bytes().await.context("Lecture réponse")?;
+        let bytes = resp.bytes().await.context("Lecture réponse")?;
 
         if !status.is_success() {
             let err: Value = serde_json::from_slice(&bytes).unwrap_or(json!({}));
@@ -82,7 +89,9 @@ impl OpenAiProvider {
                 "{} API erreur {} : {}",
                 self.provider_name,
                 status,
-                err.pointer("/error/message").and_then(Value::as_str).unwrap_or("?")
+                err.pointer("/error/message")
+                    .and_then(Value::as_str)
+                    .unwrap_or("?")
             );
         }
 
@@ -92,8 +101,12 @@ impl OpenAiProvider {
 
 #[async_trait]
 impl AiProvider for OpenAiProvider {
-    fn name(&self)  -> &str { &self.provider_name }
-    fn model(&self) -> &str { &self.model }
+    fn name(&self) -> &str {
+        &self.provider_name
+    }
+    fn model(&self) -> &str {
+        &self.model
+    }
 
     async fn complete(&self, messages: &[Message], opts: &CompletionOpts) -> Result<String> {
         let body = json!({
@@ -113,8 +126,8 @@ impl AiProvider for OpenAiProvider {
     async fn complete_json(
         &self,
         messages: &[Message],
-        _schema:  Value,
-        opts:     &CompletionOpts,
+        _schema: Value,
+        opts: &CompletionOpts,
     ) -> Result<Value> {
         let body = json!({
             "model":           self.resolve_model(opts),
@@ -125,7 +138,8 @@ impl AiProvider for OpenAiProvider {
         });
 
         let resp = self.post(body).await?;
-        let text = resp.pointer("/choices/0/message/content")
+        let text = resp
+            .pointer("/choices/0/message/content")
             .and_then(Value::as_str)
             .ok_or_else(|| anyhow::anyhow!("Contenu vide dans réponse"))?;
 
@@ -135,17 +149,22 @@ impl AiProvider for OpenAiProvider {
     async fn complete_with_tools(
         &self,
         messages: &[Message],
-        tools:    &[ToolDefinition],
-        opts:     &CompletionOpts,
+        tools: &[ToolDefinition],
+        opts: &CompletionOpts,
     ) -> Result<ToolCallResponse> {
-        let api_tools: Vec<Value> = tools.iter().map(|t| json!({
-            "type": "function",
-            "function": {
-                "name":        t.name,
-                "description": t.description,
-                "parameters":  t.parameters,
-            }
-        })).collect();
+        let api_tools: Vec<Value> = tools
+            .iter()
+            .map(|t| {
+                json!({
+                    "type": "function",
+                    "function": {
+                        "name":        t.name,
+                        "description": t.description,
+                        "parameters":  t.parameters,
+                    }
+                })
+            })
+            .collect();
 
         let body = json!({
             "model":       self.resolve_model(opts),
@@ -155,7 +174,7 @@ impl AiProvider for OpenAiProvider {
             "tools":       api_tools,
         });
 
-        let resp  = self.post(body).await?;
+        let resp = self.post(body).await?;
         let choice = &resp["choices"][0]["message"];
 
         let text = choice["content"].as_str().map(|s| s.to_string());
@@ -165,11 +184,15 @@ impl AiProvider for OpenAiProvider {
             .unwrap_or(&vec![])
             .iter()
             .filter_map(|tc| {
-                let id        = tc["id"].as_str().map(|s| s.to_string());
-                let name      = tc["function"]["name"].as_str()?;
-                let args_str  = tc["function"]["arguments"].as_str().unwrap_or("{}");
+                let id = tc["id"].as_str().map(|s| s.to_string());
+                let name = tc["function"]["name"].as_str()?;
+                let args_str = tc["function"]["arguments"].as_str().unwrap_or("{}");
                 let arguments = serde_json::from_str(args_str).unwrap_or(json!({}));
-                Some(ToolCall { id, tool_name: name.to_string(), arguments })
+                Some(ToolCall {
+                    id,
+                    tool_name: name.to_string(),
+                    arguments,
+                })
             })
             .collect();
 

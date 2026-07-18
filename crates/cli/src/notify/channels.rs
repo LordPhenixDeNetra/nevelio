@@ -9,9 +9,21 @@ pub(super) async fn send_slack(
     findings: &[&Finding],
     summary: &str,
 ) -> Result<()> {
-    let critical = findings.iter().filter(|f| matches!(f.severity, Severity::Critical)).count();
-    let high     = findings.iter().filter(|f| matches!(f.severity, Severity::High)).count();
-    let color = if critical > 0 { "danger" } else if high > 0 { "warning" } else { "good" };
+    let critical = findings
+        .iter()
+        .filter(|f| matches!(f.severity, Severity::Critical))
+        .count();
+    let high = findings
+        .iter()
+        .filter(|f| matches!(f.severity, Severity::High))
+        .count();
+    let color = if critical > 0 {
+        "danger"
+    } else if high > 0 {
+        "warning"
+    } else {
+        "good"
+    };
 
     let payload = serde_json::json!({
         "text": summary,
@@ -43,7 +55,10 @@ pub(super) async fn send_teams(
     findings: &[&Finding],
     summary: &str,
 ) -> Result<()> {
-    let critical = findings.iter().filter(|f| matches!(f.severity, Severity::Critical)).count();
+    let critical = findings
+        .iter()
+        .filter(|f| matches!(f.severity, Severity::Critical))
+        .count();
     let color = if critical > 0 { "FF0000" } else { "FF8C00" };
 
     let payload = serde_json::json!({

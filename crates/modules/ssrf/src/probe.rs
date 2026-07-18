@@ -8,18 +8,17 @@ pub(super) struct ProbeResult {
     pub body: String,
 }
 
-pub(super) async fn probe_ssrf(
-    client: &HttpClient,
-    ep: &Endpoint,
-    param: &str,
-) -> Option<Finding> {
+pub(super) async fn probe_ssrf(client: &HttpClient, ep: &Endpoint, param: &str) -> Option<Finding> {
     for probe in PROBES {
         let result = send_ssrf_request(client, ep, param, probe.url).await?;
 
         let body_lower = result.body.to_lowercase();
         let probe_url_lower = probe.url.to_lowercase();
 
-        let confirmed = probe.indicators.iter().any(|i| body_lower.contains(&i.to_lowercase()));
+        let confirmed = probe
+            .indicators
+            .iter()
+            .any(|i| body_lower.contains(&i.to_lowercase()));
         let probable = !confirmed
             && result.status == 200
             && !result.body.is_empty()
@@ -27,8 +26,12 @@ pub(super) async fn probe_ssrf(
             && (body_lower.contains("169.254") || body_lower.contains(&probe_url_lower));
 
         if confirmed || probable {
-            let severity = if confirmed { Severity::Critical } else { Severity::High };
-            let cvss    = if confirmed { 9.8 } else { 7.5 };
+            let severity = if confirmed {
+                Severity::Critical
+            } else {
+                Severity::High
+            };
+            let cvss = if confirmed { 9.8 } else { 7.5 };
 
             let mut f = Finding::new(
                 format!("SSRF — paramètre `{}` → {}", param, probe.description),

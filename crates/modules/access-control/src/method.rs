@@ -26,17 +26,24 @@ pub(super) async fn check_method_override(
             builder = builder.header("Authorization", format!("Bearer {}", token));
         }
         let Ok(req) = builder.build() else { continue };
-        let Ok(resp) = client.send(req).await else { continue };
+        let Ok(resp) = client.send(req).await else {
+            continue;
+        };
 
         let status = resp.status().as_u16();
         let body = resp.bytes().await.unwrap_or_default();
         let body_lower = String::from_utf8_lossy(&body).to_lowercase();
 
-        let is_blocked = METHOD_BLOCKED_INDICATORS.iter().any(|kw| body_lower.contains(kw));
+        let is_blocked = METHOD_BLOCKED_INDICATORS
+            .iter()
+            .any(|kw| body_lower.contains(kw));
 
         if matches!(status, 200 | 204) && !is_blocked {
             let mut f = Finding::new(
-                format!("HTTP Method Override — {} accepté via `{}`", override_method, header_name),
+                format!(
+                    "HTTP Method Override — {} accepté via `{}`",
+                    override_method, header_name
+                ),
                 Severity::High,
                 7.5,
                 "access-control".to_string(),
@@ -58,9 +65,8 @@ pub(super) async fn check_method_override(
                  Si nécessaire, n'autoriser que pour des clients authentifiés et tracer les usages."
                     .to_string();
             f.cwe = Some("CWE-650".to_string());
-            f.references = vec![
-                "https://portswigger.net/web-security/request-smuggling".to_string(),
-            ];
+            f.references =
+                vec!["https://portswigger.net/web-security/request-smuggling".to_string()];
             return vec![f];
         }
     }

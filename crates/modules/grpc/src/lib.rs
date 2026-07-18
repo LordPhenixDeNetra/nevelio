@@ -5,8 +5,7 @@ use nevelio_core::{AttackModule, HttpClient, ScanSession};
 pub struct GrpcModule;
 
 // gRPC well-known service paths
-const REFLECTION_PATH: &str =
-    "/grpc.reflection.v1alpha.ServerReflection/ServerReflectionInfo";
+const REFLECTION_PATH: &str = "/grpc.reflection.v1alpha.ServerReflection/ServerReflectionInfo";
 const HEALTH_PATH: &str = "/grpc.health.v1.Health/Check";
 const GRPC_CONTENT_TYPE: &str = "application/grpc";
 
@@ -164,15 +163,13 @@ async fn check_grpc_reflection(client: &HttpClient, base: &str) -> Option<Findin
          Un attaquant peut énumérer tous les services, méthodes et types Protobuf disponibles \
          (équivalent de l'introspection GraphQL)."
             .to_string();
-    f.recommendation =
-        "Désactiver la réflexion gRPC en production ou la restreindre avec une \
+    f.recommendation = "Désactiver la réflexion gRPC en production ou la restreindre avec une \
          authentification par métadonnées (header `Authorization`). \
          Utiliser `grpc.EnableReflection` uniquement en développement."
-            .to_string();
+        .to_string();
     f.cwe = Some("CWE-200".to_string());
-    f.references = vec![
-        "https://grpc.github.io/grpc/core/md_doc_server-reflection.html".to_string(),
-    ];
+    f.references =
+        vec!["https://grpc.github.io/grpc/core/md_doc_server-reflection.html".to_string()];
     Some(f)
 }
 
@@ -260,7 +257,9 @@ async fn check_missing_metadata_auth(client: &HttpClient, base: &str) -> Option<
                  (header `Authorization` ou token de session). \
                  grpc-status reçu : {}.",
                 path,
-                grpc_st.map(|s| s.to_string()).unwrap_or_else(|| "absent".to_string())
+                grpc_st
+                    .map(|s| s.to_string())
+                    .unwrap_or_else(|| "absent".to_string())
             );
             f.recommendation =
                 "Implémenter un intercepteur gRPC qui valide le header `Authorization` \

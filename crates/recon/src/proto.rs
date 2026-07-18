@@ -128,12 +128,8 @@ pub fn parse_proto_content(content: &str) -> Vec<GrpcService> {
         }
 
         if in_service {
-            brace_depth = brace_depth.saturating_add(
-                trimmed.chars().filter(|&c| c == '{').count(),
-            );
-            brace_depth = brace_depth.saturating_sub(
-                trimmed.chars().filter(|&c| c == '}').count(),
-            );
+            brace_depth = brace_depth.saturating_add(trimmed.chars().filter(|&c| c == '{').count());
+            brace_depth = brace_depth.saturating_sub(trimmed.chars().filter(|&c| c == '}').count());
 
             // rpc method line: rpc MethodName (InputType) returns (OutputType) { ... }
             if trimmed.starts_with("rpc ") {
@@ -171,7 +167,14 @@ fn parse_rpc_line(line: &str) -> Option<GrpcMethod> {
     let close_paren = input_section.find(')')?;
     let input_raw = input_section[1..close_paren].trim();
     let (client_streaming, input_type) = if input_raw.starts_with("stream ") {
-        (true, input_raw.strip_prefix("stream ").unwrap_or(input_raw).trim().to_string())
+        (
+            true,
+            input_raw
+                .strip_prefix("stream ")
+                .unwrap_or(input_raw)
+                .trim()
+                .to_string(),
+        )
     } else {
         (false, input_raw.to_string())
     };
@@ -184,7 +187,14 @@ fn parse_rpc_line(line: &str) -> Option<GrpcMethod> {
     let close_paren2 = after_returns.find(')')?;
     let output_raw = after_returns[open_paren + 1..close_paren2].trim();
     let (server_streaming, output_type) = if output_raw.starts_with("stream ") {
-        (true, output_raw.strip_prefix("stream ").unwrap_or(output_raw).trim().to_string())
+        (
+            true,
+            output_raw
+                .strip_prefix("stream ")
+                .unwrap_or(output_raw)
+                .trim()
+                .to_string(),
+        )
     } else {
         (false, output_raw.to_string())
     };

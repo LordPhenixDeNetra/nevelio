@@ -2,8 +2,8 @@ use anyhow::Result;
 
 use nevelio_config::AiConfig;
 
-use super::{AiProvider, factory::build_named_provider};
 use super::fallback::FallbackProvider;
+use super::{factory::build_named_provider, AiProvider};
 
 // ── Task types (A.5) ──────────────────────────────────────────────────────────
 
@@ -31,30 +31,31 @@ pub fn build_provider_for_task(cfg: &AiConfig, task: TaskType) -> Result<Box<dyn
 
     // Resolve task-specific provider name from routing config
     let task_name: Option<&str> = match task {
-        TaskType::Triage      => cfg.routing.triage.as_deref(),
-        TaskType::Report      => cfg.routing.report.as_deref(),
-        TaskType::Payloads    => cfg.routing.payloads.as_deref(),
+        TaskType::Triage => cfg.routing.triage.as_deref(),
+        TaskType::Report => cfg.routing.report.as_deref(),
+        TaskType::Payloads => cfg.routing.payloads.as_deref(),
         TaskType::Remediation => None,
-        TaskType::Agent       => None,
+        TaskType::Agent => None,
     };
 
     // Build primary provider: task-specific if available and different from active
-    let primary: Box<dyn AiProvider> = match task_name {
-        Some(name) if name != active && cfg.providers.contains_key(name) => {
-            tracing::debug!("Routing task {:?} to provider '{}'", task, name);
-            match build_named_provider(cfg, name) {
-                Ok(p)  => p,
-                Err(e) => {
-                    tracing::warn!(
+    let primary: Box<dyn AiProvider> =
+        match task_name {
+            Some(name) if name != active && cfg.providers.contains_key(name) => {
+                tracing::debug!("Routing task {:?} to provider '{}'", task, name);
+                match build_named_provider(cfg, name) {
+                    Ok(p) => p,
+                    Err(e) => {
+                        tracing::warn!(
                         "Provider '{}' pour task {:?} indisponible ({}), repli sur provider actif",
                         name, task, e
                     );
-                    build_named_provider(cfg, active)?
+                        build_named_provider(cfg, active)?
+                    }
                 }
             }
-        }
-        _ => build_named_provider(cfg, active)?,
-    };
+            _ => build_named_provider(cfg, active)?,
+        };
 
     // Optionally wrap in FallbackProvider
     if let Some(fb_name) = cfg.routing.fallback.as_deref() {
@@ -63,14 +64,16 @@ pub fn build_provider_for_task(cfg: &AiConfig, task: TaskType) -> Result<Box<dyn
                 Ok(fallback) => {
                     tracing::debug!(
                         "Fallback provider '{}' configuré pour task {:?}",
-                        fb_name, task
+                        fb_name,
+                        task
                     );
                     return Ok(Box::new(FallbackProvider::new(primary, fallback)));
                 }
                 Err(e) => {
                     tracing::warn!(
                         "Provider fallback '{}' indisponible ({}), pas de fallback",
-                        fb_name, e
+                        fb_name,
+                        e
                     );
                 }
             }

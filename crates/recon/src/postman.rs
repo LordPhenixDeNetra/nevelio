@@ -88,8 +88,7 @@ pub fn parse_postman(path: &str) -> Result<Vec<Endpoint>> {
     } else if head.contains("__export_format") {
         insomnia::parse_insomnia_export(&content)
     } else {
-        parse_postman_collection(&content)
-            .or_else(|_| insomnia::parse_insomnia_export(&content))
+        parse_postman_collection(&content).or_else(|_| insomnia::parse_insomnia_export(&content))
     }
 }
 
@@ -106,7 +105,10 @@ fn parse_postman_collection(raw: &str) -> Result<Vec<Endpoint>> {
         .collect();
 
     let endpoints = collect_postman_items(&col.item, &vars);
-    tracing::info!("[postman] Parsed {} endpoints from Postman collection", endpoints.len());
+    tracing::info!(
+        "[postman] Parsed {} endpoints from Postman collection",
+        endpoints.len()
+    );
     Ok(endpoints)
 }
 
@@ -134,14 +136,18 @@ fn postman_request_to_endpoint(
     let (raw_url, mut parameters) = match &req.url {
         Some(PostmanUrl::Object(obj)) => {
             let raw = obj.raw.as_deref().unwrap_or("").to_string();
-            let qp: Vec<Parameter> = obj.query.iter()
+            let qp: Vec<Parameter> = obj
+                .query
+                .iter()
                 .filter(|q| !q.disabled)
-                .filter_map(|q| q.key.as_ref().map(|k| Parameter {
-                    name: k.clone(),
-                    location: ParameterLocation::Query,
-                    required: false,
-                    schema: None,
-                }))
+                .filter_map(|q| {
+                    q.key.as_ref().map(|k| Parameter {
+                        name: k.clone(),
+                        location: ParameterLocation::Query,
+                        required: false,
+                        schema: None,
+                    })
+                })
                 .collect();
             (raw, qp)
         }
@@ -152,22 +158,29 @@ fn postman_request_to_endpoint(
     let resolved = resolve_vars(&raw_url, vars);
     let url_no_query = resolved.split('?').next().unwrap_or(&resolved);
 
-    let (full_url, path) = if url_no_query.starts_with("http://")
-        || url_no_query.starts_with("https://")
-    {
-        let p = extract_path_from_url(url_no_query);
-        (url_no_query.to_string(), p)
-    } else {
-        (url_no_query.to_string(), url_no_query.to_string())
-    };
+    let (full_url, path) =
+        if url_no_query.starts_with("http://") || url_no_query.starts_with("https://") {
+            let p = extract_path_from_url(url_no_query);
+            (url_no_query.to_string(), p)
+        } else {
+            (url_no_query.to_string(), url_no_query.to_string())
+        };
 
-    if full_url.is_empty() { return None; }
+    if full_url.is_empty() {
+        return None;
+    }
 
     if let Some(body) = &req.body {
         extract_postman_body_params(body, &mut parameters);
     }
 
-    Some(Endpoint { method, path, full_url, parameters, auth_required: false })
+    Some(Endpoint {
+        method,
+        path,
+        full_url,
+        parameters,
+        auth_required: false,
+    })
 }
 
 fn extract_postman_body_params(body: &PostmanBody, params: &mut Vec<Parameter>) {
@@ -193,8 +206,10 @@ fn extract_postman_body_params(body: &PostmanBody, params: &mut Vec<Parameter>) 
                 if !p.disabled {
                     if let Some(k) = &p.key {
                         params.push(Parameter {
-                            name: k.clone(), location: ParameterLocation::Body,
-                            required: false, schema: None,
+                            name: k.clone(),
+                            location: ParameterLocation::Body,
+                            required: false,
+                            schema: None,
                         });
                     }
                 }
@@ -205,8 +220,10 @@ fn extract_postman_body_params(body: &PostmanBody, params: &mut Vec<Parameter>) 
                 if !p.disabled {
                     if let Some(k) = &p.key {
                         params.push(Parameter {
-                            name: k.clone(), location: ParameterLocation::Body,
-                            required: false, schema: None,
+                            name: k.clone(),
+                            location: ParameterLocation::Body,
+                            required: false,
+                            schema: None,
                         });
                     }
                 }

@@ -14,7 +14,10 @@ pub(super) async fn probe_implicit_flow(
 
     let spec_urls: Vec<String> = auth_endpoints.iter().map(|e| e.full_url.clone()).collect();
     let probe_urls: Vec<String> = if spec_urls.is_empty() {
-        super::AUTHORIZE_PATHS.iter().map(|p| super::build_url(base, p)).collect()
+        super::AUTHORIZE_PATHS
+            .iter()
+            .map(|p| super::build_url(base, p))
+            .collect()
     } else {
         spec_urls
     };
@@ -25,22 +28,32 @@ pub(super) async fn probe_implicit_flow(
             url,
             super::urlenc("https://nevelio.example.com/callback")
         );
-        let Some((status, body)) = super::get_text(client, &test_url).await else { continue };
+        let Some((status, body)) = super::get_text(client, &test_url).await else {
+            continue;
+        };
 
         // If the server returns a redirect with #access_token or a JSON with token_type,
         // the implicit flow is likely supported.
         let implicit_indicators = [
-            "access_token", "#token", "token_type", "Bearer",
+            "access_token",
+            "#token",
+            "token_type",
+            "Bearer",
             // Some servers redirect to the callback with fragment
             "nevelio.example.com",
         ];
         let body_lower = body.to_lowercase();
         let supported = matches!(status, 302 | 303 | 307 | 308)
-            || implicit_indicators.iter().any(|i| body_lower.contains(&i.to_lowercase()));
+            || implicit_indicators
+                .iter()
+                .any(|i| body_lower.contains(&i.to_lowercase()));
 
         if supported && !matches!(status, 400 | 401 | 403 | 404 | 405 | 501) {
             let mut f = Finding::new(
-                format!("OAuth2 — Flow Implicit activé (response_type=token) — {}", url),
+                format!(
+                    "OAuth2 — Flow Implicit activé (response_type=token) — {}",
+                    url
+                ),
                 Severity::Medium,
                 5.4,
                 "oauth2",
@@ -84,7 +97,10 @@ pub(super) async fn probe_code_replay(
 
     let spec_urls: Vec<String> = token_endpoints.iter().map(|e| e.full_url.clone()).collect();
     let probe_urls: Vec<String> = if spec_urls.is_empty() {
-        super::TOKEN_PATHS.iter().map(|p| super::build_url(base, p)).collect()
+        super::TOKEN_PATHS
+            .iter()
+            .map(|p| super::build_url(base, p))
+            .collect()
     } else {
         spec_urls
     };
@@ -142,11 +158,10 @@ pub(super) async fn probe_code_replay(
                 url.clone(),
                 "POST",
             );
-            f.description =
-                "Le token endpoint accepte deux fois le même `authorization_code`. \
+            f.description = "Le token endpoint accepte deux fois le même `authorization_code`. \
                  RFC 6749 §4.1.3 impose que les codes d'autorisation soient à usage unique : \
                  un attaquant qui intercepte un code peut l'utiliser en parallèle de la victime."
-                    .to_string();
+                .to_string();
             f.proof = format!(
                 "1er appel: HTTP {} — 2ème appel: HTTP {} (attendu: 400 invalid_grant)",
                 s1, s2
@@ -157,9 +172,8 @@ pub(super) async fn probe_code_replay(
                  Utiliser des codes à usage unique avec un TTL court (< 60 secondes, RFC 6749)."
                     .to_string();
             f.cwe = Some("CWE-294".to_string());
-            f.references = vec![
-                "https://datatracker.ietf.org/doc/html/rfc6749#section-4.1.3".to_string(),
-            ];
+            f.references =
+                vec!["https://datatracker.ietf.org/doc/html/rfc6749#section-4.1.3".to_string()];
             findings.push(f);
             break;
         }

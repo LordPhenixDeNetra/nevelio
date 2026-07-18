@@ -6,9 +6,8 @@ use nevelio_core::HttpClient;
 // ---------------------------------------------------------------------------
 
 const COMMON_CLIENT_IDS: &[&str] = &[
-    "app", "client", "mobile", "web", "spa", "api", "default",
-    "test", "admin", "demo", "dev", "prod", "frontend", "backend",
-    "android", "ios", "native", "public", "internal",
+    "app", "client", "mobile", "web", "spa", "api", "default", "test", "admin", "demo", "dev",
+    "prod", "frontend", "backend", "android", "ios", "native", "public", "internal",
 ];
 
 pub(super) async fn probe_client_enumeration(
@@ -20,7 +19,10 @@ pub(super) async fn probe_client_enumeration(
 
     let spec_urls: Vec<String> = auth_endpoints.iter().map(|e| e.full_url.clone()).collect();
     let probe_urls: Vec<String> = if spec_urls.is_empty() {
-        super::AUTHORIZE_PATHS.iter().map(|p| super::build_url(base, p)).collect()
+        super::AUTHORIZE_PATHS
+            .iter()
+            .map(|p| super::build_url(base, p))
+            .collect()
     } else {
         spec_urls
     };
@@ -28,7 +30,9 @@ pub(super) async fn probe_client_enumeration(
     // Baseline: try an obviously invalid client_id and note the response
     let invalid_url = format!(
         "{}?response_type=code&client_id=nevelio_definitely_invalid_xxxx&redirect_uri={}",
-        probe_urls.first().unwrap_or(&super::build_url(base, super::AUTHORIZE_PATHS[0])),
+        probe_urls
+            .first()
+            .unwrap_or(&super::build_url(base, super::AUTHORIZE_PATHS[0])),
         super::urlenc("https://nevelio.example.com/callback")
     );
     let baseline = super::get_text(client, &invalid_url).await;
@@ -44,7 +48,9 @@ pub(super) async fn probe_client_enumeration(
                 client_id,
                 super::urlenc("https://nevelio.example.com/callback")
             );
-            let Some((status, body)) = super::get_text(client, &test_url).await else { continue };
+            let Some((status, body)) = super::get_text(client, &test_url).await else {
+                continue;
+            };
             let body_lower = body.to_lowercase();
 
             // A valid client_id produces a different response than an invalid one:

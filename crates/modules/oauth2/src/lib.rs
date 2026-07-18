@@ -3,40 +3,60 @@ use async_trait::async_trait;
 use nevelio_core::types::{Endpoint, Finding};
 use nevelio_core::{AttackModule, HttpClient, ScanSession};
 
-mod redirect;
-mod tokens;
-mod flows;
 mod clients;
+mod flows;
+mod redirect;
 mod referer;
+mod tokens;
 
 // ---------------------------------------------------------------------------
 // OAuth2 endpoint patterns
 // ---------------------------------------------------------------------------
 
 const AUTHORIZE_PATHS: &[&str] = &[
-    "/oauth/authorize", "/oauth2/authorize", "/auth/authorize",
-    "/connect/authorize", "/authorize", "/oauth/auth",
-    "/login/oauth/authorize", "/api/oauth/authorize",
-    "/v1/oauth/authorize", "/v2/oauth/authorize",
+    "/oauth/authorize",
+    "/oauth2/authorize",
+    "/auth/authorize",
+    "/connect/authorize",
+    "/authorize",
+    "/oauth/auth",
+    "/login/oauth/authorize",
+    "/api/oauth/authorize",
+    "/v1/oauth/authorize",
+    "/v2/oauth/authorize",
 ];
 
 const TOKEN_PATHS: &[&str] = &[
-    "/oauth/token", "/oauth2/token", "/auth/token",
-    "/connect/token", "/token", "/api/token",
-    "/v1/oauth/token", "/v2/oauth/token",
+    "/oauth/token",
+    "/oauth2/token",
+    "/auth/token",
+    "/connect/token",
+    "/token",
+    "/api/token",
+    "/v1/oauth/token",
+    "/v2/oauth/token",
 ];
 
 const INTROSPECT_PATHS: &[&str] = &[
-    "/oauth/introspect", "/oauth2/introspect", "/introspect",
-    "/connect/introspect", "/token/introspect", "/auth/introspect",
+    "/oauth/introspect",
+    "/oauth2/introspect",
+    "/introspect",
+    "/connect/introspect",
+    "/token/introspect",
+    "/auth/introspect",
 ];
 
 pub const REVOKE_PATHS: &[&str] = &[
-    "/oauth/revoke", "/oauth2/revoke", "/revoke", "/token/revoke",
+    "/oauth/revoke",
+    "/oauth2/revoke",
+    "/revoke",
+    "/token/revoke",
 ];
 
 const JWKS_PATHS: &[&str] = &[
-    "/.well-known/jwks.json", "/oauth/jwks", "/.well-known/openid-configuration",
+    "/.well-known/jwks.json",
+    "/oauth/jwks",
+    "/.well-known/openid-configuration",
 ];
 
 // ---------------------------------------------------------------------------
@@ -89,13 +109,16 @@ impl AttackModule for OAuth2Module {
 // Helpers (pub(super) so sub-modules can call them via super::)
 // ---------------------------------------------------------------------------
 
-pub(crate) fn collect_matching<'a>(endpoints: &'a [Endpoint], patterns: &[&str]) -> Vec<&'a Endpoint> {
+pub(crate) fn collect_matching<'a>(
+    endpoints: &'a [Endpoint],
+    patterns: &[&str],
+) -> Vec<&'a Endpoint> {
     endpoints
         .iter()
         .filter(|ep| {
-            patterns
-                .iter()
-                .any(|p| ep.path.to_lowercase().contains(p) || ep.full_url.to_lowercase().contains(p))
+            patterns.iter().any(|p| {
+                ep.path.to_lowercase().contains(p) || ep.full_url.to_lowercase().contains(p)
+            })
         })
         .collect()
 }
@@ -122,8 +145,9 @@ pub(crate) fn urlenc(s: &str) -> String {
     let mut out = String::with_capacity(s.len() * 3);
     for b in s.bytes() {
         match b {
-            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9'
-            | b'-' | b'_' | b'.' | b'~' => out.push(b as char),
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => {
+                out.push(b as char)
+            }
             _ => out.push_str(&format!("%{:02X}", b)),
         }
     }

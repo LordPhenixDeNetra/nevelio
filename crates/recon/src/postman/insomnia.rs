@@ -11,8 +11,8 @@ struct InsomniaExport {
 }
 
 pub(super) fn parse_insomnia_export(raw: &str) -> Result<Vec<Endpoint>> {
-    let export: InsomniaExport = serde_json::from_str(raw)
-        .map_err(|e| anyhow::anyhow!("Invalid Insomnia export: {}", e))?;
+    let export: InsomniaExport =
+        serde_json::from_str(raw).map_err(|e| anyhow::anyhow!("Invalid Insomnia export: {}", e))?;
 
     // First pass: collect env variables
     let mut vars: HashMap<String, String> = HashMap::new();
@@ -36,33 +36,40 @@ pub(super) fn parse_insomnia_export(raw: &str) -> Result<Vec<Endpoint>> {
         }
 
         let method = res
-            .get("method").and_then(|m| m.as_str())
-            .unwrap_or("GET").to_uppercase();
+            .get("method")
+            .and_then(|m| m.as_str())
+            .unwrap_or("GET")
+            .to_uppercase();
 
         let raw_url = res
-            .get("url").and_then(|u| u.as_str())
-            .unwrap_or("").to_string();
+            .get("url")
+            .and_then(|u| u.as_str())
+            .unwrap_or("")
+            .to_string();
 
         let resolved = resolve_vars(&raw_url, &vars);
         let url_no_query = resolved.split('?').next().unwrap_or(&resolved).to_string();
 
-        if url_no_query.is_empty() { continue; }
+        if url_no_query.is_empty() {
+            continue;
+        }
 
-        let (full_url, path) = if url_no_query.starts_with("http://")
-            || url_no_query.starts_with("https://")
-        {
-            let p = extract_path_from_url(&url_no_query);
-            (url_no_query.clone(), p)
-        } else {
-            (url_no_query.clone(), url_no_query.clone())
-        };
+        let (full_url, path) =
+            if url_no_query.starts_with("http://") || url_no_query.starts_with("https://") {
+                let p = extract_path_from_url(&url_no_query);
+                (url_no_query.clone(), p)
+            } else {
+                (url_no_query.clone(), url_no_query.clone())
+            };
 
         let mut parameters: Vec<Parameter> = Vec::new();
 
         if let Some(arr) = res.get("parameters").and_then(|p| p.as_array()) {
             for param in arr {
-                let disabled = param.get("disabled")
-                    .and_then(|d| d.as_bool()).unwrap_or(false);
+                let disabled = param
+                    .get("disabled")
+                    .and_then(|d| d.as_bool())
+                    .unwrap_or(false);
                 if !disabled {
                     if let Some(name) = param.get("name").and_then(|n| n.as_str()) {
                         parameters.push(Parameter {
@@ -93,9 +100,18 @@ pub(super) fn parse_insomnia_export(raw: &str) -> Result<Vec<Endpoint>> {
             }
         }
 
-        endpoints.push(Endpoint { method, path, full_url, parameters, auth_required: false });
+        endpoints.push(Endpoint {
+            method,
+            path,
+            full_url,
+            parameters,
+            auth_required: false,
+        });
     }
 
-    tracing::info!("[insomnia] Parsed {} endpoints from Insomnia export", endpoints.len());
+    tracing::info!(
+        "[insomnia] Parsed {} endpoints from Insomnia export",
+        endpoints.len()
+    );
     Ok(endpoints)
 }

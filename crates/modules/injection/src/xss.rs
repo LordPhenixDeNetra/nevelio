@@ -58,11 +58,10 @@ pub(super) async fn check_xss(
                 "Payload: {:?} → retrouvé non encodé dans la réponse",
                 entry.value
             );
-            f.recommendation =
-                "Encoder toutes les sorties HTML (htmlspecialchars, DOMPurify). \
+            f.recommendation = "Encoder toutes les sorties HTML (htmlspecialchars, DOMPurify). \
                  Ajouter un Content-Security-Policy strict. \
                  Valider les entrées côté serveur."
-                    .to_string();
+                .to_string();
             f.cwe = Some("CWE-79".to_string());
             f.references = vec![
                 "https://owasp.org/www-community/attacks/xss/".to_string(),

@@ -7,9 +7,19 @@ use tokio_tungstenite::tungstenite::Message;
 pub struct WebSocketModule;
 
 const WS_PATHS: &[&str] = &[
-    "/ws", "/websocket", "/socket.io/", "/socket", "/stream",
-    "/api/ws", "/api/v1/ws", "/api/socket", "/live", "/events",
-    "/realtime", "/push", "/feed",
+    "/ws",
+    "/websocket",
+    "/socket.io/",
+    "/socket",
+    "/stream",
+    "/api/ws",
+    "/api/v1/ws",
+    "/api/socket",
+    "/live",
+    "/events",
+    "/realtime",
+    "/push",
+    "/feed",
 ];
 
 const INJECTION_PAYLOADS: &[(&str, &str)] = &[
@@ -89,9 +99,19 @@ fn to_ws_scheme(url: &str) -> String {
 }
 
 fn looks_like_ws(path: &str) -> bool {
-    ["ws", "websocket", "socket", "stream", "live", "events", "realtime", "push", "feed"]
-        .iter()
-        .any(|kw| path.contains(kw))
+    [
+        "ws",
+        "websocket",
+        "socket",
+        "stream",
+        "live",
+        "events",
+        "realtime",
+        "push",
+        "feed",
+    ]
+    .iter()
+    .any(|kw| path.contains(kw))
 }
 
 // ── Checks ────────────────────────────────────────────────────────────────────
@@ -100,10 +120,8 @@ async fn check_origin_validation(url: &str) -> Option<Finding> {
     use tokio_tungstenite::tungstenite::client::IntoClientRequest;
 
     let mut req = url.into_client_request().ok()?;
-    req.headers_mut().insert(
-        "Origin",
-        "https://evil.example.com".parse().ok()?,
-    );
+    req.headers_mut()
+        .insert("Origin", "https://evil.example.com".parse().ok()?);
 
     let timeout = std::time::Duration::from_secs(5);
     match tokio::time::timeout(timeout, tokio_tungstenite::connect_async(req)).await {
@@ -171,11 +189,8 @@ async fn check_ws_injection(url: &str) -> Option<Finding> {
     for (payload, attack_type) in INJECTION_PAYLOADS {
         let _ = ws.send(Message::Text(payload.to_string().into())).await;
 
-        if let Ok(Some(Ok(msg))) = tokio::time::timeout(
-            std::time::Duration::from_secs(2),
-            ws.next(),
-        )
-        .await
+        if let Ok(Some(Ok(msg))) =
+            tokio::time::timeout(std::time::Duration::from_secs(2), ws.next()).await
         {
             let text = match msg {
                 Message::Text(t) => t.to_string(),
@@ -221,7 +236,9 @@ async fn check_ws_rate_limit(url: &str) -> Option<Finding> {
     let mut accepted = 0usize;
 
     for _ in 0..PROBE_COUNT {
-        if let Ok(Ok(_)) = tokio::time::timeout(timeout, tokio_tungstenite::connect_async(url)).await {
+        if let Ok(Ok(_)) =
+            tokio::time::timeout(timeout, tokio_tungstenite::connect_async(url)).await
+        {
             accepted += 1;
         } else {
             // Server started rejecting — rate limiting likely in place
@@ -231,7 +248,10 @@ async fn check_ws_rate_limit(url: &str) -> Option<Finding> {
 
     if accepted >= PROBE_COUNT {
         let mut f = Finding::new(
-            format!("WebSocket — Absence de rate limiting sur les connexions — {}", url),
+            format!(
+                "WebSocket — Absence de rate limiting sur les connexions — {}",
+                url
+            ),
             Severity::Medium,
             5.3,
             "websocket",
@@ -244,16 +264,18 @@ async fn check_ws_rate_limit(url: &str) -> Option<Finding> {
              connexions (resource exhaustion) ou à du brute force via WebSocket.",
             PROBE_COUNT
         );
-        f.proof = format!("{} connexions ouvertes sans aucun refus (HTTP 429 ou fermeture).", PROBE_COUNT);
+        f.proof = format!(
+            "{} connexions ouvertes sans aucun refus (HTTP 429 ou fermeture).",
+            PROBE_COUNT
+        );
         f.recommendation =
             "Implémenter un rate limit sur les connexions WebSocket (ex. max 5 connexions/seconde \
              par IP). Utiliser un reverse proxy (nginx, HAProxy) avec `limit_conn` ou un middleware \
              applicatif."
                 .to_string();
         f.cwe = Some("CWE-770".to_string());
-        f.references = vec![
-            "https://owasp.org/www-community/attacks/Denial_of_Service".to_string(),
-        ];
+        f.references =
+            vec!["https://owasp.org/www-community/attacks/Denial_of_Service".to_string()];
         return Some(f);
     }
 
@@ -268,7 +290,10 @@ mod tests {
 
     #[test]
     fn scheme_conversion_https() {
-        assert_eq!(to_ws_scheme("https://api.example.com"), "wss://api.example.com");
+        assert_eq!(
+            to_ws_scheme("https://api.example.com"),
+            "wss://api.example.com"
+        );
     }
 
     #[test]

@@ -16,13 +16,21 @@ pub(super) async fn check_race_condition(
     for _ in 0..RACE_PROBE_COUNT {
         let method = ep.method.parse().unwrap_or(reqwest::Method::POST);
         let url = ep.full_url.clone();
-        let auth = if token.is_empty() { None } else { Some(format!("Bearer {}", token)) };
+        let auth = if token.is_empty() {
+            None
+        } else {
+            Some(format!("Bearer {}", token))
+        };
         let inner = client.inner().clone();
 
         handles.push(tokio::spawn(async move {
             let mut builder = inner.request(method, &url);
-            if let Some(ref h) = auth { builder = builder.header("Authorization", h); }
-            builder = builder.header("Content-Type", "application/json").body("{}");
+            if let Some(ref h) = auth {
+                builder = builder.header("Authorization", h);
+            }
+            builder = builder
+                .header("Content-Type", "application/json")
+                .body("{}");
             let req = builder.build().ok()?;
             let resp = inner.execute(req).await.ok()?;
             Some(resp.status().as_u16())
@@ -32,7 +40,9 @@ pub(super) async fn check_race_condition(
     let mut success_count = 0usize;
     for handle in handles {
         if let Ok(Some(status)) = handle.await {
-            if matches!(status, 200..=299) { success_count += 1; }
+            if matches!(status, 200..=299) {
+                success_count += 1;
+            }
         }
     }
 
@@ -51,7 +61,10 @@ pub(super) async fn check_race_condition(
              (paiement, coupon, retrait) plusieurs fois simultanément.",
             success_count, RACE_PROBE_COUNT, ep.full_url
         );
-        f.proof = format!("{}/{} requêtes simultanées → HTTP 2xx", success_count, RACE_PROBE_COUNT);
+        f.proof = format!(
+            "{}/{} requêtes simultanées → HTTP 2xx",
+            success_count, RACE_PROBE_COUNT
+        );
         f.recommendation =
             "Utiliser des verrous optimistes (version field, ETag) ou des transactions \
              atomiques côté base de données. Implémenter une idempotence par clé de \

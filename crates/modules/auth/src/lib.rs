@@ -108,9 +108,7 @@ impl AttackModule for AuthModule {
             .as_ref()
             .map(|p| p.jwt_kid_payloads.clone())
             .unwrap_or_default();
-        let jwks_paths: Vec<String> = payload_file
-            .map(|p| p.jwks_paths)
-            .unwrap_or_default();
+        let jwks_paths: Vec<String> = payload_file.map(|p| p.jwks_paths).unwrap_or_default();
 
         let auth_token = session.config.auth_token.clone();
         let jwt_token: Option<String> = auth_token.as_ref().and_then(|t| {

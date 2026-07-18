@@ -11,8 +11,8 @@ use crate::scan::{detect_spec_format, SpecFormat};
 
 /// Monitor an API at regular intervals and alert when new findings appear.
 pub async fn handle_watch(args: WatchArgs, verbose: bool) -> Result<()> {
-    let interval_secs =
-        parse_interval(&args.interval).context(format!("Intervalle invalide: '{}'", args.interval))?;
+    let interval_secs = parse_interval(&args.interval)
+        .context(format!("Intervalle invalide: '{}'", args.interval))?;
 
     let out_dir = args
         .out_dir
@@ -89,14 +89,21 @@ pub async fn handle_watch(args: WatchArgs, verbose: bool) -> Result<()> {
         // ── Discover endpoints ────────────────────────────────────────────────
         let endpoints = if let Some(ref spec) = args.spec {
             match detect_spec_format(spec) {
-                SpecFormat::Har => nevelio_recon::parse_har(spec)
-                    .unwrap_or_else(|e| { tracing::warn!("HAR error: {}", e); vec![] }),
-                SpecFormat::Postman => nevelio_recon::parse_postman(spec)
-                    .unwrap_or_else(|e| { tracing::warn!("Postman error: {}", e); vec![] }),
+                SpecFormat::Har => nevelio_recon::parse_har(spec).unwrap_or_else(|e| {
+                    tracing::warn!("HAR error: {}", e);
+                    vec![]
+                }),
+                SpecFormat::Postman => nevelio_recon::parse_postman(spec).unwrap_or_else(|e| {
+                    tracing::warn!("Postman error: {}", e);
+                    vec![]
+                }),
                 SpecFormat::OpenApi => {
                     nevelio_recon::openapi::parse_spec(spec, &target, &raw_client)
                         .await
-                        .unwrap_or_else(|e| { tracing::warn!("OpenAPI error: {}", e); vec![] })
+                        .unwrap_or_else(|e| {
+                            tracing::warn!("OpenAPI error: {}", e);
+                            vec![]
+                        })
                 }
             }
         } else {
@@ -178,17 +185,30 @@ pub(crate) fn parse_interval(s: &str) -> Result<u64> {
         return n.parse::<u64>().context("Invalid number in interval");
     }
     if let Some(n) = s.strip_suffix('m') {
-        return n.parse::<u64>().map(|v| v * 60).context("Invalid number in interval");
+        return n
+            .parse::<u64>()
+            .map(|v| v * 60)
+            .context("Invalid number in interval");
     }
     if let Some(n) = s.strip_suffix('h') {
-        return n.parse::<u64>().map(|v| v * 3600).context("Invalid number in interval");
+        return n
+            .parse::<u64>()
+            .map(|v| v * 3600)
+            .context("Invalid number in interval");
     }
     if let Some(n) = s.strip_suffix('d') {
-        return n.parse::<u64>().map(|v| v * 86_400).context("Invalid number in interval");
+        return n
+            .parse::<u64>()
+            .map(|v| v * 86_400)
+            .context("Invalid number in interval");
     }
     // Plain number → seconds
-    s.parse::<u64>()
-        .map_err(|_| anyhow::anyhow!("Format d'intervalle invalide '{}'. Exemples : 30s, 5m, 6h, 1d", s))
+    s.parse::<u64>().map_err(|_| {
+        anyhow::anyhow!(
+            "Format d'intervalle invalide '{}'. Exemples : 30s, 5m, 6h, 1d",
+            s
+        )
+    })
 }
 
 /// Return findings that appear in `after` but not in `before`.
@@ -250,10 +270,7 @@ fn daemonize(out_dir: &std::path::Path) -> Result<()> {
                 unsafe { libc::setsid() };
                 // Redirect stdin/stdout/stderr to /dev/null
                 unsafe {
-                    let dev_null = libc::open(
-                        c"/dev/null".as_ptr(),
-                        libc::O_RDWR,
-                    );
+                    let dev_null = libc::open(c"/dev/null".as_ptr(), libc::O_RDWR);
                     if dev_null >= 0 {
                         libc::dup2(dev_null, 0);
                         libc::dup2(dev_null, 1);
@@ -282,7 +299,9 @@ fn daemonize(out_dir: &std::path::Path) -> Result<()> {
     #[cfg(not(unix))]
     {
         // On non-Unix systems, just warn and continue in foreground
-        eprintln!("  ⚠ Mode daemon non supporté sur cette plateforme. Démarrage en mode foreground.");
+        eprintln!(
+            "  ⚠ Mode daemon non supporté sur cette plateforme. Démarrage en mode foreground."
+        );
         let _ = out_dir;
         Ok(())
     }

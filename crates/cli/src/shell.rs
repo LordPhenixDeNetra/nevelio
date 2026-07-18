@@ -29,7 +29,9 @@ pub async fn handle_shell(args: ShellArgs, verbose: bool) -> Result<()> {
         spec: args.spec,
         auth_token: args.auth_token,
         proxy: args.proxy,
-        out_dir: args.out_dir.unwrap_or_else(|| PathBuf::from("./nevelio-results")),
+        out_dir: args
+            .out_dir
+            .unwrap_or_else(|| PathBuf::from("./nevelio-results")),
         endpoints: vec![],
         findings: vec![],
     };
@@ -48,7 +50,9 @@ pub async fn handle_shell(args: ShellArgs, verbose: bool) -> Result<()> {
         }
 
         let input = line.trim();
-        if input.is_empty() { continue; }
+        if input.is_empty() {
+            continue;
+        }
 
         let parts: Vec<&str> = input.split_whitespace().collect();
         let cmd = parts[0];
@@ -62,7 +66,9 @@ pub async fn handle_shell(args: ShellArgs, verbose: bool) -> Result<()> {
                 } else {
                     match &ctx.target {
                         Some(t) => println!("  Cible actuelle : {}", t.cyan()),
-                        None    => println!("  {}", "Aucune cible définie. Usage: target <url>".yellow()),
+                        None => {
+                            println!("  {}", "Aucune cible définie. Usage: target <url>".yellow())
+                        }
                     }
                 }
                 Ok(())
@@ -74,7 +80,7 @@ pub async fn handle_shell(args: ShellArgs, verbose: bool) -> Result<()> {
                 } else {
                     match &ctx.spec {
                         Some(s) => println!("  Spec actuelle : {}", s.cyan()),
-                        None    => println!("  Aucune spec définie."),
+                        None => println!("  Aucune spec définie."),
                     }
                 }
                 Ok(())
@@ -84,28 +90,54 @@ pub async fn handle_shell(args: ShellArgs, verbose: bool) -> Result<()> {
                     ctx.auth_token = Some(t.to_string());
                     println!("  Token défini.");
                 } else {
-                    println!("  Token : {}", if ctx.auth_token.is_some() { "défini" } else { "absent" });
+                    println!(
+                        "  Token : {}",
+                        if ctx.auth_token.is_some() {
+                            "défini"
+                        } else {
+                            "absent"
+                        }
+                    );
                 }
                 Ok(())
             }
-            "scan"                   => run_shell_scan(&mut ctx, verbose).await,
-            "list" | "endpoints"     => { cmds::list_endpoints(&ctx); Ok(()) }
-            "show"                   => { cmds::show_endpoint(&ctx, rest); Ok(()) }
-            "findings" | "results"   => { cmds::list_findings(&ctx); Ok(()) }
-            "replay"                 => cmds::replay_request(&ctx, rest).await,
-            "export"                 => cmds::export_findings(&ctx),
+            "scan" => run_shell_scan(&mut ctx, verbose).await,
+            "list" | "endpoints" => {
+                cmds::list_endpoints(&ctx);
+                Ok(())
+            }
+            "show" => {
+                cmds::show_endpoint(&ctx, rest);
+                Ok(())
+            }
+            "findings" | "results" => {
+                cmds::list_findings(&ctx);
+                Ok(())
+            }
+            "replay" => cmds::replay_request(&ctx, rest).await,
+            "export" => cmds::export_findings(&ctx),
             "clear" => {
                 ctx.endpoints.clear();
                 ctx.findings.clear();
                 println!("  Session effacée.");
                 Ok(())
             }
-            "status" => { ui::print_status(&ctx); Ok(()) }
-            "help" | "?" => { ui::print_help(); Ok(()) }
+            "status" => {
+                ui::print_status(&ctx);
+                Ok(())
+            }
+            "help" | "?" => {
+                ui::print_help();
+                Ok(())
+            }
             "quit" | "exit" | "q" | ":q" => break,
             other => {
-                eprintln!("  {}: '{}'. Tapez {} pour l'aide.",
-                    "Commande inconnue".red(), other, "help".bold());
+                eprintln!(
+                    "  {}: '{}'. Tapez {} pour l'aide.",
+                    "Commande inconnue".red(),
+                    other,
+                    "help".bold()
+                );
                 Ok(())
             }
         };
@@ -120,7 +152,9 @@ pub async fn handle_shell(args: ShellArgs, verbose: bool) -> Result<()> {
 }
 
 async fn run_shell_scan(ctx: &mut ShellCtx, verbose: bool) -> Result<()> {
-    let target = ctx.target.as_deref()
+    let target = ctx
+        .target
+        .as_deref()
         .ok_or_else(|| anyhow::anyhow!("Aucune cible. Utilisez: target <url>"))?
         .to_string();
 
@@ -146,15 +180,20 @@ async fn run_shell_scan(ctx: &mut ShellCtx, verbose: bool) -> Result<()> {
 
     ctx.endpoints = if let Some(ref spec) = ctx.spec {
         match detect_spec_format(spec) {
-            SpecFormat::Har     => nevelio_recon::parse_har(spec)?,
+            SpecFormat::Har => nevelio_recon::parse_har(spec)?,
             SpecFormat::Postman => nevelio_recon::parse_postman(spec)?,
-            SpecFormat::OpenApi => nevelio_recon::openapi::parse_spec(spec, &target, &raw_client).await?,
+            SpecFormat::OpenApi => {
+                nevelio_recon::openapi::parse_spec(spec, &target, &raw_client).await?
+            }
         }
     } else {
         nevelio_recon::discover_endpoints(&target, &raw_client, false).await?
     };
 
-    println!("  {} endpoint(s) découvert(s).", ctx.endpoints.len().to_string().bold());
+    println!(
+        "  {} endpoint(s) découvert(s).",
+        ctx.endpoints.len().to_string().bold()
+    );
 
     let mut session = ScanSession::new(config);
     let modules = crate::modules::build_all_modules();
@@ -164,20 +203,39 @@ async fn run_shell_scan(ctx: &mut ShellCtx, verbose: bool) -> Result<()> {
         print!("  [{}/{}] {}…\r", i + 1, total, module.name());
         io::stdout().flush().ok();
         let findings = module.run(&session, &http_client, &ctx.endpoints).await;
-        for f in findings { session.add_finding(f); }
+        for f in findings {
+            session.add_finding(f);
+        }
     }
     println!();
 
     ctx.findings = session.findings.clone();
 
-    let critical = ctx.findings.iter().filter(|f| matches!(f.severity, nevelio_core::types::Severity::Critical)).count();
-    let high     = ctx.findings.iter().filter(|f| matches!(f.severity, nevelio_core::types::Severity::High)).count();
+    let critical = ctx
+        .findings
+        .iter()
+        .filter(|f| matches!(f.severity, nevelio_core::types::Severity::Critical))
+        .count();
+    let high = ctx
+        .findings
+        .iter()
+        .filter(|f| matches!(f.severity, nevelio_core::types::Severity::High))
+        .count();
 
     println!(
         "  {} Scan terminé — {} finding(s)  [{} critical, {} high]",
-        "✓".green(), ctx.findings.len().to_string().bold(),
-        if critical > 0 { critical.to_string().red().bold().to_string() } else { critical.to_string() },
-        if high > 0 { high.to_string().red().to_string() } else { high.to_string() },
+        "✓".green(),
+        ctx.findings.len().to_string().bold(),
+        if critical > 0 {
+            critical.to_string().red().bold().to_string()
+        } else {
+            critical.to_string()
+        },
+        if high > 0 {
+            high.to_string().red().to_string()
+        } else {
+            high.to_string()
+        },
     );
 
     Ok(())

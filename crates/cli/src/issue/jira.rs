@@ -9,10 +9,12 @@ use crate::args::JiraIssueArgs;
 use crate::notify::severity_meets_threshold;
 
 pub(super) async fn handle_jira(report: &ScanReport, args: JiraIssueArgs) -> Result<()> {
-    let token = args.token
+    let token = args
+        .token
         .or_else(|| std::env::var("JIRA_API_TOKEN").ok())
         .context("Token Jira requis. Utilisez --token ou JIRA_API_TOKEN.")?;
-    let email = args.email
+    let email = args
+        .email
         .or_else(|| std::env::var("JIRA_EMAIL").ok())
         .context("Email Jira requis. Utilisez --email ou JIRA_EMAIL.")?;
 
@@ -20,7 +22,9 @@ pub(super) async fn handle_jira(report: &ScanReport, args: JiraIssueArgs) -> Res
         .timeout(Duration::from_secs(15))
         .build()?;
 
-    let to_create: Vec<&Finding> = report.findings.iter()
+    let to_create: Vec<&Finding> = report
+        .findings
+        .iter()
         .filter(|f| severity_meets_threshold(&f.severity, &args.min_severity))
         .collect();
 
@@ -29,8 +33,11 @@ pub(super) async fn handle_jira(report: &ScanReport, args: JiraIssueArgs) -> Res
         return Ok(());
     }
 
-    println!("  {} finding(s) à créer dans le projet {} sur Jira",
-        to_create.len().to_string().bold(), args.project.cyan());
+    println!(
+        "  {} finding(s) à créer dans le projet {} sur Jira",
+        to_create.len().to_string().bold(),
+        args.project.cyan()
+    );
 
     let existing =
         fetch_jira_issue_summaries(&client, &args.jira_url, &args.project, &email, &token).await?;
@@ -44,13 +51,26 @@ pub(super) async fn handle_jira(report: &ScanReport, args: JiraIssueArgs) -> Res
             skipped += 1;
             continue;
         }
-        create_jira_issue(&client, &args.jira_url, &args.project, &email, &token, finding, &summary)
-            .await?;
+        create_jira_issue(
+            &client,
+            &args.jira_url,
+            &args.project,
+            &email,
+            &token,
+            finding,
+            &summary,
+        )
+        .await?;
         created += 1;
         tokio::time::sleep(Duration::from_millis(500)).await;
     }
 
-    println!("  {} {} ticket(s) créé(s), {} ignoré(s).", "✓".green(), created, skipped);
+    println!(
+        "  {} {} ticket(s) créé(s), {} ignoré(s).",
+        "✓".green(),
+        created,
+        skipped
+    );
     Ok(())
 }
 
@@ -61,7 +81,10 @@ async fn fetch_jira_issue_summaries(
     email: &str,
     token: &str,
 ) -> Result<HashSet<String>> {
-    let jql = format!("project = {} AND labels = nevelio ORDER BY created DESC", project);
+    let jql = format!(
+        "project = {} AND labels = nevelio ORDER BY created DESC",
+        project
+    );
     let encoded_jql = percent_encode(&jql);
     let url = format!(
         "{}/rest/api/3/search?jql={}&fields=summary&maxResults=100",
@@ -72,17 +95,20 @@ async fn fetch_jira_issue_summaries(
         .get(&url)
         .basic_auth(email, Some(token))
         .header("Accept", "application/json")
-        .send().await.context("Erreur API Jira")?;
+        .send()
+        .await
+        .context("Erreur API Jira")?;
 
     match resp.status().as_u16() {
         401 => anyhow::bail!("Credentials Jira invalides (email/token)."),
         403 => anyhow::bail!("Accès refusé au projet Jira '{}'.", project),
-        _   => {}
+        _ => {}
     }
 
     let data: serde_json::Value = resp.json().await?;
     let issues = data["issues"].as_array().cloned().unwrap_or_default();
-    Ok(issues.iter()
+    Ok(issues
+        .iter()
         .filter_map(|i| i["fields"]["summary"].as_str().map(|s| s.to_string()))
         .collect())
 }
@@ -125,7 +151,9 @@ async fn create_jira_issue(
         .basic_auth(email, Some(token))
         .header("Accept", "application/json")
         .json(&payload)
-        .send().await.context("Erreur création ticket Jira")?;
+        .send()
+        .await
+        .context("Erreur création ticket Jira")?;
 
     if !resp.status().is_success() {
         let text = resp.text().await.unwrap_or_default();
@@ -133,8 +161,12 @@ async fn create_jira_issue(
     }
 
     let issue: serde_json::Value = resp.json().await?;
-    println!("  {} {} {}",
-        "→".blue(), issue["key"].as_str().unwrap_or("?").bold(), summary);
+    println!(
+        "  {} {} {}",
+        "→".blue(),
+        issue["key"].as_str().unwrap_or("?").bold(),
+        summary
+    );
     Ok(())
 }
 
@@ -144,7 +176,11 @@ fn percent_encode(s: &str) -> String {
             if c.is_ascii_alphanumeric() || "-_.~".contains(c) {
                 vec![c.to_string()]
             } else {
-                c.to_string().as_bytes().iter().map(|b| format!("%{:02X}", b)).collect()
+                c.to_string()
+                    .as_bytes()
+                    .iter()
+                    .map(|b| format!("%{:02X}", b))
+                    .collect()
             }
         })
         .collect()
@@ -152,10 +188,10 @@ fn percent_encode(s: &str) -> String {
 
 fn jira_priority(finding: &Finding) -> &'static str {
     match finding.severity {
-        Severity::Critical    => "Highest",
-        Severity::High        => "High",
-        Severity::Medium      => "Medium",
-        Severity::Low         => "Low",
+        Severity::Critical => "Highest",
+        Severity::High => "High",
+        Severity::Medium => "Medium",
+        Severity::Low => "Low",
         Severity::Informative => "Lowest",
     }
 }

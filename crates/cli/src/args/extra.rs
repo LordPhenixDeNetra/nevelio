@@ -101,7 +101,11 @@ EXEMPLES :
   nevelio notify --findings findings.json --slack https://hooks.slack.com/services/...
   nevelio notify --teams https://... --min-severity high")]
 pub struct NotifyArgs {
-    #[arg(long, value_name = "FILE", default_value = "./nevelio-results/findings.json")]
+    #[arg(
+        long,
+        value_name = "FILE",
+        default_value = "./nevelio-results/findings.json"
+    )]
     pub findings: PathBuf,
 
     #[arg(long, value_name = "URL")]
@@ -143,7 +147,11 @@ EXEMPLES :
   nevelio issue github --repo owner/repo --token ghp_...
   nevelio issue jira --jira-url https://myco.atlassian.net --project SEC --email me@myco.com")]
 pub struct IssueArgs {
-    #[arg(long, value_name = "FILE", default_value = "./nevelio-results/findings.json")]
+    #[arg(
+        long,
+        value_name = "FILE",
+        default_value = "./nevelio-results/findings.json"
+    )]
     pub findings: PathBuf,
 
     #[command(subcommand)]

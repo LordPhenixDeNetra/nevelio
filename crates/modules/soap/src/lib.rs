@@ -180,11 +180,10 @@ async fn check_soap_xxe(client: &HttpClient, url: &str) -> Option<Finding> {
          arbitraires sur le serveur (ex. /etc/passwd) ou déclencher des SSRF."
             .to_string();
     f.proof = body.chars().take(300).collect();
-    f.recommendation =
-        "Désactiver le traitement des entités XML externes dans le parser XML. \
+    f.recommendation = "Désactiver le traitement des entités XML externes dans le parser XML. \
          Utiliser des parsers configurés avec FEATURE_SECURE_PROCESSING. \
          Valider et filtrer toutes les entrées XML."
-            .to_string();
+        .to_string();
     f.cwe = Some("CWE-611".to_string());
     f.references = vec![
         "https://owasp.org/www-community/vulnerabilities/XML_External_Entity_(XXE)_Processing".to_string(),
@@ -218,7 +217,10 @@ async fn check_soap_sqli(client: &HttpClient, url: &str) -> Option<Finding> {
         "near \"OR\"",
     ];
 
-    if !sql_errors.iter().any(|e| body.to_lowercase().contains(&e.to_lowercase())) {
+    if !sql_errors
+        .iter()
+        .any(|e| body.to_lowercase().contains(&e.to_lowercase()))
+    {
         return None;
     }
 
@@ -260,7 +262,8 @@ async fn check_soap_auth(client: &HttpClient, url: &str) -> Option<Finding> {
     let body = resp.text().await.ok()?;
 
     // Only flag if the server returns a non-error SOAP response
-    if !body.contains("<soapenv:Body>") && !body.contains("<Body>") && !body.contains("<soap:Body>") {
+    if !body.contains("<soapenv:Body>") && !body.contains("<Body>") && !body.contains("<soap:Body>")
+    {
         return None;
     }
 

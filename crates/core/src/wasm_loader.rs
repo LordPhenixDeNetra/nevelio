@@ -24,10 +24,10 @@
 //! Both JSON payloads are UTF-8 and must fit within the allocated buffers.
 //! The host allocates buffers using `nevelio_alloc` before calling the exports.
 
+use crate::http_client::HttpClient;
 use crate::module_trait::AttackModule;
 use crate::plugin::PluginManifest;
 use crate::session::ScanSession;
-use crate::http_client::HttpClient;
 use crate::types::{Endpoint, Finding};
 use anyhow::{anyhow, Context, Result};
 use async_trait::async_trait;
@@ -77,7 +77,11 @@ impl WasmPlugin {
         let memory = instance
             .get_memory(&mut store, "memory")
             .ok_or_else(|| anyhow!("Le plugin WASM doit exporter 'memory'"))?;
-        Ok(Self { store, instance, memory })
+        Ok(Self {
+            store,
+            instance,
+            memory,
+        })
     }
 
     /// Return the plugin's manifest (name, version, description, author).
@@ -88,8 +92,7 @@ impl WasmPlugin {
             .get_typed_func::<(u32, u32), u32>(&mut self.store, "nevelio_manifest")
             .context("Plugin manquant : export 'nevelio_manifest'")?;
 
-        let written =
-            manifest_fn.call(&mut self.store, (buf_ptr, OUTPUT_BUFFER_SIZE))?;
+        let written = manifest_fn.call(&mut self.store, (buf_ptr, OUTPUT_BUFFER_SIZE))?;
 
         let json = self.read_memory_str(buf_ptr, written)?;
         serde_json::from_str(&json).context("nevelio_manifest a retourné un JSON invalide")
@@ -114,7 +117,12 @@ impl WasmPlugin {
 
         let rc = run_fn.call(
             &mut self.store,
-            (in_ptr, input_bytes.len() as u32, out_ptr, OUTPUT_BUFFER_SIZE),
+            (
+                in_ptr,
+                input_bytes.len() as u32,
+                out_ptr,
+                OUTPUT_BUFFER_SIZE,
+            ),
         )?;
 
         if rc != 0 {
@@ -129,7 +137,10 @@ impl WasmPlugin {
         }
         let out_len = u32::from_le_bytes(data[base..base + 4].try_into()?) as usize;
         if base + 4 + out_len > data.len() {
-            return Err(anyhow!("Longueur de sortie WASM hors limites : {}", out_len));
+            return Err(anyhow!(
+                "Longueur de sortie WASM hors limites : {}",
+                out_len
+            ));
         }
         let json = std::str::from_utf8(&data[base + 4..base + 4 + out_len])
             .context("La sortie du plugin WASM n'est pas de l'UTF-8 valide")?;
@@ -150,7 +161,11 @@ impl WasmPlugin {
         let mem = self.memory.data_mut(&mut self.store);
         let start = ptr as usize;
         if start + data.len() > mem.len() {
-            return Err(anyhow!("Écriture WASM hors limites : ptr={}, len={}", ptr, data.len()));
+            return Err(anyhow!(
+                "Écriture WASM hors limites : ptr={}, len={}",
+                ptr,
+                data.len()
+            ));
         }
         mem[start..start + data.len()].copy_from_slice(data);
         Ok(())
@@ -161,7 +176,11 @@ impl WasmPlugin {
         let start = ptr as usize;
         let end = start + len as usize;
         if end > data.len() {
-            return Err(anyhow!("Lecture WASM hors limites : ptr={}, len={}", ptr, len));
+            return Err(anyhow!(
+                "Lecture WASM hors limites : ptr={}, len={}",
+                ptr,
+                len
+            ));
         }
         std::str::from_utf8(&data[start..end])
             .map(|s| s.to_string())

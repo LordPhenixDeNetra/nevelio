@@ -16,10 +16,7 @@ const REFRESH_TOKEN_PATHS: &[&str] = &[
     "/v2/oauth/token",
 ];
 
-pub(super) async fn check_refresh_token_replay(
-    client: &HttpClient,
-    base: &str,
-) -> Vec<Finding> {
+pub(super) async fn check_refresh_token_replay(client: &HttpClient, base: &str) -> Vec<Finding> {
     let base = base.trim_end_matches('/');
     let fake_refresh = "nevelio_fake_refresh_token_replay_test_0000000";
     let body = format!("grant_type=refresh_token&refresh_token={}", fake_refresh);
@@ -41,7 +38,10 @@ pub(super) async fn check_refresh_token_replay(
             let Ok(resp) = client.send(req).await else {
                 continue;
             };
-            responses.push((resp.status().as_u16(), resp.text().await.unwrap_or_default()));
+            responses.push((
+                resp.status().as_u16(),
+                resp.text().await.unwrap_or_default(),
+            ));
         }
 
         if responses.len() < 2 {
@@ -82,9 +82,8 @@ pub(super) async fn check_refresh_token_replay(
                  si un token déjà utilisé est présenté à nouveau (RFC 6819 §5.2.2.3)."
                     .to_string();
             f.cwe = Some("CWE-294".to_string());
-            f.references = vec![
-                "https://datatracker.ietf.org/doc/html/rfc6819#section-5.2.2.3".to_string(),
-            ];
+            f.references =
+                vec!["https://datatracker.ietf.org/doc/html/rfc6819#section-5.2.2.3".to_string()];
             return vec![f];
         }
 

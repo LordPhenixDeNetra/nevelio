@@ -2,14 +2,10 @@ use nevelio_core::types::{Finding, Severity};
 use reqwest::header::HeaderMap;
 
 pub(super) fn check_cors(url: &str, headers: &HeaderMap) -> Option<Finding> {
-    let acao = headers
-        .get("access-control-allow-origin")?
-        .to_str()
-        .ok()?;
+    let acao = headers.get("access-control-allow-origin")?.to_str().ok()?;
 
-    let is_vuln = acao == "*"
-        || acao.eq_ignore_ascii_case("https://evil.nevelio.test")
-        || acao == "null";
+    let is_vuln =
+        acao == "*" || acao.eq_ignore_ascii_case("https://evil.nevelio.test") || acao == "null";
 
     if !is_vuln {
         return None;

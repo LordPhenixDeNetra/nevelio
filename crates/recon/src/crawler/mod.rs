@@ -113,9 +113,9 @@ pub async fn discover_endpoints(
         let client = client.clone();
         let path = path.to_string();
         let method = method.to_string();
-        tasks.push(tokio::spawn(
-            async move { probe_path(client, url, path, method).await },
-        ));
+        tasks.push(tokio::spawn(async move {
+            probe_path(client, url, path, method).await
+        }));
     }
 
     let mut found: Vec<Endpoint> = Vec::new();
@@ -143,7 +143,10 @@ pub async fn discover_endpoints(
     }
     for task in version_tasks {
         if let Ok(Some(ep)) = task.await {
-            if !found.iter().any(|e| e.path == ep.path && e.method == ep.method) {
+            if !found
+                .iter()
+                .any(|e| e.path == ep.path && e.method == ep.method)
+            {
                 found.push(ep);
             }
         }
@@ -165,7 +168,10 @@ pub async fn discover_endpoints(
     }
     for task in js_tasks {
         if let Ok(Some(ep)) = task.await {
-            if !found.iter().any(|e| e.path == ep.path && e.method == ep.method) {
+            if !found
+                .iter()
+                .any(|e| e.path == ep.path && e.method == ep.method)
+            {
                 found.push(ep);
             }
         }
@@ -190,7 +196,10 @@ pub async fn discover_endpoints(
     }
     for task in json_tasks {
         if let Ok(Some(ep)) = task.await {
-            if !found.iter().any(|e| e.path == ep.path && e.method == ep.method) {
+            if !found
+                .iter()
+                .any(|e| e.path == ep.path && e.method == ep.method)
+            {
                 found.push(ep);
             }
         }
@@ -299,10 +308,7 @@ mod tests {
 
     #[test]
     fn expand_versioned_no_duplicates() {
-        let paths = vec![
-            "/api/v1/users".to_string(),
-            "/api/v2/users".to_string(),
-        ];
+        let paths = vec!["/api/v1/users".to_string(), "/api/v2/users".to_string()];
         let extra = robots::expand_versioned_paths(&paths);
         assert!(!extra.contains(&"/api/v2/users".to_string()));
     }
@@ -311,21 +317,33 @@ mod tests {
     fn extract_api_paths_from_js_detects_fetch() {
         let js = r#"fetch("/api/users").then(r => r.json())"#;
         let paths = js::extract_api_paths_from_js(js);
-        assert!(paths.contains(&"/api/users".to_string()), "paths: {:?}", paths);
+        assert!(
+            paths.contains(&"/api/users".to_string()),
+            "paths: {:?}",
+            paths
+        );
     }
 
     #[test]
     fn extract_api_paths_from_js_detects_axios() {
         let js = r#"axios.get("/v1/products").then(cb)"#;
         let paths = js::extract_api_paths_from_js(js);
-        assert!(paths.contains(&"/v1/products".to_string()), "paths: {:?}", paths);
+        assert!(
+            paths.contains(&"/v1/products".to_string()),
+            "paths: {:?}",
+            paths
+        );
     }
 
     #[test]
     fn extract_api_paths_from_js_detects_string_literals() {
         let js = r#"const BASE = "/api/orders"; return fetch(BASE);"#;
         let paths = js::extract_api_paths_from_js(js);
-        assert!(paths.contains(&"/api/orders".to_string()), "paths: {:?}", paths);
+        assert!(
+            paths.contains(&"/api/orders".to_string()),
+            "paths: {:?}",
+            paths
+        );
     }
 
     #[test]
@@ -353,7 +371,8 @@ mod tests {
 
     #[test]
     fn extract_script_srcs_finds_src() {
-        let html = r#"<html><script src="/js/app.js"></script><script src='bundle.js'></script></html>"#;
+        let html =
+            r#"<html><script src="/js/app.js"></script><script src='bundle.js'></script></html>"#;
         let srcs = js::extract_script_srcs(html);
         assert!(srcs.contains(&"/js/app.js".to_string()), "srcs: {:?}", srcs);
         assert!(srcs.contains(&"bundle.js".to_string()), "srcs: {:?}", srcs);

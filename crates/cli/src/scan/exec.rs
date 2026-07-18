@@ -8,9 +8,9 @@ use rust_i18n::t;
 #[cfg(feature = "ai")]
 use std::path::Path;
 
+use nevelio_core::types::Endpoint;
 #[cfg(feature = "ai")]
 use nevelio_core::types::Finding;
-use nevelio_core::types::Endpoint;
 use nevelio_core::{AttackModule, HttpClient, ScanSession};
 use nevelio_reporting::{JsonReporter, ReportFormat};
 
@@ -20,22 +20,22 @@ use crate::tui::{self, ScanEvent};
 
 #[allow(clippy::too_many_arguments)]
 pub(super) async fn run_and_report(
-    session:        &mut ScanSession,
-    http_client:    &HttpClient,
+    session: &mut ScanSession,
+    http_client: &HttpClient,
     active_modules: &[&dyn AttackModule],
-    endpoints:      &[Endpoint],
-    module_names:   Vec<String>,
+    endpoints: &[Endpoint],
+    module_names: Vec<String>,
     completed_modules: &mut Vec<String>,
-    cfg_suppress:   Vec<SuppressRule>,
-    script_paths:   Vec<String>,
-    output_format:  OutputFormat,
-    use_tui:        bool,
+    cfg_suppress: Vec<SuppressRule>,
+    script_paths: Vec<String>,
+    output_format: OutputFormat,
+    use_tui: bool,
     ai_suggestions: bool,
-    ai_triage:      bool,
+    ai_triage: bool,
     ai_remediation: bool,
-    ai_report:      bool,
-    ai_payloads:    bool,
-    fail_on:        Option<FailOnArg>,
+    ai_report: bool,
+    ai_payloads: bool,
+    fail_on: Option<FailOnArg>,
 ) -> Result<()> {
     let out_dir = session.config.out_dir.clone();
 
@@ -47,7 +47,10 @@ pub(super) async fn run_and_report(
                 eprintln!("{}", t!("error.tui", msg = e.to_string().as_str()));
             }
         });
-        let _ = tx.send(ScanEvent::EndpointScanned { total: endpoints.len(), done: 0 });
+        let _ = tx.send(ScanEvent::EndpointScanned {
+            total: endpoints.len(),
+            done: 0,
+        });
         Some(tx)
     } else {
         None
@@ -71,7 +74,9 @@ pub(super) async fn run_and_report(
             for module in active_modules {
                 tracing::info!("Running module: {}", module.name());
                 if let Some(ref tx) = tui_tx {
-                    let _ = tx.send(ScanEvent::ModuleStarted { name: module.name().to_string() });
+                    let _ = tx.send(ScanEvent::ModuleStarted {
+                        name: module.name().to_string(),
+                    });
                 }
                 let findings = module.run(session, http_client, endpoints).await;
                 for f in findings {
@@ -82,7 +87,9 @@ pub(super) async fn run_and_report(
                 }
                 completed_modules.push(module.name().to_string());
                 if let Some(ref tx) = tui_tx {
-                    let _ = tx.send(ScanEvent::ModuleFinished { name: module.name().to_string() });
+                    let _ = tx.send(ScanEvent::ModuleFinished {
+                        name: module.name().to_string(),
+                    });
                 }
                 super::save_progress(&out_dir, completed_modules, &session.config.target);
                 let checkpoint = JsonReporter::generate(session);
@@ -112,7 +119,10 @@ pub(super) async fn run_and_report(
 
     for (i, _) in endpoints.iter().enumerate() {
         if let Some(ref tx) = tui_tx {
-            let _ = tx.send(ScanEvent::EndpointScanned { total: endpoints.len(), done: i + 1 });
+            let _ = tx.send(ScanEvent::EndpointScanned {
+                total: endpoints.len(),
+                done: i + 1,
+            });
         }
         if let Some(ref bar) = pb {
             bar.inc(1);
@@ -131,25 +141,32 @@ pub(super) async fn run_and_report(
 
     let before_count = session.findings.len();
     if !cfg_suppress.is_empty() {
-        session.findings.retain(|f| !cfg_suppress.iter().any(|r| r.matches(f)));
+        session
+            .findings
+            .retain(|f| !cfg_suppress.iter().any(|r| r.matches(f)));
     }
     if !script_paths.is_empty() {
         match crate::script::ScriptRunner::load(&script_paths) {
-            Ok(runner) => { session.findings = runner.filter_findings(&session.findings); }
+            Ok(runner) => {
+                session.findings = runner.filter_findings(&session.findings);
+            }
             Err(e) => eprintln!("  {}: {}", "Erreur chargement scripts".red(), e),
         }
     }
     let suppressed = before_count.saturating_sub(session.findings.len());
     if suppressed > 0 {
-        println!("  {} {} finding(s) supprimé(s) (règles + scripts).", "↩".yellow(), suppressed);
+        println!(
+            "  {} {} finding(s) supprimé(s) (règles + scripts).",
+            "↩".yellow(),
+            suppressed
+        );
     }
 
     session.finish();
 
     let report = JsonReporter::generate(session);
     let json_path = out_dir.join("findings.json");
-    JsonReporter::write_to_file(&report, &json_path)
-        .context(t!("error.json_write").to_string())?;
+    JsonReporter::write_to_file(&report, &json_path).context(t!("error.json_write").to_string())?;
 
     let report_format: ReportFormat = output_format.into();
     let report_path = if matches!(report_format, ReportFormat::Json) {
@@ -164,14 +181,21 @@ pub(super) async fn run_and_report(
 
     println!();
     crate::output::print_summary(&session.findings);
-    println!("{:<12}: {}", t!("scan.report_label"), report_path.display().to_string().cyan());
+    println!(
+        "{:<12}: {}",
+        t!("scan.report_label"),
+        report_path.display().to_string().cyan()
+    );
 
     if ai_suggestions {
         println!();
         println!("{}", t!("scan.ai_generating").cyan());
         match crate::ai_suggestions::generate_and_save(&session.findings, &out_dir).await {
             Ok(()) => {}
-            Err(e) => eprintln!("{}", t!("scan.ai_saved", path = e.to_string().as_str()).yellow()),
+            Err(e) => eprintln!(
+                "{}",
+                t!("scan.ai_saved", path = e.to_string().as_str()).yellow()
+            ),
         }
     }
 
@@ -186,7 +210,8 @@ pub(super) async fn run_and_report(
             ai_triage,
             ai_remediation,
             ai_report,
-        ).await;
+        )
+        .await;
     }
     #[cfg(feature = "ai")]
     if ai_payloads {
@@ -203,38 +228,47 @@ pub(super) async fn run_and_report(
 
 #[cfg(feature = "ai")]
 async fn run_ai_features(
-    findings:      &[Finding],
-    target:        &str,
-    lang:          &str,
-    out_dir:       &Path,
-    ai_triage:     bool,
+    findings: &[Finding],
+    target: &str,
+    lang: &str,
+    out_dir: &Path,
+    ai_triage: bool,
     ai_remediation: bool,
-    ai_report:     bool,
+    ai_report: bool,
 ) {
     use colored::Colorize;
     use nevelio_ai::{build_provider_for_task, CompletionOpts, FindingContext, TaskType};
 
     // Convert CLI findings to nevelio-ai FindingContext
-    let contexts: Vec<FindingContext> = findings.iter().map(|f| FindingContext {
-        id:             f.id.clone(),
-        title:          f.title.clone(),
-        severity:       f.severity.to_string(),
-        module:         f.module.clone(),
-        endpoint:       f.endpoint.clone(),
-        method:         f.method.clone(),
-        description:    f.description.clone(),
-        recommendation: f.recommendation.clone(),
-        proof:          f.proof.clone(),
-    }).collect();
+    let contexts: Vec<FindingContext> = findings
+        .iter()
+        .map(|f| FindingContext {
+            id: f.id.clone(),
+            title: f.title.clone(),
+            severity: f.severity.to_string(),
+            module: f.module.clone(),
+            endpoint: f.endpoint.clone(),
+            method: f.method.clone(),
+            description: f.description.clone(),
+            recommendation: f.recommendation.clone(),
+            proof: f.proof.clone(),
+        })
+        .collect();
 
     // Load provider from global config
     let global_cfg = match nevelio_config::load_global() {
-        Ok(c)  => c,
-        Err(e) => { eprintln!("  {} Config IA : {}", "✗".red(), e); return; }
+        Ok(c) => c,
+        Err(e) => {
+            eprintln!("  {} Config IA : {}", "✗".red(), e);
+            return;
+        }
     };
 
     if !global_cfg.ai.enabled || global_cfg.ai.providers.is_empty() {
-        eprintln!("  {} IA désactivée. Lancez : nevelio config init", "⚠".yellow());
+        eprintln!(
+            "  {} IA désactivée. Lancez : nevelio config init",
+            "⚠".yellow()
+        );
         return;
     }
 
@@ -245,10 +279,20 @@ async fn run_ai_features(
         println!();
         println!("{}", "  IA · Triage des findings...".cyan());
         let triage_provider = match build_provider_for_task(&global_cfg.ai, TaskType::Triage) {
-            Ok(p)  => p,
-            Err(e) => { eprintln!("  {} Provider triage : {}", "✗".red(), e); return; }
+            Ok(p) => p,
+            Err(e) => {
+                eprintln!("  {} Provider triage : {}", "✗".red(), e);
+                return;
+            }
         };
-        match nevelio_ai::triage::classify_findings(&contexts, lang, triage_provider.as_ref(), &opts).await {
+        match nevelio_ai::triage::classify_findings(
+            &contexts,
+            lang,
+            triage_provider.as_ref(),
+            &opts,
+        )
+        .await
+        {
             Err(e) => eprintln!("  {} Triage : {}", "✗".red(), e),
             Ok(results) => {
                 println!("  {:<8} {:<20} {:>4}  Raison", "Verdict", "Titre", "Conf");
@@ -256,19 +300,32 @@ async fn run_ai_features(
                 for r in &results {
                     let f = findings.iter().find(|f| f.id == r.id);
                     let title = f.map(|f| f.title.as_str()).unwrap_or("?");
-                    let title_trunc = if title.len() > 20 { &title[..18] } else { title };
+                    let title_trunc = if title.len() > 20 {
+                        &title[..18]
+                    } else {
+                        title
+                    };
                     let verdict_label = r.verdict.label(lang);
                     let verdict_colored = match r.verdict {
-                        nevelio_ai::triage::Verdict::TruePositive  => verdict_label.red().to_string(),
-                        nevelio_ai::triage::Verdict::FalsePositive => verdict_label.green().to_string(),
-                        nevelio_ai::triage::Verdict::Uncertain      => verdict_label.yellow().to_string(),
+                        nevelio_ai::triage::Verdict::TruePositive => {
+                            verdict_label.red().to_string()
+                        }
+                        nevelio_ai::triage::Verdict::FalsePositive => {
+                            verdict_label.green().to_string()
+                        }
+                        nevelio_ai::triage::Verdict::Uncertain => {
+                            verdict_label.yellow().to_string()
+                        }
                     };
                     let reason_trunc = if r.reason.len() > 38 {
                         format!("{}...", &r.reason[..35])
                     } else {
                         r.reason.clone()
                     };
-                    println!("  {:<8} {:<20} {:>3}%  {}", verdict_colored, title_trunc, r.confidence, reason_trunc);
+                    println!(
+                        "  {:<8} {:<20} {:>3}%  {}",
+                        verdict_colored, title_trunc, r.confidence, reason_trunc
+                    );
                 }
                 let path = out_dir.join("ai_triage.json");
                 if let Ok(json) = serde_json::to_string_pretty(&results) {
@@ -284,16 +341,21 @@ async fn run_ai_features(
         println!();
         println!("{}", "  IA · Génération des remédiations...".cyan());
         let rem_provider = match build_provider_for_task(&global_cfg.ai, TaskType::Remediation) {
-            Ok(p)  => p,
-            Err(e) => { eprintln!("  {} Provider remédiation : {}", "✗".red(), e); return; }
+            Ok(p) => p,
+            Err(e) => {
+                eprintln!("  {} Provider remédiation : {}", "✗".red(), e);
+                return;
+            }
         };
-        match nevelio_ai::remediation::suggest(&contexts, lang, rem_provider.as_ref(), &opts).await {
+        match nevelio_ai::remediation::suggest(&contexts, lang, rem_provider.as_ref(), &opts).await
+        {
             Err(e) => eprintln!("  {} Remédiation : {}", "✗".red(), e),
             Ok(results) => {
                 let path = out_dir.join("ai_remediation.md");
                 let mut md = format!(
                     "# Remédiations IA — Nevelio\n\n> Provider : {} · Modèle : {}\n\n---\n\n",
-                    rem_provider.name(), rem_provider.model()
+                    rem_provider.name(),
+                    rem_provider.model()
                 );
                 for r in &results {
                     let f = findings.iter().find(|f| f.id == r.id);
@@ -322,12 +384,23 @@ async fn run_ai_features(
         println!();
         println!("{}", "  IA · Génération du rapport narratif...".cyan());
         let report_provider = match build_provider_for_task(&global_cfg.ai, TaskType::Report) {
-            Ok(p)  => p,
-            Err(e) => { eprintln!("  {} Provider rapport : {}", "✗".red(), e); return; }
+            Ok(p) => p,
+            Err(e) => {
+                eprintln!("  {} Provider rapport : {}", "✗".red(), e);
+                return;
+            }
         };
         let mut report_opts = opts.clone();
         report_opts.max_tokens = 8192;
-        match nevelio_ai::report::narrative(&contexts, target, lang, report_provider.as_ref(), &report_opts).await {
+        match nevelio_ai::report::narrative(
+            &contexts,
+            target,
+            lang,
+            report_provider.as_ref(),
+            &report_opts,
+        )
+        .await
+        {
             Err(e) => eprintln!("  {} Rapport narratif : {}", "✗".red(), e),
             Ok(content) => {
                 use chrono::Utc;
@@ -352,13 +425,16 @@ async fn run_ai_features(
 async fn run_ai_payloads(endpoints: &[Endpoint], lang: &str, out_dir: &Path) {
     use colored::Colorize;
     use nevelio_ai::{
-        build_provider_for_task, CompletionOpts, PayloadContext, TaskType, VulnType,
-        generate_payloads,
+        build_provider_for_task, generate_payloads, CompletionOpts, PayloadContext, TaskType,
+        VulnType,
     };
 
     let global_cfg = match nevelio_config::load_global() {
-        Ok(c)  => c,
-        Err(e) => { eprintln!("  {} Config IA payloads : {}", "✗".red(), e); return; }
+        Ok(c) => c,
+        Err(e) => {
+            eprintln!("  {} Config IA payloads : {}", "✗".red(), e);
+            return;
+        }
     };
     if !global_cfg.ai.enabled || global_cfg.ai.providers.is_empty() {
         eprintln!("  {} IA désactivée — payloads non générés", "⚠".yellow());
@@ -366,8 +442,11 @@ async fn run_ai_payloads(endpoints: &[Endpoint], lang: &str, out_dir: &Path) {
     }
 
     let provider = match build_provider_for_task(&global_cfg.ai, TaskType::Payloads) {
-        Ok(p)  => p,
-        Err(e) => { eprintln!("  {} Provider payloads : {}", "✗".red(), e); return; }
+        Ok(p) => p,
+        Err(e) => {
+            eprintln!("  {} Provider payloads : {}", "✗".red(), e);
+            return;
+        }
     };
 
     println!();
@@ -385,12 +464,12 @@ async fn run_ai_payloads(endpoints: &[Endpoint], lang: &str, out_dir: &Path) {
 
     for ep in endpoints.iter().take(3) {
         let ctx = PayloadContext {
-            framework:  None,
-            waf:        None,
-            field:      None,
+            framework: None,
+            waf: None,
+            field: None,
             field_type: None,
-            endpoint:   ep.path.clone(),
-            method:     ep.method.clone(),
+            endpoint: ep.path.clone(),
+            method: ep.method.clone(),
         };
 
         for &vt in &vuln_types {

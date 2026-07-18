@@ -1,6 +1,6 @@
+use crate::types::{Finding, ScanConfig};
 use chrono::{DateTime, Utc};
 use std::collections::HashSet;
-use crate::types::{Finding, ScanConfig};
 
 pub struct ScanSession {
     pub id: String,
@@ -61,7 +61,14 @@ mod tests {
     #[test]
     fn dedup_prevents_duplicate_findings() {
         let mut session = make_session();
-        let f = Finding::new("SQLi", Severity::Critical, 9.8, "injection", "https://x.com/q", "GET");
+        let f = Finding::new(
+            "SQLi",
+            Severity::Critical,
+            9.8,
+            "injection",
+            "https://x.com/q",
+            "GET",
+        );
         session.add_finding(f.clone());
         session.add_finding(f);
         assert_eq!(session.findings.len(), 1);
@@ -70,8 +77,22 @@ mod tests {
     #[test]
     fn different_endpoints_not_deduped() {
         let mut session = make_session();
-        let f1 = Finding::new("SQLi", Severity::Critical, 9.8, "injection", "https://x.com/a", "GET");
-        let f2 = Finding::new("SQLi", Severity::Critical, 9.8, "injection", "https://x.com/b", "GET");
+        let f1 = Finding::new(
+            "SQLi",
+            Severity::Critical,
+            9.8,
+            "injection",
+            "https://x.com/a",
+            "GET",
+        );
+        let f2 = Finding::new(
+            "SQLi",
+            Severity::Critical,
+            9.8,
+            "injection",
+            "https://x.com/b",
+            "GET",
+        );
         session.add_finding(f1);
         session.add_finding(f2);
         assert_eq!(session.findings.len(), 2);
@@ -80,8 +101,22 @@ mod tests {
     #[test]
     fn different_titles_not_deduped() {
         let mut session = make_session();
-        let f1 = Finding::new("SQLi", Severity::Critical, 9.8, "injection", "https://x.com/q", "GET");
-        let f2 = Finding::new("XSS", Severity::High, 7.5, "injection", "https://x.com/q", "GET");
+        let f1 = Finding::new(
+            "SQLi",
+            Severity::Critical,
+            9.8,
+            "injection",
+            "https://x.com/q",
+            "GET",
+        );
+        let f2 = Finding::new(
+            "XSS",
+            Severity::High,
+            7.5,
+            "injection",
+            "https://x.com/q",
+            "GET",
+        );
         session.add_finding(f1);
         session.add_finding(f2);
         assert_eq!(session.findings.len(), 2);

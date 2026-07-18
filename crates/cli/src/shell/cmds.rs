@@ -27,22 +27,35 @@ pub(super) fn show_endpoint(ctx: &ShellCtx, args: &[&str]) {
         return;
     };
     let Some(ep) = ctx.endpoints.get(idx) else {
-        println!("  Index {} hors limite (0–{}).", idx, ctx.endpoints.len().saturating_sub(1));
+        println!(
+            "  Index {} hors limite (0–{}).",
+            idx,
+            ctx.endpoints.len().saturating_sub(1)
+        );
         return;
     };
 
     println!(
         "  {} {}  {}",
-        ep.method.bold(), ep.full_url.cyan(),
-        if ep.auth_required { "[auth]".yellow().to_string() } else { String::new() }
+        ep.method.bold(),
+        ep.full_url.cyan(),
+        if ep.auth_required {
+            "[auth]".yellow().to_string()
+        } else {
+            String::new()
+        }
     );
     if ep.parameters.is_empty() {
         println!("  Paramètres : aucun");
     } else {
         println!("  Paramètres :");
         for p in &ep.parameters {
-            println!("    • {} ({:?}){}", p.name.bold(), p.location,
-                if p.required { " *requis*" } else { "" });
+            println!(
+                "    • {} ({:?}){}",
+                p.name.bold(),
+                p.location,
+                if p.required { " *requis*" } else { "" }
+            );
         }
     }
 }
@@ -58,13 +71,19 @@ pub(super) fn list_findings(ctx: &ShellCtx) {
     for f in sorted {
         let sev = format!("[{}]", f.severity);
         let sev_colored = match f.severity {
-            nevelio_core::types::Severity::Critical    => sev.red().bold(),
-            nevelio_core::types::Severity::High        => sev.red(),
-            nevelio_core::types::Severity::Medium      => sev.yellow(),
-            nevelio_core::types::Severity::Low         => sev.blue(),
+            nevelio_core::types::Severity::Critical => sev.red().bold(),
+            nevelio_core::types::Severity::High => sev.red(),
+            nevelio_core::types::Severity::Medium => sev.yellow(),
+            nevelio_core::types::Severity::Low => sev.blue(),
             nevelio_core::types::Severity::Informative => sev.dimmed(),
         };
-        println!("  {} {} — {} {}", sev_colored, f.title.bold(), f.method.dimmed(), f.endpoint);
+        println!(
+            "  {} {} — {} {}",
+            sev_colored,
+            f.title.bold(),
+            f.method.dimmed(),
+            f.endpoint
+        );
     }
 }
 
@@ -104,7 +123,7 @@ pub(super) async fn replay_request(ctx: &ShellCtx, args: &[&str]) -> Result<()> 
     let req = match ep.method.as_str() {
         "POST" | "PUT" | "PATCH" => client.post(&ep.full_url),
         "DELETE" => client.delete(&ep.full_url),
-        _        => client.get(&ep.full_url),
+        _ => client.get(&ep.full_url),
     }
     .timeout(std::time::Duration::from_secs(10))
     .build()?;
@@ -117,14 +136,26 @@ pub(super) async fn replay_request(ctx: &ShellCtx, args: &[&str]) -> Result<()> 
     println!(
         "  {} {}",
         "Status:".bold(),
-        if status.is_success() { status.to_string().green() } else { status.to_string().red() }
+        if status.is_success() {
+            status.to_string().green()
+        } else {
+            status.to_string().red()
+        }
     );
 
     for (name, value) in headers.iter().take(10) {
-        println!("  {}: {}", name.as_str().dimmed(), value.to_str().unwrap_or("?"));
+        println!(
+            "  {}: {}",
+            name.as_str().dimmed(),
+            value.to_str().unwrap_or("?")
+        );
     }
 
-    let preview = if body.len() > 800 { &body[..800] } else { &body };
+    let preview = if body.len() > 800 {
+        &body[..800]
+    } else {
+        &body
+    };
     println!("\n{}", preview.dimmed());
     if body.len() > 800 {
         println!("  … ({} bytes total)", body.len());
@@ -145,20 +176,32 @@ pub(super) fn export_findings(ctx: &ShellCtx) -> Result<()> {
     let config = ScanConfig {
         target: target.clone(),
         profile: ScanProfile::Normal,
-        concurrency: 1, rate_limit: 10, timeout_ms: 5000,
-        auth_token: None, proxy: None, verbose: false,
-        out_dir: ctx.out_dir.clone(), modules: vec![],
-        dry_run: false, locale: "fr".to_string(),
+        concurrency: 1,
+        rate_limit: 10,
+        timeout_ms: 5000,
+        auth_token: None,
+        proxy: None,
+        verbose: false,
+        out_dir: ctx.out_dir.clone(),
+        modules: vec![],
+        dry_run: false,
+        locale: "fr".to_string(),
     };
 
     let mut session = nevelio_core::ScanSession::new(config);
-    for f in &ctx.findings { session.add_finding(f.clone()); }
+    for f in &ctx.findings {
+        session.add_finding(f.clone());
+    }
     session.finish();
     let report = JsonReporter::generate(&session);
 
     let path = ctx.out_dir.join("findings.json");
     JsonReporter::write_to_file(&report, &path)?;
 
-    println!("  {} Rapport exporté → {}", "✓".green(), path.display().to_string().cyan());
+    println!(
+        "  {} Rapport exporté → {}",
+        "✓".green(),
+        path.display().to_string().cyan()
+    );
     Ok(())
 }

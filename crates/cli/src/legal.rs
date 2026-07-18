@@ -82,6 +82,9 @@ pub fn display_banner() {
         format!("v{}", env!("CARGO_PKG_VERSION")).bold().white(),
         t!("legal.tagline").dimmed()
     );
-    println!("{}", "  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━".cyan());
+    println!(
+        "{}",
+        "  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━".cyan()
+    );
     println!();
 }

@@ -1,8 +1,8 @@
+use crate::types::ScanConfig;
 use anyhow::Result;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::{Mutex, Semaphore};
-use crate::types::ScanConfig;
 
 pub struct HttpClient {
     inner: reqwest::Client,

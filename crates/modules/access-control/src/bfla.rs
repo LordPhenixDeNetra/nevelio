@@ -7,11 +7,7 @@ use super::{get_with_token, ALL_METHODS, BFLA_ERROR_INDICATORS};
 // Check: BFLA — Broken Function Level Authorization
 // ---------------------------------------------------------------------------
 
-pub(super) async fn check_bfla(
-    client: &HttpClient,
-    ep: &Endpoint,
-    token: &str,
-) -> Vec<Finding> {
+pub(super) async fn check_bfla(client: &HttpClient, ep: &Endpoint, token: &str) -> Vec<Finding> {
     let mut findings = Vec::new();
 
     for method in ALL_METHODS {

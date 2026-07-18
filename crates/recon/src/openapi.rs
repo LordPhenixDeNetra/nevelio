@@ -130,7 +130,10 @@ paths:
         let spec = load_spec(yaml).expect("should parse valid YAML spec");
         let ops: Vec<_> = spec.operations().collect();
         assert_eq!(ops.len(), 2, "expected 2 operations");
-        let methods: Vec<String> = ops.iter().map(|(_, m, _)| format!("{}", m).to_uppercase()).collect();
+        let methods: Vec<String> = ops
+            .iter()
+            .map(|(_, m, _)| format!("{}", m).to_uppercase())
+            .collect();
         assert!(methods.contains(&"GET".to_string()));
         assert!(methods.contains(&"DELETE".to_string()));
     }

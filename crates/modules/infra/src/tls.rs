@@ -14,18 +14,15 @@ pub(super) async fn check_tls(client: &HttpClient, base: &str) -> Vec<Finding> {
             base,
             "GET",
         );
-        f.description =
-            "The API is accessible over HTTP without TLS encryption. All traffic \
+        f.description = "The API is accessible over HTTP without TLS encryption. All traffic \
              (including credentials and tokens) is transmitted in cleartext."
-                .to_string();
+            .to_string();
         f.recommendation =
             "Serve all API traffic exclusively over HTTPS (TLS 1.2+). Redirect HTTP → HTTPS \
              and set HSTS."
                 .to_string();
         f.cwe = Some("CWE-319".to_string());
-        f.references = vec![
-            "https://owasp.org/www-project-api-security/".to_string(),
-        ];
+        f.references = vec!["https://owasp.org/www-project-api-security/".to_string()];
         findings.push(f);
         return findings;
     }
@@ -36,10 +33,7 @@ pub(super) async fn check_tls(client: &HttpClient, base: &str) -> Vec<Finding> {
         let req = client.inner().get(&http_url).build();
         if let Ok(req) = req {
             // Use inner client directly so we don't follow redirects automatically
-            let result = client
-                .inner()
-                .execute(req)
-                .await;
+            let result = client.inner().execute(req).await;
             if let Ok(resp) = result {
                 let status = resp.status().as_u16();
                 // If the server returns 200 on HTTP instead of redirecting → finding

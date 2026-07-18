@@ -10,8 +10,8 @@ mod ldap;
 mod nosqli;
 mod sqli;
 mod ssti;
-mod xss;
 mod xpath;
+mod xss;
 mod xxe;
 
 // ---------------------------------------------------------------------------
@@ -19,25 +19,40 @@ mod xxe;
 // ---------------------------------------------------------------------------
 
 const SQLI_PAYLOADS: &str = include_str!("../../../../payloads/sqli.yaml");
-const XXE_PAYLOADS: &str  = include_str!("../../../../payloads/xxe.yaml");
-const XSS_PAYLOADS: &str  = include_str!("../../../../payloads/xss.yaml");
+const XXE_PAYLOADS: &str = include_str!("../../../../payloads/xxe.yaml");
+const XSS_PAYLOADS: &str = include_str!("../../../../payloads/xss.yaml");
 
 // LDAP error substrings
 pub(crate) const LDAP_ERRORS: &[&str] = &[
-    "ldap error", "invalid filter syntax", "bad search filter", "ldaperror",
-    "ldap_search", "javax.naming.directory", "com.sun.jndi", "0x57",
-    "NamingException", "InvalidSearchFilterException",
+    "ldap error",
+    "invalid filter syntax",
+    "bad search filter",
+    "ldaperror",
+    "ldap_search",
+    "javax.naming.directory",
+    "com.sun.jndi",
+    "0x57",
+    "NamingException",
+    "InvalidSearchFilterException",
 ];
 
 // XPath error substrings
 pub(crate) const XPATH_ERRORS: &[&str] = &[
-    "xpathexception", "invalid xpath", "xpath syntax error", "xmlxpathexception",
-    "org.xml.sax", "javax.xml.xpath", "xsltransformexception", "xpath expression",
-    "invalid token", "unexpected token",
+    "xpathexception",
+    "invalid xpath",
+    "xpath syntax error",
+    "xmlxpathexception",
+    "org.xml.sax",
+    "javax.xml.xpath",
+    "xsltransformexception",
+    "xpath expression",
+    "invalid token",
+    "unexpected token",
 ];
 
 // HTTP headers to test for SSTI
-pub(crate) const SSTI_HEADERS: &[&str] = &["User-Agent", "X-Forwarded-For", "Referer", "X-Custom-Name"];
+pub(crate) const SSTI_HEADERS: &[&str] =
+    &["User-Agent", "X-Forwarded-For", "Referer", "X-Custom-Name"];
 
 // SQL error substrings that indicate a reflected database error
 pub(crate) const SQL_ERRORS: &[&str] = &[
@@ -61,7 +76,9 @@ pub(crate) const SQL_ERRORS: &[&str] = &[
 ];
 
 // Fallback generic parameter names when no spec params are known
-const GENERIC_PARAMS: &[&str] = &["id", "q", "search", "query", "input", "name", "user", "filter"];
+const GENERIC_PARAMS: &[&str] = &[
+    "id", "q", "search", "query", "input", "name", "user", "filter",
+];
 
 // Time-based threshold in milliseconds
 pub(crate) const TIME_THRESHOLD_MS: u128 = 4_000;
@@ -196,12 +213,18 @@ impl AttackModule for InjectionModule {
 
             for param in &param_names {
                 findings.extend(sqli::check_sqli(client, ep, param, &sqli_file.payloads).await);
-                findings.extend(nosqli::check_nosqli(client, ep, param, &sqli_file.nosql_payloads).await);
-                findings.extend(ssti::check_ssti(client, ep, param, &sqli_file.ssti_payloads).await);
-                findings.extend(cmdi::check_cmdi(client, ep, param, &sqli_file.cmdi_payloads).await);
+                findings.extend(
+                    nosqli::check_nosqli(client, ep, param, &sqli_file.nosql_payloads).await,
+                );
+                findings
+                    .extend(ssti::check_ssti(client, ep, param, &sqli_file.ssti_payloads).await);
+                findings
+                    .extend(cmdi::check_cmdi(client, ep, param, &sqli_file.cmdi_payloads).await);
                 findings.extend(xss::check_xss(client, ep, param, &xss_file.payloads).await);
-                findings.extend(ldap::check_ldap(client, ep, param, &sqli_file.ldap_payloads).await);
-                findings.extend(xpath::check_xpath(client, ep, param, &sqli_file.xpath_payloads).await);
+                findings
+                    .extend(ldap::check_ldap(client, ep, param, &sqli_file.ldap_payloads).await);
+                findings
+                    .extend(xpath::check_xpath(client, ep, param, &sqli_file.xpath_payloads).await);
             }
 
             // CSV injection: only on export-like endpoints
@@ -247,7 +270,8 @@ pub(crate) fn inject_query(base_url: &str, param: &str, payload: &str) -> String
 /// `{"$gt":""}` → `?param%5B%24gt%5D=` (Express/PHP bracket notation).
 /// Falls back to `inject_query` for non-object JSON values.
 pub(crate) fn inject_nosql_query(base_url: &str, param: &str, json_str: &str) -> String {
-    if let Ok(serde_json::Value::Object(map)) = serde_json::from_str::<serde_json::Value>(json_str) {
+    if let Ok(serde_json::Value::Object(map)) = serde_json::from_str::<serde_json::Value>(json_str)
+    {
         let sep = if base_url.contains('?') { '&' } else { '?' };
         let mut url = base_url.to_string();
         let mut first = true;
@@ -279,8 +303,9 @@ pub(crate) fn urlencoding_encode(s: &str) -> String {
     let mut out = String::with_capacity(s.len());
     for b in s.bytes() {
         match b {
-            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9'
-            | b'-' | b'_' | b'.' | b'~' => out.push(b as char),
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => {
+                out.push(b as char)
+            }
             _ => out.push_str(&format!("%{:02X}", b)),
         }
     }
@@ -290,7 +315,10 @@ pub(crate) fn urlencoding_encode(s: &str) -> String {
 pub(crate) async fn get_baseline(client: &HttpClient, ep: &Endpoint) -> Option<(u16, usize)> {
     let req = client
         .inner()
-        .request(ep.method.parse().unwrap_or(reqwest::Method::GET), &ep.full_url)
+        .request(
+            ep.method.parse().unwrap_or(reqwest::Method::GET),
+            &ep.full_url,
+        )
         .build()
         .ok()?;
     let resp = client.send(req).await.ok()?;
@@ -351,14 +379,16 @@ mod tests {
 
     #[test]
     fn inject_nosql_query_bracket_notation() {
-        let url = inject_nosql_query(
-            "https://api.example.com/users",
-            "username",
-            r#"{"$gt":""}"#,
-        );
+        let url = inject_nosql_query("https://api.example.com/users", "username", r#"{"$gt":""}"#);
         // Should use bracket notation, not encode the JSON object as a string value
-        assert!(url.contains("username%5B%24gt%5D="), "expected bracket notation, got: {url}");
-        assert!(!url.contains("%7B"), "should not encode JSON object as string value: {url}");
+        assert!(
+            url.contains("username%5B%24gt%5D="),
+            "expected bracket notation, got: {url}"
+        );
+        assert!(
+            !url.contains("%7B"),
+            "should not encode JSON object as string value: {url}"
+        );
     }
 
     #[test]
@@ -376,6 +406,9 @@ mod tests {
             r#"{"$ne":null}"#,
         );
         assert!(url.contains("page=1"), "existing params preserved: {url}");
-        assert!(url.contains("id%5B%24ne%5D="), "bracket notation appended: {url}");
+        assert!(
+            url.contains("id%5B%24ne%5D="),
+            "bracket notation appended: {url}"
+        );
     }
 }

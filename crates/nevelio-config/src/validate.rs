@@ -1,9 +1,16 @@
 use crate::types::ResolvedConfig;
 
-const KNOWN_LANGS: &[&str]      = &["fr", "en", "es"];
-const KNOWN_PROFILES: &[&str]   = &["stealth", "normal", "aggressive"];
-const KNOWN_FORMATS: &[&str]    = &["text", "json", "html", "markdown"];
-const KNOWN_PROVIDERS: &[&str]  = &["anthropic", "openai", "mistral", "groq", "ollama", "bedrock"];
+const KNOWN_LANGS: &[&str] = &["fr", "en", "es"];
+const KNOWN_PROFILES: &[&str] = &["stealth", "normal", "aggressive"];
+const KNOWN_FORMATS: &[&str] = &["text", "json", "html", "markdown"];
+const KNOWN_PROVIDERS: &[&str] = &[
+    "anthropic",
+    "openai",
+    "mistral",
+    "groq",
+    "ollama",
+    "bedrock",
+];
 
 /// A single semantic validation error.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -16,7 +23,10 @@ pub struct ValidationError {
 
 impl ValidationError {
     fn new(field: impl Into<String>, message: impl Into<String>) -> Self {
-        Self { field: field.into(), message: message.into() }
+        Self {
+            field: field.into(),
+            message: message.into(),
+        }
     }
 }
 
@@ -78,7 +88,10 @@ fn validate_scan(cfg: &ResolvedConfig, errors: &mut Vec<ValidationError>) {
     } else if scan.timeout_secs > 3600 {
         errors.push(ValidationError::new(
             "scan.timeout_secs",
-            format!("timeout {}s exceeds maximum of 3600s (1 hour)", scan.timeout_secs),
+            format!(
+                "timeout {}s exceeds maximum of 3600s (1 hour)",
+                scan.timeout_secs
+            ),
         ));
     }
 
@@ -136,8 +149,8 @@ fn validate_ai(cfg: &ResolvedConfig, errors: &mut Vec<ValidationError>) {
 
     // routing fields
     let routing_checks = [
-        ("ai.routing.triage",   cfg.ai.routing.triage.as_deref()),
-        ("ai.routing.report",   cfg.ai.routing.report.as_deref()),
+        ("ai.routing.triage", cfg.ai.routing.triage.as_deref()),
+        ("ai.routing.report", cfg.ai.routing.report.as_deref()),
         ("ai.routing.payloads", cfg.ai.routing.payloads.as_deref()),
         ("ai.routing.fallback", cfg.ai.routing.fallback.as_deref()),
     ];
@@ -210,11 +223,15 @@ fn validate_user(cfg: &ResolvedConfig, errors: &mut Vec<ValidationError>) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::types::{GlobalConfig, ProviderConfig, ResolvedConfig};
     use crate::merge::{merge, CliOverrides};
+    use crate::types::{GlobalConfig, ProviderConfig, ResolvedConfig};
 
     fn resolved_default() -> ResolvedConfig {
-        merge(GlobalConfig::default(), Default::default(), CliOverrides::default())
+        merge(
+            GlobalConfig::default(),
+            Default::default(),
+            CliOverrides::default(),
+        )
     }
 
     #[test]
@@ -228,7 +245,11 @@ mod tests {
         let mut cfg = resolved_default();
         cfg.scan.lang = "xx".to_string();
         let errs = validate(&cfg);
-        assert!(errs.iter().any(|e| e.field == "scan.lang"), "Expected scan.lang error, got: {:?}", errs);
+        assert!(
+            errs.iter().any(|e| e.field == "scan.lang"),
+            "Expected scan.lang error, got: {:?}",
+            errs
+        );
     }
 
     #[test]
@@ -236,7 +257,10 @@ mod tests {
         let mut cfg = resolved_default();
         cfg.scan.profile = Some("turbo".to_string());
         let errs = validate(&cfg);
-        assert!(errs.iter().any(|e| e.field == "scan.profile"), "Expected scan.profile error");
+        assert!(
+            errs.iter().any(|e| e.field == "scan.profile"),
+            "Expected scan.profile error"
+        );
     }
 
     #[test]
@@ -293,10 +317,13 @@ mod tests {
         let mut cfg = resolved_default();
         cfg.ai.enabled = true;
         cfg.ai.provider = Some("my_custom".to_string());
-        cfg.ai.providers.insert("my_custom".to_string(), ProviderConfig {
-            model: "gpt-custom".to_string(),
-            ..Default::default()
-        });
+        cfg.ai.providers.insert(
+            "my_custom".to_string(),
+            ProviderConfig {
+                model: "gpt-custom".to_string(),
+                ..Default::default()
+            },
+        );
         assert!(validate(&cfg).is_empty());
     }
 
@@ -315,11 +342,14 @@ mod tests {
         let mut cfg = resolved_default();
         cfg.ai.enabled = true;
         cfg.ai.provider = Some("anthropic".to_string());
-        cfg.ai.providers.insert("anthropic".to_string(), ProviderConfig {
-            model: "claude-sonnet-4-6".to_string(),
-            temperature: Some(3.5),
-            ..Default::default()
-        });
+        cfg.ai.providers.insert(
+            "anthropic".to_string(),
+            ProviderConfig {
+                model: "claude-sonnet-4-6".to_string(),
+                temperature: Some(3.5),
+                ..Default::default()
+            },
+        );
         let errs = validate(&cfg);
         assert!(errs.iter().any(|e| e.field.contains("temperature")));
     }
@@ -329,10 +359,13 @@ mod tests {
         let mut cfg = resolved_default();
         cfg.ai.enabled = true;
         cfg.ai.provider = Some("anthropic".to_string());
-        cfg.ai.providers.insert("anthropic".to_string(), ProviderConfig {
-            model: String::new(),
-            ..Default::default()
-        });
+        cfg.ai.providers.insert(
+            "anthropic".to_string(),
+            ProviderConfig {
+                model: String::new(),
+                ..Default::default()
+            },
+        );
         let errs = validate(&cfg);
         assert!(errs.iter().any(|e| e.field.contains("model")));
     }
@@ -359,6 +392,10 @@ mod tests {
         cfg.scan.timeout_secs = 0;
         cfg.output.format = "pdf".to_string();
         let errs = validate(&cfg);
-        assert!(errs.len() >= 3, "Expected at least 3 errors, got: {:?}", errs);
+        assert!(
+            errs.len() >= 3,
+            "Expected at least 3 errors, got: {:?}",
+            errs
+        );
     }
 }

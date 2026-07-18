@@ -55,9 +55,8 @@ pub(super) async fn check_csv_injection(
                  Utiliser une bibliothèque de génération CSV qui gère automatiquement l'échappement."
                     .to_string();
             f.cwe = Some("CWE-1236".to_string());
-            f.references = vec![
-                "https://owasp.org/www-community/attacks/CSV_Injection".to_string(),
-            ];
+            f.references =
+                vec!["https://owasp.org/www-community/attacks/CSV_Injection".to_string()];
             return vec![f];
         }
     }

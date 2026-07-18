@@ -54,7 +54,9 @@ pub async fn handle_agent(args: AgentArgs) -> Result<()> {
 
     let provider = build_provider(&global_cfg.ai)?;
 
-    let out_dir = args.out_dir.clone()
+    let out_dir = args
+        .out_dir
+        .clone()
         .unwrap_or_else(|| PathBuf::from("./nevelio-results"));
     std::fs::create_dir_all(&out_dir)?;
 
@@ -63,7 +65,10 @@ pub async fn handle_agent(args: AgentArgs) -> Result<()> {
     println!();
     println!("  {} {} — Agent autonome", "◆".cyan(), args.target.bold());
     if args.dry_run {
-        println!("  {} dry-run activé (aucune requête HTTP réelle)", "⚠".yellow());
+        println!(
+            "  {} dry-run activé (aucune requête HTTP réelle)",
+            "⚠".yellow()
+        );
     }
     println!(
         "  {} max {} itérations · {} requêtes",
@@ -92,7 +97,7 @@ pub async fn handle_agent(args: AgentArgs) -> Result<()> {
             .build()?;
         match nevelio_recon::discover_endpoints(&args.target, &raw_client, false).await {
             Ok(eps) => eps.into_iter().map(|e| e.full_url).collect(),
-            Err(_)  => {
+            Err(_) => {
                 println!(
                     "  {} Découverte échouée — l'agent démarre avec la cible uniquement",
                     "⚠".yellow()
@@ -109,12 +114,12 @@ pub async fn handle_agent(args: AgentArgs) -> Result<()> {
     println!();
 
     let config = AgentConfig {
-        target:         args.target.clone(),
+        target: args.target.clone(),
         max_iterations: args.max_iterations,
-        max_requests:   args.max_requests,
-        ai_budget:      args.ai_budget,
-        dry_run:        args.dry_run,
-        lang:           lang.clone(),
+        max_requests: args.max_requests,
+        ai_budget: args.ai_budget,
+        dry_run: args.dry_run,
+        lang: lang.clone(),
     };
 
     let opts = CompletionOpts::default();
@@ -134,7 +139,11 @@ pub async fn handle_agent(args: AgentArgs) -> Result<()> {
     );
 
     if result.tokens_spent > 0 {
-        println!("  {} ~{} tokens consommés", "→".dimmed(), result.tokens_spent);
+        println!(
+            "  {} ~{} tokens consommés",
+            "→".dimmed(),
+            result.tokens_spent
+        );
     }
     println!();
 
@@ -151,10 +160,10 @@ pub async fn handle_agent(args: AgentArgs) -> Result<()> {
         for f in &result.findings {
             let sev = match f.severity.to_uppercase().as_str() {
                 "CRITICAL" => f.severity.red().bold().to_string(),
-                "HIGH"     => f.severity.red().to_string(),
-                "MEDIUM"   => f.severity.yellow().to_string(),
-                "LOW"      => f.severity.blue().to_string(),
-                _          => f.severity.dimmed().to_string(),
+                "HIGH" => f.severity.red().to_string(),
+                "MEDIUM" => f.severity.yellow().to_string(),
+                "LOW" => f.severity.blue().to_string(),
+                _ => f.severity.dimmed().to_string(),
             };
             println!(
                 "  [{}] {} — {} {}",

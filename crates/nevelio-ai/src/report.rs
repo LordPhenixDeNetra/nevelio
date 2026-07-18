@@ -9,10 +9,10 @@ use crate::triage::FindingContext;
 /// the overall risk posture, and key remediation priorities.
 pub async fn narrative(
     findings: &[FindingContext],
-    target:   &str,
-    lang:     &str,
+    target: &str,
+    lang: &str,
     provider: &dyn AiProvider,
-    opts:     &CompletionOpts,
+    opts: &CompletionOpts,
 ) -> Result<String> {
     if findings.is_empty() {
         return Ok(match lang {
@@ -29,12 +29,22 @@ pub async fn narrative(
     };
 
     let severity_counts = count_severities(findings);
-    let findings_md: String = findings.iter().enumerate().map(|(i, f)| {
-        format!(
-            "{}. **[{}]** {} — `{} {}` (module: {})\n   {}\n",
-            i + 1, f.severity, f.title, f.method, f.endpoint, f.module, f.description
-        )
-    }).collect();
+    let findings_md: String = findings
+        .iter()
+        .enumerate()
+        .map(|(i, f)| {
+            format!(
+                "{}. **[{}]** {} — `{} {}` (module: {})\n   {}\n",
+                i + 1,
+                f.severity,
+                f.title,
+                f.method,
+                f.endpoint,
+                f.module,
+                f.description
+            )
+        })
+        .collect();
 
     let (instruction, sections) = match lang {
         "en" => (
@@ -65,42 +75,45 @@ Write a penetration test narrative report with these sections:
 
 Use Markdown. Be specific, reference actual endpoints and findings."#,
         instruction = instruction,
-        target      = target,
-        critical    = severity_counts.critical,
-        high        = severity_counts.high,
-        medium      = severity_counts.medium,
-        low         = severity_counts.low,
-        info        = severity_counts.informative,
+        target = target,
+        critical = severity_counts.critical,
+        high = severity_counts.high,
+        medium = severity_counts.medium,
+        low = severity_counts.low,
+        info = severity_counts.informative,
         findings_md = findings_md,
-        sections    = sections,
+        sections = sections,
     );
 
-    let messages = vec![
-        Message::system(system),
-        Message::user(user_content),
-    ];
+    let messages = vec![Message::system(system), Message::user(user_content)];
 
     provider.complete(&messages, opts).await
 }
 
 struct SeverityCounts {
-    critical:    usize,
-    high:        usize,
-    medium:      usize,
-    low:         usize,
+    critical: usize,
+    high: usize,
+    medium: usize,
+    low: usize,
     informative: usize,
 }
 
 fn count_severities(findings: &[FindingContext]) -> SeverityCounts {
-    let mut counts = SeverityCounts { critical: 0, high: 0, medium: 0, low: 0, informative: 0 };
+    let mut counts = SeverityCounts {
+        critical: 0,
+        high: 0,
+        medium: 0,
+        low: 0,
+        informative: 0,
+    };
     for f in findings {
         match f.severity.to_uppercase().as_str() {
-            "CRITICAL"    => counts.critical    += 1,
-            "HIGH"        => counts.high        += 1,
-            "MEDIUM"      => counts.medium      += 1,
-            "LOW"         => counts.low         += 1,
+            "CRITICAL" => counts.critical += 1,
+            "HIGH" => counts.high += 1,
+            "MEDIUM" => counts.medium += 1,
+            "LOW" => counts.low += 1,
             "INFORMATIVE" => counts.informative += 1,
-            _             => {}
+            _ => {}
         }
     }
     counts

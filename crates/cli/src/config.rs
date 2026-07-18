@@ -116,7 +116,9 @@ impl NevelioConfig {
         if let Some(ref var) = self.auth_token_env {
             match std::env::var(var) {
                 Ok(token) => return Some(token),
-                Err(_) => eprintln!("Warning: env var {var} not set (auth_token_env in .nevelio.toml)"),
+                Err(_) => {
+                    eprintln!("Warning: env var {var} not set (auth_token_env in .nevelio.toml)")
+                }
             }
         }
         self.auth_token.clone()
@@ -150,7 +152,10 @@ mod tests {
         assert_eq!(cfg.profile.as_deref(), Some("stealth"));
         assert_eq!(cfg.output.as_deref(), Some("html"));
         assert_eq!(cfg.timeout, Some(10));
-        assert_eq!(cfg.modules.as_deref(), Some(&["auth".to_string(), "injection".to_string()][..]));
+        assert_eq!(
+            cfg.modules.as_deref(),
+            Some(&["auth".to_string(), "injection".to_string()][..])
+        );
     }
 
     #[test]
@@ -160,7 +165,10 @@ mod tests {
             auth_token_env: Some("__NEVELIO_TEST_TOKEN".to_string()),
             ..Default::default()
         };
-        assert_eq!(cfg.resolved_auth_token().as_deref(), Some("Bearer test-token"));
+        assert_eq!(
+            cfg.resolved_auth_token().as_deref(),
+            Some("Bearer test-token")
+        );
         std::env::remove_var("__NEVELIO_TEST_TOKEN");
     }
 

@@ -145,7 +145,14 @@ mod tests {
 
     #[test]
     fn finding_new_has_id_and_fields() {
-        let f = Finding::new("XSS", Severity::High, 7.5, "injection", "https://x.com/q", "GET");
+        let f = Finding::new(
+            "XSS",
+            Severity::High,
+            7.5,
+            "injection",
+            "https://x.com/q",
+            "GET",
+        );
         assert!(!f.id.is_empty());
         assert_eq!(f.title, "XSS");
         assert_eq!(f.severity, Severity::High);

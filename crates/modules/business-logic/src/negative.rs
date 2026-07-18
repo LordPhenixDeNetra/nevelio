@@ -9,12 +9,12 @@ pub(super) async fn check_negative_values(
     token: &str,
 ) -> Vec<Finding> {
     let test_values: &[(&str, serde_json::Value)] = &[
-        ("-1",           serde_json::json!(-1)),
-        ("-0.01",        serde_json::json!(-0.01)),
-        ("0",            serde_json::json!(0)),
-        ("2147483647",   serde_json::json!(2147483647i64)),
-        ("-2147483648",  serde_json::json!(-2147483648i64)),
-        ("9999999999",   serde_json::json!(9999999999i64)),
+        ("-1", serde_json::json!(-1)),
+        ("-0.01", serde_json::json!(-0.01)),
+        ("0", serde_json::json!(0)),
+        ("2147483647", serde_json::json!(2147483647i64)),
+        ("-2147483648", serde_json::json!(-2147483648i64)),
+        ("9999999999", serde_json::json!(9999999999i64)),
     ];
 
     for field in NUMERIC_FIELD_NAMES {

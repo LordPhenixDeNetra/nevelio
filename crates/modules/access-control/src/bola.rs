@@ -7,11 +7,7 @@ use super::{extract_numeric_id, get_with_token, ALL_METHODS, BFLA_ERROR_INDICATO
 // Check: BOLA — Broken Object Level Authorization (cross-verb)
 // ---------------------------------------------------------------------------
 
-pub(super) async fn check_bola(
-    client: &HttpClient,
-    ep: &Endpoint,
-    token: &str,
-) -> Vec<Finding> {
+pub(super) async fn check_bola(client: &HttpClient, ep: &Endpoint, token: &str) -> Vec<Finding> {
     // Only endpoints that have a resource ID in the path
     let Some((prefix, id, suffix)) = extract_numeric_id(&ep.full_url) else {
         return vec![];
@@ -40,8 +36,12 @@ pub(super) async fn check_bola(
 
         if matches!(status, 200..=299) && body != baseline_body && !body.is_empty() {
             let body_lower = String::from_utf8_lossy(&body).to_lowercase();
-            let is_error = BFLA_ERROR_INDICATORS.iter().any(|kw| body_lower.contains(kw));
-            if is_error { continue; }
+            let is_error = BFLA_ERROR_INDICATORS
+                .iter()
+                .any(|kw| body_lower.contains(kw));
+            if is_error {
+                continue;
+            }
 
             let mut f = Finding::new(
                 format!("BOLA — {} /{}/ via {}", ep.path, other_id, method),
@@ -58,7 +58,12 @@ pub(super) async fn check_bola(
             );
             f.proof = format!(
                 "{} {} → HTTP {} ({} octets) — ID substitué : {} → {}",
-                method, other_url, status, body.len(), id, other_id
+                method,
+                other_url,
+                status,
+                body.len(),
+                id,
+                other_id
             );
             f.recommendation =
                 "Vérifier côté serveur que la ressource demandée appartient à l'utilisateur \

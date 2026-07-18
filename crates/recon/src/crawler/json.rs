@@ -57,19 +57,15 @@ pub(super) fn extract_api_paths_from_json(body: &str, base_host: &str) -> Vec<St
     paths
 }
 
-pub(super) fn collect_json_paths(
-    val: &serde_json::Value,
-    base_host: &str,
-    out: &mut Vec<String>,
-) {
+pub(super) fn collect_json_paths(val: &serde_json::Value, base_host: &str, out: &mut Vec<String>) {
     match val {
         serde_json::Value::Object(map) => {
             for (key, v) in map {
                 let k = key.to_lowercase();
                 // Interesting keys that may contain URL/path values
                 if [
-                    "href", "url", "uri", "link", "path", "endpoint", "next", "prev",
-                    "previous", "self", "first", "last", "related",
+                    "href", "url", "uri", "link", "path", "endpoint", "next", "prev", "previous",
+                    "self", "first", "last", "related",
                 ]
                 .contains(&k.as_str())
                 {
@@ -98,9 +94,7 @@ pub(super) fn extract_path_from_str(s: &str, base_host: &str) -> Option<String> 
     if s.starts_with("http") {
         if s.contains(base_host) {
             // Strip the host part, keep the path
-            let after_host = s
-                .find(base_host)
-                .map(|i| &s[i + base_host.len()..])?;
+            let after_host = s.find(base_host).map(|i| &s[i + base_host.len()..])?;
             let path = after_host.split('?').next().unwrap_or(after_host);
             if path.starts_with('/') && path.len() > 1 {
                 return Some(path.to_string());

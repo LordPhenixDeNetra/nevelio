@@ -1,8 +1,8 @@
+use rust_i18n::t;
 use std::io;
 use std::sync::mpsc;
 use std::time::Duration;
 use std::time::Instant;
-use rust_i18n::t;
 
 use crossterm::{
     event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyEventKind},
@@ -52,7 +52,10 @@ impl TuiApp {
         Self {
             modules: module_names
                 .iter()
-                .map(|n| ModuleState { name: n.clone(), done: false })
+                .map(|n| ModuleState {
+                    name: n.clone(),
+                    done: false,
+                })
                 .collect(),
             findings: Vec::new(),
             endpoints_total: 0,
@@ -82,11 +85,31 @@ impl TuiApp {
     }
 
     fn severity_counts(&self) -> (usize, usize, usize, usize, usize) {
-        let c = self.findings.iter().filter(|f| f.severity == Severity::Critical).count();
-        let h = self.findings.iter().filter(|f| f.severity == Severity::High).count();
-        let m = self.findings.iter().filter(|f| f.severity == Severity::Medium).count();
-        let l = self.findings.iter().filter(|f| f.severity == Severity::Low).count();
-        let i = self.findings.iter().filter(|f| f.severity == Severity::Informative).count();
+        let c = self
+            .findings
+            .iter()
+            .filter(|f| f.severity == Severity::Critical)
+            .count();
+        let h = self
+            .findings
+            .iter()
+            .filter(|f| f.severity == Severity::High)
+            .count();
+        let m = self
+            .findings
+            .iter()
+            .filter(|f| f.severity == Severity::Medium)
+            .count();
+        let l = self
+            .findings
+            .iter()
+            .filter(|f| f.severity == Severity::Low)
+            .count();
+        let i = self
+            .findings
+            .iter()
+            .filter(|f| f.severity == Severity::Informative)
+            .count();
         (c, h, m, l, i)
     }
 }
@@ -140,7 +163,14 @@ fn draw_header(f: &mut Frame, app: &TuiApp, area: Rect) {
     let gauge = Gauge::default()
         .block(
             Block::default()
-                .title(t!("tui.header_title", count = app.endpoints_total, status = status.as_str()).to_string())
+                .title(
+                    t!(
+                        "tui.header_title",
+                        count = app.endpoints_total,
+                        status = status.as_str()
+                    )
+                    .to_string(),
+                )
                 .borders(Borders::ALL)
                 .border_style(Style::default().fg(Color::Cyan)),
         )
@@ -180,10 +210,14 @@ fn draw_modules(f: &mut Frame, app: &TuiApp, area: Rect) {
 
 fn draw_findings(f: &mut Frame, app: &TuiApp, area: Rect) {
     let header = Row::new(vec![
-        Cell::from(t!("tui.col_severity").to_string()).style(Style::default().add_modifier(Modifier::BOLD)),
-        Cell::from(t!("tui.col_module").to_string()).style(Style::default().add_modifier(Modifier::BOLD)),
-        Cell::from(t!("tui.col_title").to_string()).style(Style::default().add_modifier(Modifier::BOLD)),
-        Cell::from(t!("tui.col_endpoint").to_string()).style(Style::default().add_modifier(Modifier::BOLD)),
+        Cell::from(t!("tui.col_severity").to_string())
+            .style(Style::default().add_modifier(Modifier::BOLD)),
+        Cell::from(t!("tui.col_module").to_string())
+            .style(Style::default().add_modifier(Modifier::BOLD)),
+        Cell::from(t!("tui.col_title").to_string())
+            .style(Style::default().add_modifier(Modifier::BOLD)),
+        Cell::from(t!("tui.col_endpoint").to_string())
+            .style(Style::default().add_modifier(Modifier::BOLD)),
     ])
     .style(Style::default().fg(Color::Yellow));
 
@@ -207,8 +241,13 @@ fn draw_findings(f: &mut Frame, app: &TuiApp, area: Rect) {
     let title = t!(
         "tui.findings_panel",
         total = app.findings.len(),
-        c = c, h = h, m = m, l = l, i = i
-    ).to_string();
+        c = c,
+        h = h,
+        m = m,
+        l = l,
+        i = i
+    )
+    .to_string();
 
     let table = Table::new(
         rows,

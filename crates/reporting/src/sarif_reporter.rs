@@ -2,8 +2,8 @@ use anyhow::Result;
 use serde::Serialize;
 use std::path::Path;
 
-use nevelio_core::types::{Finding, Severity};
 use crate::report_types::ScanReport;
+use nevelio_core::types::{Finding, Severity};
 
 // ---------------------------------------------------------------------------
 // SARIF 2.1.0 structures
@@ -143,7 +143,9 @@ fn build_rules(findings: &[Finding]) -> Vec<SarifRule> {
                     .next()
                     .unwrap_or("Finding")
                     .to_string(),
-                short_description: SarifText { text: f.title.clone() },
+                short_description: SarifText {
+                    text: f.title.clone(),
+                },
                 help_uri: help,
                 properties: SarifRuleProps {
                     security_severity: format!("{:.1}", f.cvss_score),
@@ -160,11 +162,17 @@ fn build_result(f: &Finding) -> SarifResult {
         rule_id: rule_id(f),
         level: severity_to_level(&f.severity),
         message: SarifText {
-            text: if f.description.is_empty() { f.title.clone() } else { f.description.clone() },
+            text: if f.description.is_empty() {
+                f.title.clone()
+            } else {
+                f.description.clone()
+            },
         },
         locations: vec![SarifLocation {
             physical_location: SarifPhysicalLocation {
-                artifact_location: SarifArtifactLocation { uri: f.endpoint.clone() },
+                artifact_location: SarifArtifactLocation {
+                    uri: f.endpoint.clone(),
+                },
             },
         }],
         properties: SarifResultProps {
@@ -272,9 +280,23 @@ mod tests {
     #[test]
     fn sarif_deduplicates_rules() {
         // Two findings with same CWE should produce one rule
-        let mut f1 = Finding::new("SQLi boolean", Severity::Critical, 9.8, "injection", "https://x.com/a", "GET");
+        let mut f1 = Finding::new(
+            "SQLi boolean",
+            Severity::Critical,
+            9.8,
+            "injection",
+            "https://x.com/a",
+            "GET",
+        );
         f1.cwe = Some("CWE-89".to_string());
-        let mut f2 = Finding::new("SQLi time", Severity::Critical, 9.8, "injection", "https://x.com/b", "GET");
+        let mut f2 = Finding::new(
+            "SQLi time",
+            Severity::Critical,
+            9.8,
+            "injection",
+            "https://x.com/b",
+            "GET",
+        );
         f2.cwe = Some("CWE-89".to_string());
         let report = make_report(vec![f1, f2]);
         let sarif = SarifReporter::generate(&report);

@@ -8,7 +8,9 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use crate::args::ServeArgs;
 
 pub async fn handle_serve(args: ServeArgs) -> Result<()> {
-    let dir = args.dir.unwrap_or_else(|| PathBuf::from("./nevelio-results"));
+    let dir = args
+        .dir
+        .unwrap_or_else(|| PathBuf::from("./nevelio-results"));
     let port = args.port;
 
     // Collect all available scan history (findings-*.json + findings.json)
@@ -24,11 +26,7 @@ pub async fn handle_serve(args: ServeArgs) -> Result<()> {
 
     let url = format!("http://127.0.0.1:{}", port);
     println!();
-    println!(
-        "  {}  {}",
-        "Dashboard Nevelio →".bold(),
-        url.cyan().bold()
-    );
+    println!("  {}  {}", "Dashboard Nevelio →".bold(), url.cyan().bold());
     if !history.is_empty() {
         println!("  Historique : {} scan(s) disponible(s)", history.len());
     }
@@ -67,7 +65,9 @@ fn collect_scan_history(dir: &Path) -> Vec<PathBuf> {
             .filter(|p| {
                 p.file_name()
                     .and_then(|n| n.to_str())
-                    .map(|n| n.starts_with("findings") && n.ends_with(".json") && n != "findings.json")
+                    .map(|n| {
+                        n.starts_with("findings") && n.ends_with(".json") && n != "findings.json"
+                    })
                     .unwrap_or(false)
             })
             .collect();
@@ -93,7 +93,8 @@ fn build_dashboard_html(
     let report = if json_path.exists() {
         let content = std::fs::read_to_string(&json_path)
             .with_context(|| format!("Fichier introuvable : {}", json_path.display()))?;
-        let r: ScanReport = serde_json::from_str(&content).context("Format findings.json invalide")?;
+        let r: ScanReport =
+            serde_json::from_str(&content).context("Format findings.json invalide")?;
         r
     } else if let Ok(report_html) = std::fs::read(dir.join("report.html")) {
         // Serve pre-generated HTML as-is
@@ -330,7 +331,9 @@ async fn serve_connection(
                 }
             }
         }
-        let _ = stream.write_all(b"HTTP/1.1 404 Not Found\r\nContent-Length: 2\r\n\r\n{}").await;
+        let _ = stream
+            .write_all(b"HTTP/1.1 404 Not Found\r\nContent-Length: 2\r\n\r\n{}")
+            .await;
         return;
     }
 

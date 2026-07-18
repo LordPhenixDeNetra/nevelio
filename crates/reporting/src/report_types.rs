@@ -45,8 +45,7 @@ impl ReportSummary {
         if s.total > 0 {
             let mean: f64 = findings.iter().map(|f| f.cvss_score).sum::<f64>() / s.total as f64;
             // Weight boost: each Critical adds +0.2, each High adds +0.1 (capped at 10.0)
-            let boost = (s.critical as f64 * 0.2 + s.high as f64 * 0.1)
-                .min(10.0 - mean);
+            let boost = (s.critical as f64 * 0.2 + s.high as f64 * 0.1).min(10.0 - mean);
             s.risk_score = (mean + boost).min(10.0);
             s.risk_score = (s.risk_score * 10.0).round() / 10.0; // round to 1 decimal
         }
@@ -102,8 +101,8 @@ mod tests {
     #[test]
     fn json_reporter_round_trip() {
         use crate::json_reporter::JsonReporter;
-        use nevelio_core::ScanSession;
         use nevelio_core::types::ScanConfig;
+        use nevelio_core::ScanSession;
         use std::path::PathBuf;
 
         let config = ScanConfig {

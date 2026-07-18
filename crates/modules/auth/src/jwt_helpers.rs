@@ -46,8 +46,7 @@ pub(super) fn forge_jwt_with_kid(original: &str, kid: &str, secret: &[u8]) -> Op
     let claims = decode_jwt_claims(original)?;
     let mut header = Header::new(Algorithm::HS256);
     header.kid = Some(kid.to_string());
-    jsonwebtoken::encode(&header, &claims, &EncodingKey::from_secret(secret))
-        .ok()
+    jsonwebtoken::encode(&header, &claims, &EncodingKey::from_secret(secret)).ok()
 }
 
 /// Forges an alg:none JWT with `exp` set to a past timestamp.

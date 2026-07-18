@@ -15,9 +15,7 @@ pub fn default_audit_path() -> Option<PathBuf> {
 
 /// Returns `true` if the global config file exists.
 pub fn global_config_exists() -> bool {
-    global_config_path()
-        .map(|p| p.exists())
-        .unwrap_or(false)
+    global_config_path().map(|p| p.exists()).unwrap_or(false)
 }
 
 /// Load and parse `~/.config/nevelio/config.toml`.
@@ -32,11 +30,10 @@ pub fn load_global() -> Result<GlobalConfig> {
         return Ok(GlobalConfig::default());
     }
 
-    let content = std::fs::read_to_string(&path)
-        .with_context(|| format!("Lecture de {}", path.display()))?;
+    let content =
+        std::fs::read_to_string(&path).with_context(|| format!("Lecture de {}", path.display()))?;
 
-    toml::from_str(&content)
-        .with_context(|| format!("Parsing de {}", path.display()))
+    toml::from_str(&content).with_context(|| format!("Parsing de {}", path.display()))
 }
 
 /// Load and parse `./nevelio.toml` (project config).
@@ -53,23 +50,19 @@ pub fn load_project(path: Option<&Path>) -> Result<ProjectConfig> {
     let content = std::fs::read_to_string(&resolved)
         .with_context(|| format!("Lecture de {}", resolved.display()))?;
 
-    toml::from_str(&content)
-        .with_context(|| format!("Parsing de {}", resolved.display()))
+    toml::from_str(&content).with_context(|| format!("Parsing de {}", resolved.display()))
 }
 
 /// Write a `GlobalConfig` back to `~/.config/nevelio/config.toml`.
 pub fn save_global(cfg: &GlobalConfig) -> Result<()> {
-    let path = global_config_path()
-        .context("Impossible de déterminer le répertoire de config")?;
+    let path = global_config_path().context("Impossible de déterminer le répertoire de config")?;
 
     if let Some(parent) = path.parent() {
         std::fs::create_dir_all(parent)
             .with_context(|| format!("Création de {}", parent.display()))?;
     }
 
-    let content = toml::to_string_pretty(cfg)
-        .context("Sérialisation de la config")?;
+    let content = toml::to_string_pretty(cfg).context("Sérialisation de la config")?;
 
-    std::fs::write(&path, content)
-        .with_context(|| format!("Écriture de {}", path.display()))
+    std::fs::write(&path, content).with_context(|| format!("Écriture de {}", path.display()))
 }

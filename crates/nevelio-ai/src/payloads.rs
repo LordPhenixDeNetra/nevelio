@@ -10,17 +10,17 @@ use crate::provider::{AiProvider, CompletionOpts, Message};
 #[derive(Debug, Clone, Serialize)]
 pub struct PayloadContext {
     /// Technology stack detected (e.g. "Express.js", "Spring Boot", "Django")
-    pub framework:   Option<String>,
+    pub framework: Option<String>,
     /// WAF/protection detected (e.g. "Cloudflare", "ModSecurity", "none")
-    pub waf:         Option<String>,
+    pub waf: Option<String>,
     /// Parameter or field to inject into (e.g. "username", "query", "id")
-    pub field:       Option<String>,
+    pub field: Option<String>,
     /// How the field appears in the request (e.g. "JSON body", "query string", "header")
-    pub field_type:  Option<String>,
+    pub field_type: Option<String>,
     /// Target endpoint path
-    pub endpoint:    String,
+    pub endpoint: String,
     /// HTTP method
-    pub method:      String,
+    pub method: String,
 }
 
 // ── Vulnerability types ───────────────────────────────────────────────────────
@@ -42,16 +42,16 @@ pub enum VulnType {
 impl VulnType {
     pub fn label(self) -> &'static str {
         match self {
-            Self::SqlInjection      => "SQL Injection",
-            Self::NoSqlInjection    => "NoSQL Injection",
-            Self::Xss               => "Cross-Site Scripting (XSS)",
-            Self::Ssrf              => "Server-Side Request Forgery (SSRF)",
-            Self::Ssti              => "Server-Side Template Injection (SSTI)",
-            Self::PathTraversal     => "Path Traversal",
-            Self::CommandInjection  => "Command Injection",
-            Self::LdapInjection     => "LDAP Injection",
-            Self::XxeInjection      => "XXE Injection",
-            Self::OpenRedirect      => "Open Redirect",
+            Self::SqlInjection => "SQL Injection",
+            Self::NoSqlInjection => "NoSQL Injection",
+            Self::Xss => "Cross-Site Scripting (XSS)",
+            Self::Ssrf => "Server-Side Request Forgery (SSRF)",
+            Self::Ssti => "Server-Side Template Injection (SSTI)",
+            Self::PathTraversal => "Path Traversal",
+            Self::CommandInjection => "Command Injection",
+            Self::LdapInjection => "LDAP Injection",
+            Self::XxeInjection => "XXE Injection",
+            Self::OpenRedirect => "Open Redirect",
         }
     }
 }
@@ -61,18 +61,18 @@ impl VulnType {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GeneratedPayload {
     /// The payload string itself
-    pub value:       String,
+    pub value: String,
     /// Brief note on what this payload tests
     pub description: String,
     /// Expected indicator of success (e.g. "SQL error in response", "DNS callback")
-    pub indicator:   String,
+    pub indicator: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PayloadSet {
     pub vuln_type: String,
-    pub endpoint:  String,
-    pub payloads:  Vec<GeneratedPayload>,
+    pub endpoint: String,
+    pub payloads: Vec<GeneratedPayload>,
 }
 
 // ── F.11 — generate() ─────────────────────────────────────────────────────────
@@ -81,11 +81,11 @@ pub struct PayloadSet {
 ///
 /// Returns a `PayloadSet` with validated, deduplicated payloads ready for use.
 pub async fn generate(
-    context:   &PayloadContext,
+    context: &PayloadContext,
     vuln_type: VulnType,
-    lang:      &str,
-    provider:  &dyn AiProvider,
-    opts:      &CompletionOpts,
+    lang: &str,
+    provider: &dyn AiProvider,
+    opts: &CompletionOpts,
 ) -> Result<PayloadSet> {
     let system = match lang {
         "en" => "You are a penetration testing payload specialist. Generate precise, context-adapted attack payloads.",
@@ -95,7 +95,8 @@ pub async fn generate(
 
     let ctx_desc = format!(
         "Endpoint: {} {}\nFramework: {}\nWAF: {}\nField: {} ({})",
-        context.method, context.endpoint,
+        context.method,
+        context.endpoint,
         context.framework.as_deref().unwrap_or("unknown"),
         context.waf.as_deref().unwrap_or("none"),
         context.field.as_deref().unwrap_or("generic"),
@@ -115,7 +116,8 @@ Rules:
 - Each payload must be different — no duplicates
 - Max 500 chars per payload
 - Realistic: no lorem ipsum or placeholder content"#,
-            vuln = vuln_type.label(), ctx = ctx_desc
+            vuln = vuln_type.label(),
+            ctx = ctx_desc
         ),
         "es" => format!(
             r#"Genera 8-12 payloads de {vuln} para:
@@ -128,7 +130,8 @@ Reglas:
 - Payloads DEBEN ser específicos al contexto (evasión WAF si hay WAF, sintaxis del framework)
 - Sin duplicados — cada payload diferente
 - Máx 500 caracteres por payload"#,
-            vuln = vuln_type.label(), ctx = ctx_desc
+            vuln = vuln_type.label(),
+            ctx = ctx_desc
         ),
         _ => format!(
             r#"Génère 8-12 payloads de {vuln} pour :
@@ -141,14 +144,12 @@ Règles :
 - Les payloads DOIVENT être adaptés au contexte (évasion WAF si WAF détecté, syntaxe du framework)
 - Pas de doublons — chaque payload différent
 - Max 500 caractères par payload"#,
-            vuln = vuln_type.label(), ctx = ctx_desc
+            vuln = vuln_type.label(),
+            ctx = ctx_desc
         ),
     };
 
-    let messages = vec![
-        Message::system(system),
-        Message::user(user_content),
-    ];
+    let messages = vec![Message::system(system), Message::user(user_content)];
 
     let schema = json!({
         "type": "object",
@@ -180,9 +181,9 @@ Règles :
         .filter_map(|item| {
             let value = item["value"].as_str()?;
             Some(GeneratedPayload {
-                value:       value.to_string(),
+                value: value.to_string(),
                 description: item["description"].as_str().unwrap_or("").to_string(),
-                indicator:   item["indicator"].as_str().unwrap_or("").to_string(),
+                indicator: item["indicator"].as_str().unwrap_or("").to_string(),
             })
         })
         .collect();
@@ -192,7 +193,7 @@ Règles :
 
     Ok(PayloadSet {
         vuln_type: vuln_type.label().to_string(),
-        endpoint:  context.endpoint.clone(),
+        endpoint: context.endpoint.clone(),
         payloads,
     })
 }
@@ -210,7 +211,7 @@ fn validate_payloads(raw: Vec<GeneratedPayload>) -> Vec<GeneratedPayload> {
     const BAD_PATTERNS: &[&str] = &[
         "lorem ipsum",
         "<insert",
-        "{{",     // unresolved template variables
+        "{{", // unresolved template variables
         "your_",
         "example_payload",
     ];
@@ -247,10 +248,7 @@ fn validate_payloads(raw: Vec<GeneratedPayload>) -> Vec<GeneratedPayload> {
 /// Merge LLM-generated payloads with an existing static list, deduplicating.
 ///
 /// Static payloads have priority (LLM ones are appended after).
-pub fn merge_with_static(
-    static_payloads: Vec<String>,
-    generated:       &PayloadSet,
-) -> Vec<String> {
+pub fn merge_with_static(static_payloads: Vec<String>, generated: &PayloadSet) -> Vec<String> {
     let mut seen: std::collections::HashSet<String> = static_payloads.iter().cloned().collect();
     let mut merged = static_payloads;
 
@@ -272,9 +270,21 @@ mod tests {
     #[test]
     fn validate_rejects_empty() {
         let raw = vec![
-            GeneratedPayload { value: "".to_string(), description: "".to_string(), indicator: "".to_string() },
-            GeneratedPayload { value: " ".to_string(), description: "".to_string(), indicator: "".to_string() },
-            GeneratedPayload { value: "' OR 1=1--".to_string(), description: "Classic SQLi".to_string(), indicator: "SQL error".to_string() },
+            GeneratedPayload {
+                value: "".to_string(),
+                description: "".to_string(),
+                indicator: "".to_string(),
+            },
+            GeneratedPayload {
+                value: " ".to_string(),
+                description: "".to_string(),
+                indicator: "".to_string(),
+            },
+            GeneratedPayload {
+                value: "' OR 1=1--".to_string(),
+                description: "Classic SQLi".to_string(),
+                indicator: "SQL error".to_string(),
+            },
         ];
         let valid = validate_payloads(raw);
         assert_eq!(valid.len(), 1);
@@ -285,14 +295,14 @@ mod tests {
     fn validate_rejects_oversized() {
         let raw = vec![
             GeneratedPayload {
-                value:       "A".repeat(501),
+                value: "A".repeat(501),
                 description: "too long".to_string(),
-                indicator:   "".to_string(),
+                indicator: "".to_string(),
             },
             GeneratedPayload {
-                value:       "' OR 1=1--".to_string(),
+                value: "' OR 1=1--".to_string(),
                 description: "ok".to_string(),
-                indicator:   "error".to_string(),
+                indicator: "error".to_string(),
             },
         ];
         let valid = validate_payloads(raw);
@@ -302,8 +312,16 @@ mod tests {
     #[test]
     fn validate_deduplicates() {
         let raw = vec![
-            GeneratedPayload { value: "payload".to_string(), description: "a".to_string(), indicator: "b".to_string() },
-            GeneratedPayload { value: "payload".to_string(), description: "c".to_string(), indicator: "d".to_string() },
+            GeneratedPayload {
+                value: "payload".to_string(),
+                description: "a".to_string(),
+                indicator: "b".to_string(),
+            },
+            GeneratedPayload {
+                value: "payload".to_string(),
+                description: "c".to_string(),
+                indicator: "d".to_string(),
+            },
         ];
         let valid = validate_payloads(raw);
         assert_eq!(valid.len(), 1);
@@ -314,10 +332,18 @@ mod tests {
         let static_list = vec!["' OR 1=1--".to_string(), "admin' --".to_string()];
         let generated = PayloadSet {
             vuln_type: "SQLi".to_string(),
-            endpoint:  "/api/login".to_string(),
-            payloads:  vec![
-                GeneratedPayload { value: "' OR 1=1--".to_string(), description: "dup".to_string(), indicator: "".to_string() },
-                GeneratedPayload { value: "1' AND SLEEP(5)--".to_string(), description: "time-based".to_string(), indicator: "delay".to_string() },
+            endpoint: "/api/login".to_string(),
+            payloads: vec![
+                GeneratedPayload {
+                    value: "' OR 1=1--".to_string(),
+                    description: "dup".to_string(),
+                    indicator: "".to_string(),
+                },
+                GeneratedPayload {
+                    value: "1' AND SLEEP(5)--".to_string(),
+                    description: "time-based".to_string(),
+                    indicator: "delay".to_string(),
+                },
             ],
         };
         let merged = merge_with_static(static_list, &generated);

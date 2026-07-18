@@ -60,7 +60,7 @@ jobs:
       # ── Publish JUnit results in the Actions UI ───────────────────────────
       - name: Publish Security Findings
         uses: dorny/test-reporter@v1
-        if: always()
+        if: ${{ always() && hashFiles('security-report.xml') != '' }}
         with:
           name: Nevelio Security Findings
           path: security-report.xml
@@ -77,9 +77,16 @@ jobs:
             findings.json
             security-report.xml
           retention-days: 30
+          if-no-files-found: ignore
+
+      - name: Warn when scan outputs are missing
+        if: ${{ always() && hashFiles('findings.json') == '' && hashFiles('security-report.xml') == '' }}
+        run: |
+          echo "::warning::Nevelio n'a généré ni findings.json ni security-report.xml. Vérifiez les logs de l'étape de scan et les secrets API_STAGING_URL/API_TOKEN."
 
       # ── Fail the pipeline on Critical findings (exit code 3) ─────────────
       - name: Enforce security gate
+        if: ${{ always() && hashFiles('findings.json') != '' }}
         run: |
           docker run --rm \
             -v "${{ github.workspace }}:/workspace" \

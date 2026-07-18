@@ -1,9 +1,9 @@
 use std::path::Path;
 
 use anyhow::{bail, Context, Result};
-use rust_i18n::t;
 use chrono::Utc;
 use nevelio_core::types::Finding;
+use rust_i18n::t;
 use serde_json::json;
 
 const ANTHROPIC_API: &str = "https://api.anthropic.com/v1/messages";
@@ -39,8 +39,7 @@ fn build_prompt(findings: &[Finding]) -> String {
 }
 
 pub async fn generate_and_save(findings: &[Finding], out_dir: &Path) -> Result<()> {
-    let api_key = std::env::var("ANTHROPIC_API_KEY")
-        .context(t!("ai.no_key").to_string())?;
+    let api_key = std::env::var("ANTHROPIC_API_KEY").context(t!("ai.no_key").to_string())?;
 
     let prompt = build_prompt(findings);
 
@@ -66,10 +65,19 @@ pub async fn generate_and_save(findings: &[Finding], out_dir: &Path) -> Result<(
     if !resp.status().is_success() {
         let status = resp.status();
         let text = resp.text().await.unwrap_or_default();
-        bail!("{}", t!("ai.api_status", status = status.as_str(), body = text.as_str()));
+        bail!(
+            "{}",
+            t!(
+                "ai.api_status",
+                status = status.as_str(),
+                body = text.as_str()
+            )
+        );
     }
 
-    let data: serde_json::Value = resp.json().await
+    let data: serde_json::Value = resp
+        .json()
+        .await
         .context(t!("ai.invalid_response").to_string())?;
 
     let content = data["content"]
@@ -86,8 +94,7 @@ pub async fn generate_and_save(findings: &[Finding], out_dir: &Path) -> Result<(
     let output = format!("{}{}", header, content);
 
     let path = out_dir.join("ai_suggestions.md");
-    std::fs::write(&path, &output)
-        .context(t!("ai.write_error").to_string())?;
+    std::fs::write(&path, &output).context(t!("ai.write_error").to_string())?;
 
     println!("{:<12}: {}", t!("scan.ia_label"), path.display());
 

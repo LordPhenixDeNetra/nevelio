@@ -9,8 +9,7 @@ use nevelio_core::{AttackModule, HttpClient, ScanSession};
 // ---------------------------------------------------------------------------
 
 /// GraphQL introspection query — detects if schema introspection is enabled.
-const INTROSPECTION_QUERY: &str =
-    r#"{"query":"{ __schema { types { name } } }"}"#;
+const INTROSPECTION_QUERY: &str = r#"{"query":"{ __schema { types { name } } }"}"#;
 
 /// Deeply nested query — a 20-level nesting stresses query depth limits.
 const DEPTH_QUERY: &str = r#"{"query":"{ a { a { a { a { a { a { a { a { a { a { a { a { a { a { a { a { a { a { a { a { __typename } } } } } } } } } } } } } } } } } } } }"}"#;
@@ -174,11 +173,10 @@ async fn check_introspection(client: &HttpClient, ep: &Endpoint) -> Option<Findi
         "Requête: {}\nLe corps de réponse contient __schema ou queryType",
         INTROSPECTION_QUERY
     );
-    f.recommendation =
-        "Désactiver l'introspection en production. Dans Apollo Server : \
+    f.recommendation = "Désactiver l'introspection en production. Dans Apollo Server : \
          `introspection: false`. Dans Hasura : restreindre via des règles de rôle. \
          Autoriser l'introspection uniquement aux équipes internes via IP allowlist."
-            .to_string();
+        .to_string();
     f.cwe = Some("CWE-200".to_string());
     f.references = vec![
         "https://owasp.org/API-Security/editions/2023/en/0xa3-broken-object-property-level-authorization/".to_string(),
@@ -225,17 +223,13 @@ async fn check_field_suggestions(client: &HttpClient, ep: &Endpoint) -> Option<F
          pour les champs invalides. Ces messages révèlent des noms de champs réels du schéma, \
          même si l'introspection est désactivée."
             .to_string();
-    f.proof = format!(
-        "Payload: {body}\nRéponse contient \"Did you mean\" — noms de champs divulgués"
-    );
-    f.recommendation =
-        "Désactiver les suggestions dans le moteur GraphQL. Dans Apollo Server : \
+    f.proof =
+        format!("Payload: {body}\nRéponse contient \"Did you mean\" — noms de champs divulgués");
+    f.recommendation = "Désactiver les suggestions dans le moteur GraphQL. Dans Apollo Server : \
          `formatError: (err) => {{ delete err.extensions.suggestions; return err; }}`."
-            .to_string();
+        .to_string();
     f.cwe = Some("CWE-209".to_string());
-    f.references = vec![
-        "https://lab.wallarm.com/graphql-batching-attack/".to_string(),
-    ];
+    f.references = vec!["https://lab.wallarm.com/graphql-batching-attack/".to_string()];
 
     Some(f)
 }
@@ -281,18 +275,15 @@ async fn check_depth_dos(client: &HttpClient, ep: &Endpoint) -> Option<Finding> 
          coûteuses qui saturent le serveur (CPU/mémoire).",
         elapsed
     );
-    f.proof = format!(
-        "Requête 20 niveaux d'imbrication → {}ms de délai",
-        elapsed
-    );
-    f.recommendation =
-        "Implémenter une limite de profondeur de requête (ex: max 10 niveaux). \
+    f.proof = format!("Requête 20 niveaux d'imbrication → {}ms de délai", elapsed);
+    f.recommendation = "Implémenter une limite de profondeur de requête (ex: max 10 niveaux). \
          Dans Apollo Server : plugin `graphql-depth-limit`. \
          Activer également la limite de complexité de requête."
-            .to_string();
+        .to_string();
     f.cwe = Some("CWE-400".to_string());
     f.references = vec![
-        "https://owasp.org/API-Security/editions/2023/en/0xa4-unrestricted-resource-consumption/".to_string(),
+        "https://owasp.org/API-Security/editions/2023/en/0xa4-unrestricted-resource-consumption/"
+            .to_string(),
         "https://www.apollographql.com/docs/apollo-server/performance/cache-hints/".to_string(),
     ];
 

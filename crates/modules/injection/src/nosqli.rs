@@ -54,8 +54,7 @@ pub(super) async fn check_nosqli(
 
         let triggered = (baseline_status != 200 && status == 200)
             || (baseline_len > 0
-                && (body_len as isize - baseline_len as isize).unsigned_abs() * 100
-                    / baseline_len
+                && (body_len as isize - baseline_len as isize).unsigned_abs() * 100 / baseline_len
                     > 30);
 
         if triggered {

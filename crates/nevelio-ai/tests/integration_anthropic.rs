@@ -23,7 +23,7 @@ mod anthropic_integration {
     }
 
     fn build_provider() -> AnthropicProvider {
-        let key   = std::env::var("ANTHROPIC_API_KEY").unwrap();
+        let key = std::env::var("ANTHROPIC_API_KEY").unwrap();
         let model = std::env::var("ANTHROPIC_MODEL")
             .unwrap_or_else(|_| "claude-haiku-4-5-20251001".to_string());
         // Use the cheapest model by default to minimise test cost
@@ -44,9 +44,15 @@ mod anthropic_integration {
             Message::system("Reply with a single word only."),
             Message::user("What is 1 + 1?"),
         ];
-        let opts = CompletionOpts { max_tokens: 32, temperature: 0.0, model: None };
+        let opts = CompletionOpts {
+            max_tokens: 32,
+            temperature: 0.0,
+            model: None,
+        };
 
-        let reply = provider.complete(&msgs, &opts).await
+        let reply = provider
+            .complete(&msgs, &opts)
+            .await
             .expect("AnthropicProvider::complete should succeed");
 
         assert!(!reply.is_empty(), "Response should not be empty");
@@ -63,20 +69,27 @@ mod anthropic_integration {
         }
 
         let provider = build_provider();
-        let msgs = vec![Message::user(
-            r#"Return JSON: {"result": 42}"#,
-        )];
+        let msgs = vec![Message::user(r#"Return JSON: {"result": 42}"#)];
         let schema = json!({
             "type": "object",
             "properties": { "result": { "type": "number" } },
             "required": ["result"]
         });
-        let opts = CompletionOpts { max_tokens: 64, temperature: 0.0, model: None };
+        let opts = CompletionOpts {
+            max_tokens: 64,
+            temperature: 0.0,
+            model: None,
+        };
 
-        let value = provider.complete_json(&msgs, schema, &opts).await
+        let value = provider
+            .complete_json(&msgs, schema, &opts)
+            .await
             .expect("AnthropicProvider::complete_json should succeed");
 
-        assert!(value["result"].is_number(), "Expected numeric 'result' field");
+        assert!(
+            value["result"].is_number(),
+            "Expected numeric 'result' field"
+        );
         eprintln!("Anthropic JSON reply: {:?}", value);
     }
 
@@ -95,9 +108,9 @@ mod anthropic_integration {
             Message::user("Get the weather in Paris."),
         ];
         let tools = vec![ToolDefinition {
-            name:        "get_weather".to_string(),
+            name: "get_weather".to_string(),
             description: "Get the current weather for a city.".to_string(),
-            parameters:  json!({
+            parameters: json!({
                 "type": "object",
                 "properties": {
                     "city": { "type": "string", "description": "City name" }
@@ -105,14 +118,26 @@ mod anthropic_integration {
                 "required": ["city"]
             }),
         }];
-        let opts = CompletionOpts { max_tokens: 256, temperature: 0.0, model: None };
+        let opts = CompletionOpts {
+            max_tokens: 256,
+            temperature: 0.0,
+            model: None,
+        };
 
-        let resp = provider.complete_with_tools(&msgs, &tools, &opts).await
+        let resp = provider
+            .complete_with_tools(&msgs, &tools, &opts)
+            .await
             .expect("AnthropicProvider::complete_with_tools should succeed");
 
-        assert!(!resp.tool_calls.is_empty(), "Expected at least one tool call");
+        assert!(
+            !resp.tool_calls.is_empty(),
+            "Expected at least one tool call"
+        );
         assert_eq!(resp.tool_calls[0].tool_name, "get_weather");
-        assert!(resp.tool_calls[0].arguments.get("city").is_some(), "Expected 'city' argument");
+        assert!(
+            resp.tool_calls[0].arguments.get("city").is_some(),
+            "Expected 'city' argument"
+        );
         eprintln!("Tool calls: {:?}", resp.tool_calls);
     }
 
@@ -124,7 +149,8 @@ mod anthropic_integration {
         let provider = AnthropicProvider::new(
             "sk-ant-invalid-key".to_string(),
             "claude-haiku-4-5-20251001".to_string(),
-            32, 0.0,
+            32,
+            0.0,
         );
 
         let msgs = vec![Message::user("hello")];

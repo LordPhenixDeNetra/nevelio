@@ -6,16 +6,22 @@
 pub fn detect(lang_flag: Option<&str>) -> String {
     if let Some(l) = lang_flag {
         let n = normalize(l);
-        if is_supported(&n) { return n; }
+        if is_supported(&n) {
+            return n;
+        }
     }
     if let Ok(v) = std::env::var("NEVELIO_LANG") {
         let n = normalize(&v);
-        if is_supported(&n) { return n; }
+        if is_supported(&n) {
+            return n;
+        }
     }
     for var in &["LANGUAGE", "LANG"] {
         if let Ok(v) = std::env::var(var) {
             let n = normalize(&v);
-            if is_supported(&n) { return n; }
+            if is_supported(&n) {
+                return n;
+            }
         }
     }
     "en".to_string()

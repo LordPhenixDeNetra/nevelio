@@ -14,8 +14,8 @@ pub async fn handle_issue(args: IssueArgs) -> Result<()> {
         serde_json::from_str(&content).context("Format findings.json invalide")?;
 
     match args.provider {
-        IssueProvider::Github(gh)  => github::handle_github(&report, gh).await,
-        IssueProvider::Jira(jira)  => jira::handle_jira(&report, jira).await,
+        IssueProvider::Github(gh) => github::handle_github(&report, gh).await,
+        IssueProvider::Jira(jira) => jira::handle_jira(&report, jira).await,
         IssueProvider::Linear(lin) => linear::handle_linear(&report, lin).await,
     }
 }
@@ -26,19 +26,19 @@ mod tests {
 
     #[test]
     fn jira_priority_maps_severity() {
-        assert_eq!(priority(Severity::Critical),    "Highest");
-        assert_eq!(priority(Severity::High),        "High");
-        assert_eq!(priority(Severity::Medium),      "Medium");
-        assert_eq!(priority(Severity::Low),         "Low");
+        assert_eq!(priority(Severity::Critical), "Highest");
+        assert_eq!(priority(Severity::High), "High");
+        assert_eq!(priority(Severity::Medium), "Medium");
+        assert_eq!(priority(Severity::Low), "Low");
         assert_eq!(priority(Severity::Informative), "Lowest");
     }
 
     fn priority(sev: Severity) -> &'static str {
         match sev {
-            Severity::Critical    => "Highest",
-            Severity::High        => "High",
-            Severity::Medium      => "Medium",
-            Severity::Low         => "Low",
+            Severity::Critical => "Highest",
+            Severity::High => "High",
+            Severity::Medium => "Medium",
+            Severity::Low => "Low",
             Severity::Informative => "Lowest",
         }
     }

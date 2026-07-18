@@ -56,11 +56,7 @@ impl PluginManifest {
 /// WASM plugins implement the same interface across the memory boundary.
 pub trait NevelioPlugin: Send + Sync {
     fn manifest(&self) -> PluginManifest;
-    fn run(
-        &self,
-        config: &ScanConfig,
-        endpoints: &[Endpoint],
-    ) -> Result<Vec<Finding>>;
+    fn run(&self, config: &ScanConfig, endpoints: &[Endpoint]) -> Result<Vec<Finding>>;
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────────────

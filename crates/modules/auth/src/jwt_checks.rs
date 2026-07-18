@@ -95,15 +95,13 @@ pub(super) async fn check_jwt_weak_secret(
                 ep.full_url.clone(),
                 ep.method.clone(),
             );
-            f.description =
-                "The JWT secret key is trivially guessable. An attacker can forge \
+            f.description = "The JWT secret key is trivially guessable. An attacker can forge \
                  valid tokens for any user or role using the discovered secret."
-                    .to_string();
+                .to_string();
             f.proof = format!("Secret cracked: \"{}\"", secret);
-            f.recommendation =
-                "Use a cryptographically random secret of at least 256 bits. \
+            f.recommendation = "Use a cryptographically random secret of at least 256 bits. \
                  Rotate immediately and invalidate all existing tokens."
-                    .to_string();
+                .to_string();
             f.cwe = Some("CWE-330".to_string());
             f.references = vec![
                 "https://owasp.org/API-Security/editions/2023/en/0xa2-broken-authentication/"
@@ -213,7 +211,10 @@ pub(super) async fn check_jwt_expired(
 
     let Ok(req) = client
         .inner()
-        .request(ep.method.parse().unwrap_or(reqwest::Method::GET), &ep.full_url)
+        .request(
+            ep.method.parse().unwrap_or(reqwest::Method::GET),
+            &ep.full_url,
+        )
         .header("Authorization", format!("Bearer {}", expired_token))
         .build()
     else {

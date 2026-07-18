@@ -131,18 +131,8 @@ pub(super) async fn check_xxe_svg(client: &HttpClient, ep: &Endpoint) -> Vec<Fin
     }
 
     let probes: [(&str, &[&str], &str, &str); 2] = [
-        (
-            SVG_XXE_PAYLOAD,
-            SVG_DETECT_MARKERS,
-            "file",
-            "image/svg+xml",
-        ),
-        (
-            SVG_XXE_SSRF_PAYLOAD,
-            IMDS_MARKERS,
-            "ssrf",
-            "image/svg+xml",
-        ),
+        (SVG_XXE_PAYLOAD, SVG_DETECT_MARKERS, "file", "image/svg+xml"),
+        (SVG_XXE_SSRF_PAYLOAD, IMDS_MARKERS, "ssrf", "image/svg+xml"),
     ];
     for (payload, detect, kind, ctype) in &probes {
         let Ok(req) = client

@@ -14,7 +14,10 @@ pub(super) async fn probe_redirect_uri(
 
     let spec_urls: Vec<String> = auth_endpoints.iter().map(|e| e.full_url.clone()).collect();
     let probe_urls: Vec<String> = if spec_urls.is_empty() {
-        super::AUTHORIZE_PATHS.iter().map(|p| super::build_url(base, p)).collect()
+        super::AUTHORIZE_PATHS
+            .iter()
+            .map(|p| super::build_url(base, p))
+            .collect()
     } else {
         spec_urls
     };
@@ -95,7 +98,10 @@ pub(super) async fn probe_missing_state(
 
     let spec_urls: Vec<String> = auth_endpoints.iter().map(|e| e.full_url.clone()).collect();
     let probe_urls: Vec<String> = if spec_urls.is_empty() {
-        super::AUTHORIZE_PATHS.iter().map(|p| super::build_url(base, p)).collect()
+        super::AUTHORIZE_PATHS
+            .iter()
+            .map(|p| super::build_url(base, p))
+            .collect()
     } else {
         spec_urls
     };
@@ -165,7 +171,10 @@ pub(super) async fn probe_pkce_bypass(
 
     let spec_urls: Vec<String> = auth_endpoints.iter().map(|e| e.full_url.clone()).collect();
     let probe_urls: Vec<String> = if spec_urls.is_empty() {
-        super::AUTHORIZE_PATHS.iter().map(|p| super::build_url(base, p)).collect()
+        super::AUTHORIZE_PATHS
+            .iter()
+            .map(|p| super::build_url(base, p))
+            .collect()
     } else {
         spec_urls
     };

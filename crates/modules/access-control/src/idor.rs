@@ -65,8 +65,12 @@ pub(super) async fn check_idor_numeric(
             );
             f.proof = format!(
                 "GET {} → HTTP {} ({} octets) ≠ baseline GET {} → HTTP {} ({} octets)",
-                url, status, body.len(),
-                ep.full_url, baseline_status, baseline_body.len()
+                url,
+                status,
+                body.len(),
+                ep.full_url,
+                baseline_status,
+                baseline_body.len()
             );
             f.recommendation =
                 "Vérifier que chaque ressource accédée appartient bien à l'utilisateur \
@@ -97,17 +101,13 @@ pub(super) async fn check_idor_uuid(
         return vec![];
     };
 
-    let Some((baseline_status, _)) =
-        get_with_token(client, &ep.full_url, &ep.method, token).await
+    let Some((baseline_status, _)) = get_with_token(client, &ep.full_url, &ep.method, token).await
     else {
         return vec![];
     };
 
     // Try nil UUID and a freshly generated random UUID
-    let candidates = [
-        NIL_UUID.to_string(),
-        uuid::Uuid::new_v4().to_string(),
-    ];
+    let candidates = [NIL_UUID.to_string(), uuid::Uuid::new_v4().to_string()];
 
     for candidate in &candidates {
         if candidate == &original_uuid {
@@ -120,9 +120,7 @@ pub(super) async fn check_idor_uuid(
 
         // Suspicious: got 200 when baseline was also 200 with a different UUID,
         // OR got 200 when baseline was 403 (broken access)
-        if matches!(status, 200..=299)
-            && (baseline_status != 200 || !body.is_empty())
-        {
+        if matches!(status, 200..=299) && (baseline_status != 200 || !body.is_empty()) {
             let mut f = Finding::new(
                 format!("IDOR — UUID substitution `{}`", &original_uuid[..8]),
                 Severity::High,

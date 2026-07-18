@@ -51,15 +51,15 @@ pub enum AiAction {
 
 pub fn handle_config(args: ConfigArgs) -> Result<()> {
     match args.action {
-        ConfigAction::Init          => cmd_init(),
-        ConfigAction::Show          => cmd_show(),
-        ConfigAction::Get { key }   => cmd_get(&key),
+        ConfigAction::Init => cmd_init(),
+        ConfigAction::Show => cmd_show(),
+        ConfigAction::Get { key } => cmd_get(&key),
         ConfigAction::Set { key, value } => cmd_set(&key, &value),
-        ConfigAction::Edit          => cmd_edit(),
-        ConfigAction::Reset         => cmd_reset(),
+        ConfigAction::Edit => cmd_edit(),
+        ConfigAction::Reset => cmd_reset(),
         ConfigAction::Ai { action } => match action {
             AiAction::Ping { provider } => cmd_ai_ping(provider.as_deref()),
-            AiAction::Providers         => cmd_ai_providers(),
+            AiAction::Providers => cmd_ai_providers(),
         },
     }
 }
@@ -74,7 +74,10 @@ fn cmd_init() -> Result<()> {
         let path = global_config_path().unwrap_or_default();
         println!(
             "{}",
-            t!("config.init.already_exists", path = path.display().to_string())
+            t!(
+                "config.init.already_exists",
+                path = path.display().to_string()
+            )
         );
         print!("{} ", t!("config.init.overwrite"));
         if !confirm_yes() {
@@ -103,7 +106,11 @@ fn cmd_init() -> Result<()> {
     cfg.ai.enabled = confirm_yes();
 
     if cfg.ai.enabled {
-        println!("  {} : {}", t!("config.init.provider"), t!("config.init.providers_list"));
+        println!(
+            "  {} : {}",
+            t!("config.init.provider"),
+            t!("config.init.providers_list")
+        );
         print!("  [anthropic]: ");
         let prov = read_line_optional().unwrap_or_else(|| "anthropic".to_string());
         cfg.ai.provider = Some(prov.clone());
@@ -121,7 +128,7 @@ fn cmd_init() -> Result<()> {
 
         // Store provider config
         let provider_cfg = nevelio_config::ProviderConfig {
-            model:       default_model(&prov).to_string(),
+            model: default_model(&prov).to_string(),
             api_key_env: Some(env_var),
             ..Default::default()
         };
@@ -170,13 +177,19 @@ fn cmd_show() -> Result<()> {
     for (name, prov) in &cfg.ai.providers {
         println!("  [ai.providers.{}]", name);
         println!("    model       = {:?}", prov.model);
-        println!("    api_key_env = {:?}", prov.api_key_env.as_deref().unwrap_or(""));
+        println!(
+            "    api_key_env = {:?}",
+            prov.api_key_env.as_deref().unwrap_or("")
+        );
     }
 
     println!();
     println!("[scan]");
     println!("  lang         = {:?}", cfg.scan.lang);
-    println!("  profile      = {:?}", cfg.scan.profile.as_deref().unwrap_or("standard"));
+    println!(
+        "  profile      = {:?}",
+        cfg.scan.profile.as_deref().unwrap_or("standard")
+    );
     println!("  dry_run      = {}", cfg.scan.dry_run);
     println!("  timeout_secs = {}", cfg.scan.timeout_secs);
     println!("  concurrency  = {}", cfg.scan.concurrency);
@@ -190,23 +203,23 @@ fn cmd_get(key: &str) -> Result<()> {
     let cfg = load_global()?;
 
     let value = match key {
-        "ai.enabled"      => Some(cfg.ai.enabled.to_string()),
-        "ai.provider"     => cfg.ai.provider.clone(),
-        "scan.lang"       => Some(cfg.scan.lang.clone()),
-        "scan.profile"    => cfg.scan.profile.clone(),
-        "scan.dry_run"    => Some(cfg.scan.dry_run.to_string()),
+        "ai.enabled" => Some(cfg.ai.enabled.to_string()),
+        "ai.provider" => cfg.ai.provider.clone(),
+        "scan.lang" => Some(cfg.scan.lang.clone()),
+        "scan.profile" => cfg.scan.profile.clone(),
+        "scan.dry_run" => Some(cfg.scan.dry_run.to_string()),
         "scan.timeout_secs" => Some(cfg.scan.timeout_secs.to_string()),
-        "scan.concurrency"  => Some(cfg.scan.concurrency.to_string()),
-        "user.name"       => cfg.user.name.clone(),
-        "user.email"      => cfg.user.email.clone(),
-        "output.format"   => Some(cfg.output.format.clone()),
+        "scan.concurrency" => Some(cfg.scan.concurrency.to_string()),
+        "user.name" => cfg.user.name.clone(),
+        "user.email" => cfg.user.email.clone(),
+        "output.format" => Some(cfg.output.format.clone()),
         "output.colorize" => Some(cfg.output.colorize.to_string()),
         _ => None,
     };
 
     match value {
         Some(v) => println!("{}", v),
-        None    => {
+        None => {
             eprintln!("{}", t!("config.cmd.get_miss", key = key).red());
             std::process::exit(1);
         }
@@ -220,17 +233,50 @@ fn cmd_set(key: &str, value: &str) -> Result<()> {
     let mut cfg = load_global()?;
 
     let ok = match key {
-        "ai.enabled"       => { cfg.ai.enabled = value == "true" || value == "oui" || value == "yes"; true }
-        "ai.provider"      => { cfg.ai.provider = Some(value.to_string()); true }
-        "scan.lang"        => { cfg.scan.lang = value.to_string(); true }
-        "scan.profile"     => { cfg.scan.profile = Some(value.to_string()); true }
-        "scan.dry_run"     => { cfg.scan.dry_run = value == "true"; true }
-        "scan.timeout_secs"=> { cfg.scan.timeout_secs = value.parse().unwrap_or(30); true }
-        "scan.concurrency" => { cfg.scan.concurrency  = value.parse().unwrap_or(10); true }
-        "user.name"        => { cfg.user.name = Some(value.to_string()); true }
-        "user.email"       => { cfg.user.email = Some(value.to_string()); true }
-        "output.format"    => { cfg.output.format   = value.to_string(); true }
-        "output.colorize"  => { cfg.output.colorize = value == "true"; true }
+        "ai.enabled" => {
+            cfg.ai.enabled = value == "true" || value == "oui" || value == "yes";
+            true
+        }
+        "ai.provider" => {
+            cfg.ai.provider = Some(value.to_string());
+            true
+        }
+        "scan.lang" => {
+            cfg.scan.lang = value.to_string();
+            true
+        }
+        "scan.profile" => {
+            cfg.scan.profile = Some(value.to_string());
+            true
+        }
+        "scan.dry_run" => {
+            cfg.scan.dry_run = value == "true";
+            true
+        }
+        "scan.timeout_secs" => {
+            cfg.scan.timeout_secs = value.parse().unwrap_or(30);
+            true
+        }
+        "scan.concurrency" => {
+            cfg.scan.concurrency = value.parse().unwrap_or(10);
+            true
+        }
+        "user.name" => {
+            cfg.user.name = Some(value.to_string());
+            true
+        }
+        "user.email" => {
+            cfg.user.email = Some(value.to_string());
+            true
+        }
+        "output.format" => {
+            cfg.output.format = value.to_string();
+            true
+        }
+        "output.colorize" => {
+            cfg.output.colorize = value == "true";
+            true
+        }
         _ => false,
     };
 
@@ -240,7 +286,10 @@ fn cmd_set(key: &str, value: &str) -> Result<()> {
     }
 
     save_global(&cfg)?;
-    println!("{}", t!("config.cmd.set_ok", key = key, value = value).green());
+    println!(
+        "{}",
+        t!("config.cmd.set_ok", key = key, value = value).green()
+    );
     Ok(())
 }
 
@@ -260,12 +309,12 @@ fn cmd_edit() -> Result<()> {
         .or_else(|_| std::env::var("VISUAL"))
         .unwrap_or_else(|_| "nano".to_string());
 
-    println!("{}", t!("config.cmd.edit_open", path = &path, editor = &editor));
+    println!(
+        "{}",
+        t!("config.cmd.edit_open", path = &path, editor = &editor)
+    );
 
-    std::process::Command::new(&editor)
-        .arg(&path)
-        .status()
-        .ok();
+    std::process::Command::new(&editor).arg(&path).status().ok();
 
     Ok(())
 }
@@ -304,14 +353,18 @@ fn cmd_ai_ping(provider_filter: Option<&str>) -> Result<()> {
         }
 
         // Check API key
-        let has_key = prov.api_key_env
+        let has_key = prov
+            .api_key_env
             .as_deref()
             .map(|env| std::env::var(env).is_ok())
             .unwrap_or(true); // Ollama / local providers have no key
 
         if !has_key {
             let env = prov.api_key_env.as_deref().unwrap_or("");
-            println!("{}", t!("config.ai.ping_no_key", provider = name, env = env).yellow());
+            println!(
+                "{}",
+                t!("config.ai.ping_no_key", provider = name, env = env).yellow()
+            );
             continue;
         }
 
@@ -326,9 +379,26 @@ fn cmd_ai_ping(provider_filter: Option<&str>) -> Result<()> {
             } else {
                 "config.ai.ping_ok"
             };
-            println!("{}", t!(key, provider = name, ms = ms.to_string(), model = &prov.model).green());
+            println!(
+                "{}",
+                t!(
+                    key,
+                    provider = name,
+                    ms = ms.to_string(),
+                    model = &prov.model
+                )
+                .green()
+            );
         } else {
-            println!("{}", t!("config.ai.ping_fail", provider = name, error = "connexion refusée").red());
+            println!(
+                "{}",
+                t!(
+                    "config.ai.ping_fail",
+                    provider = name,
+                    error = "connexion refusée"
+                )
+                .red()
+            );
         }
     }
 
@@ -339,11 +409,15 @@ fn cmd_ai_ping(provider_filter: Option<&str>) -> Result<()> {
 
 fn cmd_ai_providers() -> Result<()> {
     const KNOWN: &[(&str, &str, &str)] = &[
-        ("anthropic", "ANTHROPIC_API_KEY", "https://api.anthropic.com"),
-        ("openai",    "OPENAI_API_KEY",    "https://api.openai.com"),
-        ("mistral",   "MISTRAL_API_KEY",   "https://api.mistral.ai"),
-        ("groq",      "GROQ_API_KEY",      "https://api.groq.com"),
-        ("ollama",    "",                  "http://localhost:11434"),
+        (
+            "anthropic",
+            "ANTHROPIC_API_KEY",
+            "https://api.anthropic.com",
+        ),
+        ("openai", "OPENAI_API_KEY", "https://api.openai.com"),
+        ("mistral", "MISTRAL_API_KEY", "https://api.mistral.ai"),
+        ("groq", "GROQ_API_KEY", "https://api.groq.com"),
+        ("ollama", "", "http://localhost:11434"),
     ];
 
     let cfg = load_global().unwrap_or_default();
@@ -381,7 +455,13 @@ fn cmd_ai_providers() -> Result<()> {
         };
 
         let model_str = prov_cfg
-            .map(|p| if p.model.is_empty() { "—".to_string() } else { p.model.clone() })
+            .map(|p| {
+                if p.model.is_empty() {
+                    "—".to_string()
+                } else {
+                    p.model.clone()
+                }
+            })
             .unwrap_or_else(|| "—".to_string());
 
         let status = if name == active && configured {
@@ -400,11 +480,7 @@ fn cmd_ai_providers() -> Result<()> {
 
         println!(
             "  {:<12} {:<12} {:<26} {:<24} {}",
-            name,
-            configured_str,
-            key_colored,
-            model_str,
-            status,
+            name, configured_str, key_colored, model_str, status,
         );
     }
 
@@ -422,11 +498,18 @@ fn cmd_ai_providers() -> Result<()> {
     println!(
         "  {:<14} {}",
         "Fallback :",
-        routing.fallback.as_deref().unwrap_or("(non configuré)").yellow()
+        routing
+            .fallback
+            .as_deref()
+            .unwrap_or("(non configuré)")
+            .yellow()
     );
 
     println!();
-    println!("  {}", "Configurez via : nevelio config set ai.routing.triage groq".dimmed());
+    println!(
+        "  {}",
+        "Configurez via : nevelio config set ai.routing.triage groq".dimmed()
+    );
 
     Ok(())
 }
@@ -436,11 +519,11 @@ fn cmd_ai_providers() -> Result<()> {
 fn ping_provider(name: &str, prov: &nevelio_config::ProviderConfig) -> bool {
     let url = match name {
         "anthropic" => "https://api.anthropic.com",
-        "openai"    => "https://api.openai.com",
-        "mistral"   => "https://api.mistral.ai",
-        "groq"      => "https://api.groq.com",
-        "ollama"    => prov.base_url.as_deref().unwrap_or("http://localhost:11434"),
-        _           => return false,
+        "openai" => "https://api.openai.com",
+        "mistral" => "https://api.mistral.ai",
+        "groq" => "https://api.groq.com",
+        "ollama" => prov.base_url.as_deref().unwrap_or("http://localhost:11434"),
+        _ => return false,
     };
 
     // Simple TCP connect check (no HTTP request, no tokens consumed)
@@ -452,31 +535,35 @@ fn ping_provider(name: &str, prov: &nevelio_config::ProviderConfig) -> bool {
     };
 
     // Resolve hostname via DNS, then attempt TCP connection
-    let Ok(mut addrs) = host_port.to_socket_addrs() else { return false };
-    let Some(addr) = addrs.next()                   else { return false };
+    let Ok(mut addrs) = host_port.to_socket_addrs() else {
+        return false;
+    };
+    let Some(addr) = addrs.next() else {
+        return false;
+    };
     TcpStream::connect_timeout(&addr, std::time::Duration::from_secs(3)).is_ok()
 }
 
 fn default_key_env(provider: &str) -> &'static str {
     match provider {
         "anthropic" => "ANTHROPIC_API_KEY",
-        "openai"    => "OPENAI_API_KEY",
-        "mistral"   => "MISTRAL_API_KEY",
-        "groq"      => "GROQ_API_KEY",
-        "bedrock"   => "AWS_ACCESS_KEY_ID",
-        _           => "API_KEY",
+        "openai" => "OPENAI_API_KEY",
+        "mistral" => "MISTRAL_API_KEY",
+        "groq" => "GROQ_API_KEY",
+        "bedrock" => "AWS_ACCESS_KEY_ID",
+        _ => "API_KEY",
     }
 }
 
 fn default_model(provider: &str) -> &'static str {
     match provider {
         "anthropic" => "claude-sonnet-4-6",
-        "openai"    => "gpt-4o",
-        "mistral"   => "mistral-large-latest",
-        "groq"      => "llama-3.1-70b-versatile",
-        "ollama"    => "llama3.2",
-        "bedrock"   => "anthropic.claude-3-5-sonnet-20241022-v2:0",
-        _           => "unknown",
+        "openai" => "gpt-4o",
+        "mistral" => "mistral-large-latest",
+        "groq" => "llama-3.1-70b-versatile",
+        "ollama" => "llama3.2",
+        "bedrock" => "anthropic.claude-3-5-sonnet-20241022-v2:0",
+        _ => "unknown",
     }
 }
 
@@ -485,7 +572,11 @@ fn read_line_optional() -> Option<String> {
     let stdin = io::stdin();
     let line = stdin.lock().lines().next()?.ok()?;
     let trimmed = line.trim().to_string();
-    if trimmed.is_empty() { None } else { Some(trimmed) }
+    if trimmed.is_empty() {
+        None
+    } else {
+        Some(trimmed)
+    }
 }
 
 fn confirm_yes() -> bool {

@@ -70,7 +70,8 @@ pub(crate) fn load_progress(out_dir: &Path) -> Option<ScanProgress> {
 
 pub(crate) fn load_findings_json(out_dir: &Path) -> Result<ScanReport> {
     let path = out_dir.join("findings.json");
-    let content = std::fs::read_to_string(path).context(t!("error.findings_missing").to_string())?;
+    let content =
+        std::fs::read_to_string(path).context(t!("error.findings_missing").to_string())?;
     serde_json::from_str(&content).context(t!("error.findings_invalid").to_string())
 }
 
@@ -80,21 +81,21 @@ pub(crate) fn load_findings_json(out_dir: &Path) -> Result<ScanReport> {
 
 fn parse_profile(s: Option<&str>) -> Option<ScanProfile> {
     match s? {
-        "stealth"    => Some(ScanProfile::Stealth),
-        "normal"     => Some(ScanProfile::Normal),
+        "stealth" => Some(ScanProfile::Stealth),
+        "normal" => Some(ScanProfile::Normal),
         "aggressive" => Some(ScanProfile::Aggressive),
-        _            => None,
+        _ => None,
     }
 }
 
 fn parse_output_format(s: Option<&str>) -> Option<OutputFormat> {
     match s? {
-        "json"     => Some(OutputFormat::Json),
-        "html"     => Some(OutputFormat::Html),
+        "json" => Some(OutputFormat::Json),
+        "html" => Some(OutputFormat::Html),
         "markdown" => Some(OutputFormat::Markdown),
-        "junit"    => Some(OutputFormat::Junit),
-        "sarif"    => Some(OutputFormat::Sarif),
-        _          => None,
+        "junit" => Some(OutputFormat::Junit),
+        "sarif" => Some(OutputFormat::Sarif),
+        _ => None,
     }
 }
 
@@ -115,13 +116,22 @@ pub(crate) fn load_plugin_registry() -> Vec<PathBuf> {
     .collect();
 
     for registry_path in candidates {
-        let Ok(content) = std::fs::read_to_string(&registry_path) else { continue };
-        let Ok(table) = content.parse::<toml::Value>() else { continue };
+        let Ok(content) = std::fs::read_to_string(&registry_path) else {
+            continue;
+        };
+        let Ok(table) = content.parse::<toml::Value>() else {
+            continue;
+        };
 
         if let Some(plugins) = table.get("plugins").and_then(|p| p.as_array()) {
             for plugin in plugins {
-                let enabled = plugin.get("enabled").and_then(|e| e.as_bool()).unwrap_or(true);
-                if !enabled { continue; }
+                let enabled = plugin
+                    .get("enabled")
+                    .and_then(|e| e.as_bool())
+                    .unwrap_or(true);
+                if !enabled {
+                    continue;
+                }
                 if let Some(path_str) = plugin.get("path").and_then(|p| p.as_str()) {
                     let p = PathBuf::from(path_str);
                     if p.exists() {
@@ -137,7 +147,9 @@ pub(crate) fn load_plugin_registry() -> Vec<PathBuf> {
 }
 
 fn dirs_home() -> Option<PathBuf> {
-    std::env::var("HOME").ok().map(PathBuf::from)
+    std::env::var("HOME")
+        .ok()
+        .map(PathBuf::from)
         .or_else(|| std::env::var("USERPROFILE").ok().map(PathBuf::from))
 }
 
@@ -147,36 +159,44 @@ fn dirs_home() -> Option<PathBuf> {
 
 pub async fn handle_scan(args: ScanArgs, verbose: bool) -> Result<()> {
     let file_cfg = NevelioConfig::load();
-    let cfg_auth_token  = file_cfg.resolved_auth_token();
-    let cfg_suppress    = file_cfg.suppress;
-    let cfg_target      = file_cfg.target;
-    let cfg_profile     = file_cfg.profile;
-    let cfg_output      = file_cfg.output;
-    let cfg_out_dir     = file_cfg.out_dir;
-    let cfg_timeout     = file_cfg.timeout;
-    let cfg_modules     = file_cfg.modules;
+    let cfg_auth_token = file_cfg.resolved_auth_token();
+    let cfg_suppress = file_cfg.suppress;
+    let cfg_target = file_cfg.target;
+    let cfg_profile = file_cfg.profile;
+    let cfg_output = file_cfg.output;
+    let cfg_out_dir = file_cfg.out_dir;
+    let cfg_timeout = file_cfg.timeout;
+    let cfg_modules = file_cfg.modules;
     let cfg_concurrency = file_cfg.concurrency;
-    let cfg_rate_limit  = file_cfg.rate_limit;
-    let cfg_proxy       = file_cfg.proxy;
+    let cfg_rate_limit = file_cfg.rate_limit;
+    let cfg_proxy = file_cfg.proxy;
 
     let fail_on = args.fail_on;
 
-    let target = args.target.or(args.url).or(cfg_target)
+    let target = args
+        .target
+        .or(args.url)
+        .or(cfg_target)
         .context(t!("error.no_target").to_string())?;
 
     if !target.starts_with("http://") && !target.starts_with("https://") {
         anyhow::bail!("{}", t!("error.invalid_url", url = target.as_str()));
     }
 
-    let profile: ScanProfile = args.profile.map(ScanProfile::from)
+    let profile: ScanProfile = args
+        .profile
+        .map(ScanProfile::from)
         .or_else(|| parse_profile(cfg_profile.as_deref()))
         .unwrap_or(ScanProfile::Normal);
 
-    let output_format: OutputFormat = args.output
+    let output_format: OutputFormat = args
+        .output
         .or_else(|| parse_output_format(cfg_output.as_deref()))
         .unwrap_or(OutputFormat::Html);
 
-    let out_dir: PathBuf = args.out_dir.or(cfg_out_dir)
+    let out_dir: PathBuf = args
+        .out_dir
+        .or(cfg_out_dir)
         .unwrap_or_else(|| PathBuf::from("./nevelio-results"));
     let timeout: u64 = args.timeout.or(cfg_timeout).unwrap_or(5);
     let modules: Vec<String> = if !args.modules.is_empty() {
@@ -187,24 +207,38 @@ pub async fn handle_scan(args: ScanArgs, verbose: bool) -> Result<()> {
 
     let auth_token = args.auth_token.or(cfg_auth_token);
     let proxy = args.proxy.or(cfg_proxy);
-    let concurrency = args.concurrency.or(cfg_concurrency).unwrap_or_else(|| profile.concurrency());
-    let rate_limit = args.rate_limit.or(cfg_rate_limit).unwrap_or_else(|| profile.rate_limit_per_sec());
+    let concurrency = args
+        .concurrency
+        .or(cfg_concurrency)
+        .unwrap_or_else(|| profile.concurrency());
+    let rate_limit = args
+        .rate_limit
+        .or(cfg_rate_limit)
+        .unwrap_or_else(|| profile.rate_limit_per_sec());
 
     let config = ScanConfig {
-        target: target.clone(), profile, concurrency, rate_limit,
-        timeout_ms: timeout * 1000, auth_token, proxy, verbose,
-        out_dir: out_dir.clone(), modules, dry_run: args.dry_run,
+        target: target.clone(),
+        profile,
+        concurrency,
+        rate_limit,
+        timeout_ms: timeout * 1000,
+        auth_token,
+        proxy,
+        verbose,
+        out_dir: out_dir.clone(),
+        modules,
+        dry_run: args.dry_run,
         locale: rust_i18n::locale().to_string(),
     };
 
     use std::io::IsTerminal;
-    let use_tui        = !args.no_tui && !args.dry_run && std::io::stdout().is_terminal();
-    let ai_suggestions  = args.ai_suggestions;
-    let ai_triage       = args.ai_triage;
-    let ai_remediation  = args.ai_remediation;
-    let ai_report       = args.ai_report;
-    let ai_payloads     = args.ai_payloads;
-    let script_paths    = args.scripts.clone();
+    let use_tui = !args.no_tui && !args.dry_run && std::io::stdout().is_terminal();
+    let ai_suggestions = args.ai_suggestions;
+    let ai_triage = args.ai_triage;
+    let ai_remediation = args.ai_remediation;
+    let ai_report = args.ai_report;
+    let ai_payloads = args.ai_payloads;
+    let script_paths = args.scripts.clone();
 
     if ai_suggestions && std::env::var("ANTHROPIC_API_KEY").is_err() {
         eprintln!("{}", t!("scan.ai_warning").yellow());
@@ -216,18 +250,37 @@ pub async fn handle_scan(args: ScanArgs, verbose: bool) -> Result<()> {
             println!("{:<12}: {}", t!("scan.label.spec"), spec);
         }
         println!("{:<12}: {:?}", t!("scan.label.profile"), config.profile);
-        println!("{:<12}: {}", t!("scan.label.output"), out_dir.display().to_string().dimmed());
-        if config.dry_run { println!("{}", t!("scan.dry_run").yellow()); }
+        println!(
+            "{:<12}: {}",
+            t!("scan.label.output"),
+            out_dir.display().to_string().dimmed()
+        );
+        if config.dry_run {
+            println!("{}", t!("scan.dry_run").yellow());
+        }
         println!();
     }
 
     if !use_tui && !config.dry_run {
         let names: Vec<&str> = if config.modules.is_empty() {
-            vec!["auth", "injection", "access-control", "business-logic", "graphql", "infra", "ssrf", "oauth2"]
+            vec![
+                "auth",
+                "injection",
+                "access-control",
+                "business-logic",
+                "graphql",
+                "infra",
+                "ssrf",
+                "oauth2",
+            ]
         } else {
             config.modules.iter().map(String::as_str).collect()
         };
-        println!("{:<12}: {}", t!("scan.label.modules"), names.join(", ").dimmed());
+        println!(
+            "{:<12}: {}",
+            t!("scan.label.modules"),
+            names.join(", ").dimmed()
+        );
         println!();
     }
 
@@ -237,22 +290,30 @@ pub async fn handle_scan(args: ScanArgs, verbose: bool) -> Result<()> {
     let endpoints = if !config.dry_run {
         if let Some(ref spec_path) = args.spec {
             match detect_spec_format(spec_path) {
-                SpecFormat::Har => nevelio_recon::parse_har(spec_path)
-                    .context("Erreur lecture fichier HAR")?,
+                SpecFormat::Har => {
+                    nevelio_recon::parse_har(spec_path).context("Erreur lecture fichier HAR")?
+                }
                 SpecFormat::Postman => nevelio_recon::parse_postman(spec_path)
                     .context("Erreur lecture collection Postman/Insomnia")?,
-                SpecFormat::OpenApi => nevelio_recon::openapi::parse_spec(spec_path, &target, &raw_client)
-                    .await.context(t!("error.spec_read").to_string())?,
+                SpecFormat::OpenApi => {
+                    nevelio_recon::openapi::parse_spec(spec_path, &target, &raw_client)
+                        .await
+                        .context(t!("error.spec_read").to_string())?
+                }
             }
         } else {
             let stealth = matches!(config.profile, ScanProfile::Stealth);
             nevelio_recon::discover_endpoints(&target, &raw_client, stealth)
-                .await.context(t!("error.discovery").to_string())?
+                .await
+                .context(t!("error.discovery").to_string())?
         }
     } else {
         vec![Endpoint {
-            method: "GET".to_string(), path: "/".to_string(),
-            full_url: target.clone(), parameters: vec![], auth_required: false,
+            method: "GET".to_string(),
+            path: "/".to_string(),
+            full_url: target.clone(),
+            parameters: vec![],
+            auth_required: false,
         }]
     };
 
@@ -265,8 +326,12 @@ pub async fn handle_scan(args: ScanArgs, verbose: bool) -> Result<()> {
                 let grpc_count = grpc_eps.len();
                 endpoints.extend(grpc_eps);
                 if !use_tui {
-                    println!("  {} Proto: {} service(s) → {} endpoint(s) gRPC ajoutés",
-                        "✓".green(), services.len(), grpc_count);
+                    println!(
+                        "  {} Proto: {} service(s) → {} endpoint(s) gRPC ajoutés",
+                        "✓".green(),
+                        services.len(),
+                        grpc_count
+                    );
                 }
             }
             Err(e) => eprintln!("  ⚠ Erreur lecture .proto : {}", e),
@@ -285,12 +350,20 @@ pub async fn handle_scan(args: ScanArgs, verbose: bool) -> Result<()> {
         match nevelio_core::WasmAttackModule::load(&path_str) {
             Ok(wasm_mod) => {
                 if !use_tui {
-                    println!("  {} Plugin WASM chargé : {}", "✓".green(), wasm_mod.name().cyan());
+                    println!(
+                        "  {} Plugin WASM chargé : {}",
+                        "✓".green(),
+                        wasm_mod.name().cyan()
+                    );
                 }
                 all_modules.push(Box::new(wasm_mod));
             }
-            Err(e) => eprintln!("  {} Impossible de charger le plugin WASM '{}' : {}",
-                "✗".red(), path_str, e),
+            Err(e) => eprintln!(
+                "  {} Impossible de charger le plugin WASM '{}' : {}",
+                "✗".red(),
+                path_str,
+                e
+            ),
         }
     }
 
@@ -299,7 +372,11 @@ pub async fn handle_scan(args: ScanArgs, verbose: bool) -> Result<()> {
         match nevelio_core::WasmAttackModule::load(&path_str) {
             Ok(wasm_mod) => {
                 if !use_tui {
-                    println!("  {} Plugin registry WASM : {}", "✓".green(), wasm_mod.name().cyan());
+                    println!(
+                        "  {} Plugin registry WASM : {}",
+                        "✓".green(),
+                        wasm_mod.name().cyan()
+                    );
                 }
                 all_modules.push(Box::new(wasm_mod));
             }
@@ -313,15 +390,21 @@ pub async fn handle_scan(args: ScanArgs, verbose: bool) -> Result<()> {
     if args.resume {
         if let Some(prev) = load_progress(&out_dir) {
             if !use_tui {
-                println!("{}", t!(
-                    "scan.resume",
-                    count = prev.completed_modules.len(),
-                    modules = prev.completed_modules.join(", ").as_str()
-                ).yellow());
+                println!(
+                    "{}",
+                    t!(
+                        "scan.resume",
+                        count = prev.completed_modules.len(),
+                        modules = prev.completed_modules.join(", ").as_str()
+                    )
+                    .yellow()
+                );
             }
             completed_modules = prev.completed_modules.clone();
             if let Ok(prev_report) = load_findings_json(&out_dir) {
-                for f in prev_report.findings { session.add_finding(f); }
+                for f in prev_report.findings {
+                    session.add_finding(f);
+                }
             }
         } else if !use_tui {
             println!("{}", t!("scan.no_progress").yellow());
@@ -356,5 +439,6 @@ pub async fn handle_scan(args: ScanArgs, verbose: bool) -> Result<()> {
         ai_report,
         ai_payloads,
         fail_on,
-    ).await
+    )
+    .await
 }

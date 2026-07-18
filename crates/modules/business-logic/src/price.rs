@@ -10,10 +10,10 @@ pub(super) async fn check_price_manipulation(
 ) -> Vec<Finding> {
     let price_fields = &["price", "amount", "total", "cost", "subtotal"];
     let manipulated_values: &[(&str, serde_json::Value)] = &[
-        ("0",    serde_json::json!(0)),
+        ("0", serde_json::json!(0)),
         ("0.01", serde_json::json!(0.01)),
-        ("-1",   serde_json::json!(-1)),
-        ("1",    serde_json::json!(1)),
+        ("-1", serde_json::json!(-1)),
+        ("1", serde_json::json!(1)),
     ];
 
     let baseline = send_request(client, ep, token, &[], Some("{}")).await;

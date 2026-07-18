@@ -12,9 +12,15 @@ pub(super) async fn probe_introspect_unauth(
 ) -> Vec<Finding> {
     let mut findings = Vec::new();
 
-    let spec_urls: Vec<String> = introspect_endpoints.iter().map(|e| e.full_url.clone()).collect();
+    let spec_urls: Vec<String> = introspect_endpoints
+        .iter()
+        .map(|e| e.full_url.clone())
+        .collect();
     let probe_urls: Vec<String> = if spec_urls.is_empty() {
-        super::INTROSPECT_PATHS.iter().map(|p| super::build_url(base, p)).collect()
+        super::INTROSPECT_PATHS
+            .iter()
+            .map(|p| super::build_url(base, p))
+            .collect()
     } else {
         spec_urls
     };
@@ -31,7 +37,9 @@ pub(super) async fn probe_introspect_unauth(
             .build();
 
         let Ok(req) = req else { continue };
-        let Ok(resp) = client.send(req).await else { continue };
+        let Ok(resp) = client.send(req).await else {
+            continue;
+        };
 
         let status = resp.status().as_u16();
         let body = resp.text().await.unwrap_or_default();
@@ -53,11 +61,10 @@ pub(super) async fn probe_introspect_unauth(
                 url.clone(),
                 "POST",
             );
-            f.description =
-                "L'endpoint d'introspection (RFC 7662) répond sans authentification. \
+            f.description = "L'endpoint d'introspection (RFC 7662) répond sans authentification. \
                  N'importe quel client peut vérifier la validité d'un token et lire ses claims \
                  (sujet, scopes, expiration) sans présenter de credentials."
-                    .to_string();
+                .to_string();
             f.proof = format!(
                 "POST {} sans Authorization → HTTP {} body: {}",
                 url,
@@ -94,7 +101,10 @@ pub(super) async fn probe_token_endpoint_methods(
 
     let spec_urls: Vec<String> = token_endpoints.iter().map(|e| e.full_url.clone()).collect();
     let probe_urls: Vec<String> = if spec_urls.is_empty() {
-        super::TOKEN_PATHS.iter().map(|p| super::build_url(base, p)).collect()
+        super::TOKEN_PATHS
+            .iter()
+            .map(|p| super::build_url(base, p))
+            .collect()
     } else {
         spec_urls
     };
@@ -111,7 +121,10 @@ pub(super) async fn probe_token_endpoint_methods(
         // 200 or 400 (invalid_grant) but not 405 (method not allowed) means GET is accepted
         if status != 405 && status != 404 {
             let mut f = Finding::new(
-                format!("OAuth2 — Token endpoint accepte GET (fuite potentielle) — {}", url),
+                format!(
+                    "OAuth2 — Token endpoint accepte GET (fuite potentielle) — {}",
+                    url
+                ),
                 Severity::Low,
                 3.7,
                 "oauth2",
@@ -130,9 +143,8 @@ pub(super) async fn probe_token_endpoint_methods(
                  Ne jamais accepter client_secret dans la query string."
                     .to_string();
             f.cwe = Some("CWE-319".to_string());
-            f.references = vec![
-                "https://datatracker.ietf.org/doc/html/rfc6749#section-3.2".to_string(),
-            ];
+            f.references =
+                vec!["https://datatracker.ietf.org/doc/html/rfc6749#section-3.2".to_string()];
             findings.push(f);
         }
     }
@@ -172,15 +184,12 @@ pub(super) async fn probe_open_jwks(client: &HttpClient, base: &str) -> Vec<Find
                     "GET {} → HTTP {} — champs de clé privée trouvés (\"d\", \"p\" ou \"q\")",
                     url, status
                 );
-                f.recommendation =
-                    "Le JWKS public ne doit exposer que les clés publiques. \
+                f.recommendation = "Le JWKS public ne doit exposer que les clés publiques. \
                      Vérifier immédiatement la configuration du serveur d'autorisation \
                      et révoquer toutes les clés compromises."
-                        .to_string();
+                    .to_string();
                 f.cwe = Some("CWE-312".to_string());
-                f.references = vec![
-                    "https://datatracker.ietf.org/doc/html/rfc7517".to_string(),
-                ];
+                f.references = vec!["https://datatracker.ietf.org/doc/html/rfc7517".to_string()];
                 findings.push(f);
             }
         }

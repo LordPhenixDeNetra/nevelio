@@ -5,26 +5,21 @@ use anyhow::{bail, Result};
 pub struct Guardrail {
     allowed_hosts: Vec<String>,
     pub max_requests: u32,
-    pub ai_budget:    Option<u32>,
-    pub dry_run:      bool,
-    requests_made:    u32,
-    tokens_spent:     u32,
+    pub ai_budget: Option<u32>,
+    pub dry_run: bool,
+    requests_made: u32,
+    tokens_spent: u32,
 }
 
 impl Guardrail {
-    pub fn new(
-        target:       &str,
-        max_requests: u32,
-        ai_budget:    Option<u32>,
-        dry_run:      bool,
-    ) -> Self {
+    pub fn new(target: &str, max_requests: u32, ai_budget: Option<u32>, dry_run: bool) -> Self {
         Self {
             allowed_hosts: extract_allowed_hosts(target),
             max_requests,
             ai_budget,
             dry_run,
             requests_made: 0,
-            tokens_spent:  0,
+            tokens_spent: 0,
         }
     }
 
@@ -64,11 +59,7 @@ impl Guardrail {
         if let Some(max) = self.ai_budget {
             let projected = self.tokens_spent.saturating_add(additional_estimate);
             if projected >= max {
-                bail!(
-                    "Token budget exhausted ({}/{})",
-                    projected,
-                    max
-                );
+                bail!("Token budget exhausted ({}/{})", projected, max);
             }
         }
         Ok(())
@@ -82,15 +73,23 @@ impl Guardrail {
         self.tokens_spent = self.tokens_spent.saturating_add(tokens);
     }
 
-    pub fn requests_made(&self) -> u32 { self.requests_made }
-    pub fn tokens_spent(&self)  -> u32 { self.tokens_spent  }
+    pub fn requests_made(&self) -> u32 {
+        self.requests_made
+    }
+    pub fn tokens_spent(&self) -> u32 {
+        self.tokens_spent
+    }
 }
 
 // ── Host extraction helpers ────────────────────────────────────────────────────
 
 fn extract_allowed_hosts(target: &str) -> Vec<String> {
     let host = extract_host(target);
-    if host.is_empty() { vec![] } else { vec![host] }
+    if host.is_empty() {
+        vec![]
+    } else {
+        vec![host]
+    }
 }
 
 pub fn extract_host(url: &str) -> String {
@@ -103,7 +102,7 @@ pub fn extract_host(url: &str) -> String {
         .split('/')
         .next()
         .unwrap_or("")
-        .split(':')   // strip port
+        .split(':') // strip port
         .next()
         .unwrap_or("")
         .to_string()

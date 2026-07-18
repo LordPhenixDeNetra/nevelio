@@ -24,17 +24,36 @@ pub(super) async fn check_mass_assignment(
 
     // 2. Spec parameters augmented with privilege-escalation values
     // We inject each spec field with a value that could trigger privilege escalation.
-    let spec_param_names: Vec<String> = ep.parameters.iter()
-        .filter(|p| matches!(p.location, nevelio_core::types::ParameterLocation::Body | nevelio_core::types::ParameterLocation::Query))
+    let spec_param_names: Vec<String> = ep
+        .parameters
+        .iter()
+        .filter(|p| {
+            matches!(
+                p.location,
+                nevelio_core::types::ParameterLocation::Body
+                    | nevelio_core::types::ParameterLocation::Query
+            )
+        })
         .map(|p| p.name.clone())
         .collect();
 
     for param in &spec_param_names {
         let param_lower = param.to_lowercase();
         // Only inject spec params that look privilege-sensitive and aren't already in the body
-        let is_priv_sensitive = ["role", "permission", "admin", "level", "group",
-                                  "verified", "premium", "scope", "grant", "access"]
-            .iter().any(|kw| param_lower.contains(kw));
+        let is_priv_sensitive = [
+            "role",
+            "permission",
+            "admin",
+            "level",
+            "group",
+            "verified",
+            "premium",
+            "scope",
+            "grant",
+            "access",
+        ]
+        .iter()
+        .any(|kw| param_lower.contains(kw));
         if is_priv_sensitive && !body.contains_key(param) {
             body.insert(param.clone(), serde_json::json!("admin"));
         }
@@ -48,7 +67,10 @@ pub(super) async fn check_mass_assignment(
 
     let mut req_builder = client
         .inner()
-        .request(ep.method.parse().unwrap_or(reqwest::Method::POST), &ep.full_url)
+        .request(
+            ep.method.parse().unwrap_or(reqwest::Method::POST),
+            &ep.full_url,
+        )
         .header("Content-Type", "application/json")
         .body(body_str.clone());
     if !token.is_empty() {
@@ -76,7 +98,10 @@ pub(super) async fn check_mass_assignment(
         .collect();
 
     if matches!(status, 200..=299) && !reflected_keys.is_empty() {
-        let source = if reflected_keys.iter().any(|k| fields.iter().any(|f| f.field == *k)) {
+        let source = if reflected_keys
+            .iter()
+            .any(|k| fields.iter().any(|f| f.field == *k))
+        {
             "champs privilégiés hardcodés"
         } else {
             "champs de la spec OpenAPI"
@@ -93,7 +118,9 @@ pub(super) async fn check_mass_assignment(
         finding.description = format!(
             "L'endpoint {} {} accepte et reflète des champs sensibles ({}) : {}. \
              Un attaquant peut s'octroyer des droits admin ou modifier des attributs protégés.",
-            ep.method, ep.full_url, source,
+            ep.method,
+            ep.full_url,
+            source,
             reflected_keys.join(", ")
         );
         finding.proof = format!(

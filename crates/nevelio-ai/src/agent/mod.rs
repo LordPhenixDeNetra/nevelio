@@ -13,43 +13,43 @@ pub use tools::nevelio_tools;
 // ── Config ────────────────────────────────────────────────────────────────────
 
 pub struct AgentConfig {
-    pub target:         String,
+    pub target: String,
     pub max_iterations: u32,
-    pub max_requests:   u32,
-    pub ai_budget:      Option<u32>,
-    pub dry_run:        bool,
-    pub lang:           String,
+    pub max_requests: u32,
+    pub ai_budget: Option<u32>,
+    pub dry_run: bool,
+    pub lang: String,
 }
 
 // ── Output ────────────────────────────────────────────────────────────────────
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AgentFinding {
-    pub id:             String,
-    pub title:          String,
-    pub severity:       String,
-    pub endpoint:       String,
-    pub method:         String,
-    pub description:    String,
+    pub id: String,
+    pub title: String,
+    pub severity: String,
+    pub endpoint: String,
+    pub method: String,
+    pub description: String,
     pub recommendation: String,
-    pub proof:          String,
+    pub proof: String,
 }
 
 #[derive(Debug)]
 pub struct AgentResult {
-    pub findings:      Vec<AgentFinding>,
-    pub iterations:    u32,
+    pub findings: Vec<AgentFinding>,
+    pub iterations: u32,
     pub requests_made: u32,
-    pub tokens_spent:  u32,
-    pub summary:       String,
+    pub tokens_spent: u32,
+    pub summary: String,
 }
 
 // ── Internal state ────────────────────────────────────────────────────────────
 
 struct AgentState {
-    findings:  Vec<AgentFinding>,
-    finished:  bool,
-    summary:   String,
+    findings: Vec<AgentFinding>,
+    finished: bool,
+    summary: String,
     guardrail: Guardrail,
 }
 
@@ -60,15 +60,15 @@ struct AgentState {
 /// The LLM drives the loop via tool calls. Guardrails enforce scope, request
 /// count, and token budget hard limits server-side (not relying on the LLM).
 pub async fn run_agent(
-    config:    &AgentConfig,
+    config: &AgentConfig,
     endpoints: &[String],
-    provider:  &dyn AiProvider,
-    opts:      &CompletionOpts,
+    provider: &dyn AiProvider,
+    opts: &CompletionOpts,
 ) -> Result<AgentResult> {
     let mut state = AgentState {
-        findings:  Vec::new(),
-        finished:  false,
-        summary:   String::new(),
+        findings: Vec::new(),
+        finished: false,
+        summary: String::new(),
         guardrail: Guardrail::new(
             &config.target,
             config.max_requests,
@@ -128,27 +128,18 @@ pub async fn run_agent(
         // Execute tool calls, collect results
         let mut result_parts = Vec::new();
         for tool_call in &response.tool_calls {
-            let result = execute_tool_call(
-                tool_call,
-                &mut state,
-                endpoints,
-                &http_client,
-                config,
-            )
-            .await;
+            let result =
+                execute_tool_call(tool_call, &mut state, endpoints, &http_client, config).await;
 
             let result_str = match result {
-                Ok(r)  => r,
+                Ok(r) => r,
                 Err(e) => {
                     let msg = e.to_string().replace('"', "'");
                     format!("{{\"error\": \"{}\"}}", msg)
                 }
             };
 
-            result_parts.push(format!(
-                "[Tool: {}]\n{}",
-                tool_call.tool_name, result_str
-            ));
+            result_parts.push(format!("[Tool: {}]\n{}", tool_call.tool_name, result_str));
 
             if state.finished {
                 break;
@@ -164,7 +155,7 @@ pub async fn run_agent(
     }
 
     let requests_made = state.guardrail.requests_made();
-    let tokens_spent  = state.guardrail.tokens_spent();
+    let tokens_spent = state.guardrail.tokens_spent();
 
     Ok(AgentResult {
         findings: state.findings,
@@ -178,36 +169,32 @@ pub async fn run_agent(
 // ── Tool dispatch ─────────────────────────────────────────────────────────────
 
 async fn execute_tool_call(
-    tool_call:   &ToolCall,
-    state:       &mut AgentState,
-    endpoints:   &[String],
+    tool_call: &ToolCall,
+    state: &mut AgentState,
+    endpoints: &[String],
     http_client: &reqwest::Client,
-    config:      &AgentConfig,
+    config: &AgentConfig,
 ) -> Result<String> {
     match tool_call.tool_name.as_str() {
-        "list_endpoints" => {
-            Ok(serde_json::json!({
-                "count":     endpoints.len(),
-                "endpoints": endpoints
-            })
-            .to_string())
-        }
+        "list_endpoints" => Ok(serde_json::json!({
+            "count":     endpoints.len(),
+            "endpoints": endpoints
+        })
+        .to_string()),
 
-        "probe_endpoint" => {
-            execute_probe(tool_call, state, http_client, config).await
-        }
+        "probe_endpoint" => execute_probe(tool_call, state, http_client, config).await,
 
         "report_finding" => {
-            let id      = format!("agent-{:03}", state.findings.len() + 1);
+            let id = format!("agent-{:03}", state.findings.len() + 1);
             let finding = AgentFinding {
-                id:             id.clone(),
-                title:          get_str(&tool_call.arguments, "title"),
-                severity:       get_str(&tool_call.arguments, "severity"),
-                endpoint:       get_str(&tool_call.arguments, "endpoint"),
-                method:         get_str(&tool_call.arguments, "method"),
-                description:    get_str(&tool_call.arguments, "description"),
+                id: id.clone(),
+                title: get_str(&tool_call.arguments, "title"),
+                severity: get_str(&tool_call.arguments, "severity"),
+                endpoint: get_str(&tool_call.arguments, "endpoint"),
+                method: get_str(&tool_call.arguments, "method"),
+                description: get_str(&tool_call.arguments, "description"),
                 recommendation: get_str(&tool_call.arguments, "recommendation"),
-                proof:          get_str(&tool_call.arguments, "proof"),
+                proof: get_str(&tool_call.arguments, "proof"),
             };
             state.findings.push(finding);
             Ok(serde_json::json!({ "id": id, "recorded": true }).to_string())
@@ -215,7 +202,7 @@ async fn execute_tool_call(
 
         "finish" => {
             state.finished = true;
-            state.summary  = get_str(&tool_call.arguments, "summary");
+            state.summary = get_str(&tool_call.arguments, "summary");
             Ok(serde_json::json!({ "status": "done" }).to_string())
         }
 
@@ -226,13 +213,13 @@ async fn execute_tool_call(
 // ── probe_endpoint implementation ─────────────────────────────────────────────
 
 async fn execute_probe(
-    tool_call:   &ToolCall,
-    state:       &mut AgentState,
+    tool_call: &ToolCall,
+    state: &mut AgentState,
     http_client: &reqwest::Client,
-    config:      &AgentConfig,
+    config: &AgentConfig,
 ) -> Result<String> {
     let method = get_str(&tool_call.arguments, "method").to_uppercase();
-    let url    = get_str(&tool_call.arguments, "url");
+    let url = get_str(&tool_call.arguments, "url");
 
     if url.is_empty() {
         anyhow::bail!("probe_endpoint: 'url' is required");
@@ -258,18 +245,22 @@ async fn execute_probe(
 
     // Build request
     let rb = match method.as_str() {
-        "GET"     => http_client.get(&url),
-        "POST"    => http_client.post(&url),
-        "PUT"     => http_client.put(&url),
-        "PATCH"   => http_client.patch(&url),
-        "DELETE"  => http_client.delete(&url),
-        "HEAD"    => http_client.head(&url),
+        "GET" => http_client.get(&url),
+        "POST" => http_client.post(&url),
+        "PUT" => http_client.put(&url),
+        "PATCH" => http_client.patch(&url),
+        "DELETE" => http_client.delete(&url),
+        "HEAD" => http_client.head(&url),
         "OPTIONS" => http_client.request(reqwest::Method::OPTIONS, &url),
-        _         => http_client.get(&url),
+        _ => http_client.get(&url),
     };
 
     // Custom headers
-    let rb = if let Some(hdrs) = tool_call.arguments.get("headers").and_then(|v| v.as_object()) {
+    let rb = if let Some(hdrs) = tool_call
+        .arguments
+        .get("headers")
+        .and_then(|v| v.as_object())
+    {
         let mut rb = rb;
         for (k, v) in hdrs {
             if let Some(v_str) = v.as_str() {
@@ -291,10 +282,13 @@ async fn execute_probe(
     state.guardrail.record_request();
     let t0 = std::time::Instant::now();
 
-    let resp = rb.send().await.map_err(|e| anyhow::anyhow!("Request failed: {}", e))?;
+    let resp = rb
+        .send()
+        .await
+        .map_err(|e| anyhow::anyhow!("Request failed: {}", e))?;
 
     let latency_ms = t0.elapsed().as_millis() as u64;
-    let status     = resp.status().as_u16();
+    let status = resp.status().as_u16();
 
     // Capture security-relevant response headers
     let sec_headers: Vec<String> = resp
@@ -340,7 +334,7 @@ fn build_system_prompt(config: &AgentConfig) -> String {
     let lang_instr = match config.lang.as_str() {
         "en" => "Respond in English.",
         "es" => "Responde en español.",
-        _    => "Réponds en français.",
+        _ => "Réponds en français.",
     };
 
     format!(
@@ -375,8 +369,8 @@ Workflow:
 5. Call `finish` with a summary when testing is complete
 
 {lang_instr}"#,
-        target   = config.target,
-        max_req  = config.max_requests,
+        target = config.target,
+        max_req = config.max_requests,
         max_iter = config.max_iterations,
         lang_instr = lang_instr,
     )
@@ -392,7 +386,10 @@ fn build_initial_message(config: &AgentConfig, endpoints: &[String]) -> String {
         )
     };
 
-    format!("Start the security assessment of: {}\n\n{}", config.target, ep_note)
+    format!(
+        "Start the security assessment of: {}\n\n{}",
+        config.target, ep_note
+    )
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────

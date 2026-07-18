@@ -40,9 +40,15 @@ mod ollama_integration {
         };
 
         let msgs = vec![Message::user("Reply with just the number 42.")];
-        let opts = CompletionOpts { max_tokens: 64, temperature: 0.0, model: None };
+        let opts = CompletionOpts {
+            max_tokens: 64,
+            temperature: 0.0,
+            model: None,
+        };
 
-        let reply = provider.complete(&msgs, &opts).await
+        let reply = provider
+            .complete(&msgs, &opts)
+            .await
             .expect("OllamaProvider::complete should succeed");
 
         assert!(!reply.is_empty(), "Response should not be empty");
@@ -62,15 +68,18 @@ mod ollama_integration {
             r#"Return a JSON object with a single field "status" set to "ok"."#,
         )];
         let schema = json!({ "type": "object", "properties": { "status": { "type": "string" } } });
-        let opts = CompletionOpts { max_tokens: 128, temperature: 0.0, model: None };
+        let opts = CompletionOpts {
+            max_tokens: 128,
+            temperature: 0.0,
+            model: None,
+        };
 
-        let value = provider.complete_json(&msgs, schema, &opts).await
+        let value = provider
+            .complete_json(&msgs, schema, &opts)
+            .await
             .expect("OllamaProvider::complete_json should succeed");
 
-        assert!(
-            value.is_object(),
-            "Expected JSON object, got: {:?}", value
-        );
+        assert!(value.is_object(), "Expected JSON object, got: {:?}", value);
         eprintln!("Ollama JSON reply: {:?}", value);
     }
 
@@ -100,9 +109,9 @@ mod ollama_integration {
             Message::user("What is the weather in Paris? Use the get_weather tool."),
         ];
         let tools = vec![ToolDefinition {
-            name:        "get_weather".to_string(),
+            name: "get_weather".to_string(),
             description: "Get current weather for a city.".to_string(),
-            parameters:  json!({
+            parameters: json!({
                 "type": "object",
                 "properties": {
                     "city": { "type": "string", "description": "City name" }
@@ -110,9 +119,15 @@ mod ollama_integration {
                 "required": ["city"]
             }),
         }];
-        let opts = CompletionOpts { max_tokens: 256, temperature: 0.0, model: None };
+        let opts = CompletionOpts {
+            max_tokens: 256,
+            temperature: 0.0,
+            model: None,
+        };
 
-        let resp = provider.complete_with_tools(&msgs, &tools, &opts).await
+        let resp = provider
+            .complete_with_tools(&msgs, &tools, &opts)
+            .await
             .expect("OllamaProvider::complete_with_tools should succeed");
 
         eprintln!("Tool calls: {:?}", resp.tool_calls);
@@ -126,9 +141,10 @@ mod ollama_integration {
     async fn test_ollama_unreachable_gives_error() {
         // No OLLAMA_HOST check — tests a hardcoded unreachable port
         let provider = OllamaProvider::new(
-            "http://localhost:59999".to_string(),  // nothing listening here
+            "http://localhost:59999".to_string(), // nothing listening here
             "llama3.2".to_string(),
-            64, 0.0,
+            64,
+            0.0,
         );
 
         let msgs = vec![Message::user("hello")];

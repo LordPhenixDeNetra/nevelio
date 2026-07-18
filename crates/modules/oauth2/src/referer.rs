@@ -14,7 +14,10 @@ pub(super) async fn probe_token_referer_leak(
 
     let spec_urls: Vec<String> = auth_endpoints.iter().map(|e| e.full_url.clone()).collect();
     let probe_urls: Vec<String> = if spec_urls.is_empty() {
-        super::AUTHORIZE_PATHS.iter().map(|p| super::build_url(base, p)).collect()
+        super::AUTHORIZE_PATHS
+            .iter()
+            .map(|p| super::build_url(base, p))
+            .collect()
     } else {
         spec_urls
     };
@@ -27,16 +30,22 @@ pub(super) async fn probe_token_referer_leak(
             url,
             super::urlenc("https://nevelio.example.com/callback")
         );
-        let Some((status, body)) = super::get_text(client, &test_url).await else { continue };
+        let Some((status, body)) = super::get_text(client, &test_url).await else {
+            continue;
+        };
 
         // Check if the server responds with a token in URL (redirect Location header)
         // or directly in the body with a query-string format
         let location_has_token = body.contains("access_token=") || body.contains("token=");
-        let redirect_with_query = matches!(status, 302 | 303 | 307 | 308) && body.contains("access_token");
+        let redirect_with_query =
+            matches!(status, 302 | 303 | 307 | 308) && body.contains("access_token");
 
         if location_has_query_token(status, &body) || redirect_with_query || location_has_token {
             let mut f = Finding::new(
-                format!("OAuth2 — Token d'accès exposé dans l'URL (response_mode=query) — {}", url),
+                format!(
+                    "OAuth2 — Token d'accès exposé dans l'URL (response_mode=query) — {}",
+                    url
+                ),
                 Severity::Medium,
                 6.5,
                 "oauth2",
@@ -49,7 +58,10 @@ pub(super) async fn probe_token_referer_leak(
                  Ce token apparaît dans les logs serveur, l'historique du navigateur et est \
                  envoyé dans le header `Referer` lors de la navigation vers des ressources tierces."
                     .to_string();
-            f.proof = format!("GET {} → HTTP {} — token détecté dans la réponse", test_url, status);
+            f.proof = format!(
+                "GET {} → HTTP {} — token détecté dans la réponse",
+                test_url, status
+            );
             f.recommendation =
                 "Utiliser uniquement `response_mode=fragment` pour les tokens (token dans #fragment, \
                  non envoyé au serveur) ou `response_mode=form_post` pour les codes d'autorisation. \
@@ -78,7 +90,9 @@ pub(super) async fn probe_token_referer_leak(
         else {
             continue;
         };
-        let Ok(resp) = client.send(req).await else { continue };
+        let Ok(resp) = client.send(req).await else {
+            continue;
+        };
         let status = resp.status().as_u16();
         // If redirected with token in URL
         if matches!(status, 302 | 303) {
@@ -92,11 +106,10 @@ pub(super) async fn probe_token_referer_leak(
                         url.clone(),
                         "POST",
                     );
-                    f.description =
-                        "Le token endpoint redirige avec le token d'accès dans l'URL \
+                    f.description = "Le token endpoint redirige avec le token d'accès dans l'URL \
                          (header Location). Ce token sera capturé par les logs d'accès \
                          du serveur et transmis aux tiers via le header Referer."
-                            .to_string();
+                        .to_string();
                     f.proof = format!(
                         "POST {} → HTTP {} Location: {}",
                         url,
@@ -129,9 +142,9 @@ pub(super) fn location_has_query_token(status: u16, body: &str) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::super::{OAuth2Module, collect_matching, build_url, urlenc, AUTHORIZE_PATHS};
-    use nevelio_core::AttackModule;
+    use super::super::{build_url, collect_matching, urlenc, OAuth2Module, AUTHORIZE_PATHS};
     use nevelio_core::types::Endpoint;
+    use nevelio_core::AttackModule;
 
     #[test]
     fn oauth2_module_name() {

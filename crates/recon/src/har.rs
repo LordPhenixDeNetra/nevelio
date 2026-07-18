@@ -127,10 +127,8 @@ pub(crate) fn is_api_request(url: &str) -> bool {
     }
     let path = url.split('?').next().unwrap_or(url);
     const STATIC: &[&str] = &[
-        ".css", ".js", ".mjs", ".ts",
-        ".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".ico", ".bmp",
-        ".woff", ".woff2", ".ttf", ".eot", ".otf",
-        ".map", ".br", ".gz", ".html", ".htm",
+        ".css", ".js", ".mjs", ".ts", ".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".ico",
+        ".bmp", ".woff", ".woff2", ".ttf", ".eot", ".otf", ".map", ".br", ".gz", ".html", ".htm",
         ".mp4", ".mp3", ".ogg", ".wav", ".pdf",
     ];
     !STATIC.iter().any(|ext| path.ends_with(ext))

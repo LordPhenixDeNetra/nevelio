@@ -3,8 +3,11 @@ use std::collections::HashMap;
 
 #[test]
 fn resolve_vars_postman_style() {
-    let vars: HashMap<String, String> =
-        [("base_url".to_string(), "https://api.example.com".to_string())].into();
+    let vars: HashMap<String, String> = [(
+        "base_url".to_string(),
+        "https://api.example.com".to_string(),
+    )]
+    .into();
     assert_eq!(
         resolve_vars("{{base_url}}/users", &vars),
         "https://api.example.com/users"
@@ -13,8 +16,11 @@ fn resolve_vars_postman_style() {
 
 #[test]
 fn resolve_vars_insomnia_style() {
-    let vars: HashMap<String, String> =
-        [("base_url".to_string(), "https://api.example.com".to_string())].into();
+    let vars: HashMap<String, String> = [(
+        "base_url".to_string(),
+        "https://api.example.com".to_string(),
+    )]
+    .into();
     assert_eq!(
         resolve_vars("{{ base_url }}/users", &vars),
         "https://api.example.com/users"
