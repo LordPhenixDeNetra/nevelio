@@ -27,6 +27,9 @@ impl JsonReporter {
     }
 
     pub fn write_to_file(report: &ScanReport, path: &Path) -> Result<()> {
+        if let Some(parent) = path.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
         let json = serde_json::to_string_pretty(report)?;
         std::fs::write(path, json)?;
         Ok(())
