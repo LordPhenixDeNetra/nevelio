@@ -27,7 +27,9 @@ RUN apt-get update \
 COPY --from=builder /build/target/release/nevelio /usr/local/bin/nevelio
 
 # Non-root user for runtime security
-RUN useradd -m -u 1000 nevelio
+RUN useradd -m -u 1000 nevelio \
+    && mkdir -p /reports \
+    && chown -R nevelio:nevelio /reports /home/nevelio
 USER nevelio
 
 WORKDIR /reports
