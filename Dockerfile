@@ -1,6 +1,7 @@
 # ─── Stage 1 : builder ────────────────────────────────────────────────────────
-# Cargo 1.85+ is required because some locked dependencies use edition2024.
-FROM rust:1.85-slim-bookworm AS builder
+# Cargo 1.88+ is required by locked dependencies such as instability 0.3.12
+# and time 0.3.47 / time-core 0.1.8 / time-macros 0.2.27.
+FROM rust:1.88-slim-bookworm AS builder
 
 RUN apt-get update && apt-get install -y pkg-config libssl-dev && rm -rf /var/lib/apt/lists/*
 
